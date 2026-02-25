@@ -1,0 +1,651 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYS.ORIGIN | StudentsHelper</title>
+    <!-- Fonts for Cyber Editorial theme -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base: #030305;
+            --bg-surface: #0a0a0e;
+            --bg-elevated: #111118;
+
+            --text-primary: #ffffff;
+            --text-secondary: #84849a;
+            --text-tertiary: #4a4a5e;
+
+            --accent-lime: #ccff00;
+            --accent-purple: #7b42fa;
+            --accent-blue: #00e5ff;
+
+            --border-dim: rgba(255, 255, 255, 0.05);
+            --border-bright: rgba(255, 255, 255, 0.15);
+
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --danger-red: #ff3366;
+            --success-green: #ccff00;
+            --warning-amber: #ffaa00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #app {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ----- LEFT PANEL: NAVIGATION TREE ----- */
+        .sidebar-nav {
+            width: 260px;
+            height: 100%;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-dim);
+            display: flex;
+            flex-direction: column;
+            z-index: 20;
+        }
+
+        .brand-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--text-primary);
+            color: var(--bg-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .brand-header:hover .brand-icon {
+            transform: scale(1.1) rotate(5deg);
+            background: var(--accent-lime);
+        }
+
+        .brand-name {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 32px 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .nav-menu::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb {
+            background: var(--border-dim);
+        }
+
+        .nav-section h4 {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+            padding-left: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-item.active {
+            background: rgba(123, 66, 250, 0.05);
+            /* Purple tinted for Info */
+            color: var(--accent-purple);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 20px;
+            width: 3px;
+            background: var(--accent-purple);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .nav-item:hover:not(.active) {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--text-primary);
+            color: var(--bg-base);
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .sidebar-footer {
+            padding: 32px;
+            border-top: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .sidebar-footer:hover {
+            background: var(--bg-elevated);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--bg-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-dim);
+            font-size: 0.85rem;
+        }
+
+        .user-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .user-name {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+        }
+
+        /* ----- MIDDLE PANEL: WORKSPACE ----- */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-base);
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .workspace::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .workspace::-webkit-scrollbar-thumb {
+            background: var(--border-dim);
+        }
+
+        /* Background Typography */
+        .ambient-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-display);
+            font-size: 25vw;
+            font-weight: 900;
+            color: rgba(123, 66, 250, 0.015);
+            white-space: nowrap;
+            z-index: 0;
+            pointer-events: none;
+            letter-spacing: -0.05em;
+        }
+
+        /* Hero Header */
+        .sys-header {
+            padding: 80px 80px 40px;
+            border-bottom: 1px solid var(--border-dim);
+            background: var(--bg-base);
+            position: relative;
+            z-index: 2;
+        }
+
+        .sys-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at top right, rgba(123, 66, 250, 0.1) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .sys-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            text-transform: uppercase;
+            border: 1px solid var(--accent-purple);
+            padding: 6px 12px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+            background: rgba(123, 66, 250, 0.05);
+        }
+
+        .sys-title {
+            font-family: var(--font-display);
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 0.9;
+            text-transform: uppercase;
+            letter-spacing: -0.04em;
+            margin-bottom: 24px;
+            max-width: 800px;
+            background: linear-gradient(to bottom right, #ffffff, #888888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sys-desc {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 600px;
+            font-family: var(--font-mono);
+        }
+
+        /* Workspace Content */
+        .workspace-content {
+            padding: 80px;
+            max-width: 1200px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Stats Blocks */
+        .sys-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .sys-stats::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -20px;
+            right: -20px;
+            height: 1px;
+            background: var(--border-dim);
+            z-index: -1;
+        }
+
+        .stat-block {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-bright);
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .stat-val {
+            font-family: var(--font-display);
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+
+        .stat-label {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+        }
+
+        /* Protocol Grid */
+        .protocol-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 32px;
+        }
+
+        .protocol-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .protocol-card:hover {
+            border-color: var(--border-bright);
+            background: var(--bg-elevated);
+        }
+
+        .protocol-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent-purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            border: 1px solid var(--border-dim);
+        }
+
+        .protocol-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+
+        .protocol-desc {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .protocol-tag {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.70rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border: 1px solid var(--border-dim);
+            border-radius: 4px;
+            background: var(--bg-base);
+        }
+
+        .large-card {
+            grid-column: span 2;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(123, 66, 250, 0.05), transparent);
+        }
+
+        @media (max-width: 1100px) {
+
+            .sys-header,
+            .workspace-content {
+                padding: 48px;
+            }
+
+            .sys-stats,
+            .protocol-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .large-card {
+                grid-template-columns: 1fr;
+            }
+
+            .sys-title {
+                font-size: 3rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar-nav {
+                width: 80px;
+            }
+
+            .brand-name,
+            .nav-item span,
+            .nav-badge,
+            .user-info {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-text">SYS.ORIGIN</div>
+
+    <div id="app">
+        <!-- LEFT PANEL: Navigation Tree -->
+        <aside class="sidebar-nav">
+            <a href="../index.html" class="brand-header">
+                <div class="brand-icon">
+                    <i data-lucide="terminal" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div class="brand-name">StudentsHelper</div>
+            </a>
+
+            <div class="nav-menu">
+                <div class="nav-section">
+                    <h4>Public Net</h4>
+                    <a href="../index.html" class="nav-item">
+                        <i data-lucide="globe" style="width: 18px; height: 18px;"></i>
+                        <span>Grid</span>
+                    </a>
+                    <a href="about.html" class="nav-item active">
+                        <i data-lucide="info" style="width: 18px; height: 18px;"></i>
+                        <span>Sys.Origin</span>
+                    </a>
+                    <a href="contact.html" class="nav-item">
+                        <i data-lucide="mail" style="width: 18px; height: 18px;"></i>
+                        <span>Transmit</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Actions</h4>
+                    <a href="login.html" class="nav-item">
+                        <i data-lucide="log-in" style="width: 18px; height: 18px;"></i>
+                        <span>Authenticate</span>
+                    </a>
+                    <a href="register.html" class="nav-item">
+                        <i data-lucide="user-plus" style="width: 18px; height: 18px;"></i>
+                        <span>Initialize Node</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-footer" onclick="location.href='login.html'">
+                <div class="user-avatar" id="sidebarAvatar"><i data-lucide="user"></i></div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebarName">Guest User</div>
+                    <div class="user-role">UNVERIFIED_NODE</div>
+                </div>
+                <i data-lucide="arrow-right"
+                    style="color: var(--text-tertiary); width: 16px; height: 16px; margin-left: auto;"></i>
+            </div>
+        </aside>
+
+        <!-- MIDDLE PANEL: Workspace -->
+        <main class="workspace">
+
+            <header class="sys-header">
+                <div class="sys-badge">
+                    <i data-lucide="rocket" style="width: 14px; height: 14px;"></i> Core Directive
+                </div>
+                <h1 class="sys-title">Mapping the latent network of peer knowledge.</h1>
+                <p class="sys-desc">StudentsHelper intercepts and reroutes academic friction. We believe the answer to
+                    your toughest technical hurdle is often compiling on the machine next door.</p>
+            </header>
+
+            <div class="workspace-content">
+
+                <!-- System Metrics -->
+                <div class="sys-stats">
+                    <div class="stat-block">
+                        <div class="stat-val">500k</div>
+                        <div class="stat-label">Active Nodes</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-val">2.4M</div>
+                        <div class="stat-label">Bounties Claimed</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-val">99%</div>
+                        <div class="stat-label">Hash Integrity</div>
+                    </div>
+                </div>
+
+                <!-- Protocol Grid -->
+                <div class="protocol-grid">
+
+                    <!-- Large Story Card -->
+                    <div class="protocol-card large-card">
+                        <div>
+                            <div class="protocol-icon"><i data-lucide="cpu" style="width: 24px; height: 24px;"></i>
+                            </div>
+                            <h2 class="protocol-title">The Initial Commit</h2>
+                            <p class="protocol-desc">It started in a university lab at 2 AM. A student stuck on a memory
+                                leak, surrounded by hundreds of others, yet completely alone in their debugging process.
+                                The realization hit: what if we could map the latent knowledge in this building down to
+                                the desk level?</p>
+                            <p class="protocol-desc">StudentsHelper was born from the idea that education shouldn't be a
+                                solitary struggle, but a collective computational endeavor powered by localized networks
+                                of peers.</p>
+                        </div>
+                        <div
+                            style="height: 100%; min-height: 250px; border-radius: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-dim); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+                            <i data-lucide="network" style="width: 120px; height: 120px; color: var(--border-dim);"></i>
+                            <div
+                                style="position: absolute; width: 100%; height: 2px; background: var(--accent-purple); top: 50%; opacity: 0.5; box-shadow: 0 0 20px var(--accent-purple);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="protocol-card">
+                        <div class="protocol-icon"><i data-lucide="zap" style="width: 20px; height: 20px;"></i></div>
+                        <h3 class="protocol-title">Velocity</h3>
+                        <p class="protocol-desc">When you're halted by a bug, every cycle counts. Our protocol connects
+                            you with an adjacent expert within milliseconds. Office hours are legacy; real-time
+                            resolution is the modern standard.</p>
+                        <div class="protocol-tag">Latency / 15ms</div>
+                    </div>
+
+                    <div class="protocol-card">
+                        <div class="protocol-icon"><i data-lucide="shield-check" style="width: 20px; height: 20px;"></i>
+                        </div>
+                        <h3 class="protocol-title">Verified Quality</h3>
+                        <p class="protocol-desc">Trust is our consensus mechanism. Through strict identity verification
+                            and a robust cryptographically-backed peer review system, we ensure that the patches you
+                            receive are safe and executable.</p>
+                        <div class="protocol-tag">Verification / Level-4</div>
+                    </div>
+
+                    <div class="protocol-card">
+                        <div class="protocol-icon"><i data-lucide="award" style="width: 20px; height: 20px;"></i></div>
+                        <h3 class="protocol-title">Reputation Economy</h3>
+                        <p class="protocol-desc">Nodes aren't just volunteering; they're algorithmically staking their
+                            expertise. Our platform turns academic assistance into tangible REP blocks validated by the
+                            network index.</p>
+                        <div class="protocol-tag">Ledger / Active</div>
+                    </div>
+
+                    <div class="protocol-card">
+                        <div class="protocol-icon"><i data-lucide="globe" style="width: 20px; height: 20px;"></i></div>
+                        <h3 class="protocol-title">Distributed Access</h3>
+                        <p class="protocol-desc">Whether resolving advanced calculus matrices, debugging a distributed
+                            system, or refactoring legacy data engines, our decentralized network processes queries
+                            synchronously.</p>
+                        <div class="protocol-tag">Grid / Global</div>
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "community-learning-platform",
+  "version": "1.0.0",
+  "description": "Full-stack community learning platform with real-time features",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "install-all": "npm install && cd backend && npm install && cd ..",
+    "backend": "cd backend && npm start",
+    "setup": "npm install && cd backend && npm install && cd ..",
+    "test": "echo \"Tests not yet implemented\""
+  },
+  "keywords": [
+    "learning",
+    "tutoring",
+    "community",
+    "help-requests",
+    "reputation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}

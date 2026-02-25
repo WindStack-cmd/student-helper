@@ -1,0 +1,678 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Bounties | StudentsHelper</title>
+    <!-- Fonts for Cyber Editorial theme -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base: #030305;
+            --bg-surface: #0a0a0e;
+            --bg-elevated: #111118;
+
+            --text-primary: #ffffff;
+            --text-secondary: #84849a;
+            --text-tertiary: #4a4a5e;
+
+            --accent-lime: #ccff00;
+            --accent-purple: #7b42fa;
+            --accent-blue: #00e5ff;
+
+            --border-dim: rgba(255, 255, 255, 0.05);
+            --border-bright: rgba(255, 255, 255, 0.15);
+
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --danger-red: #ff3366;
+            --success-green: #ccff00;
+            --warning-amber: #ffaa00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #app {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ----- LEFT PANEL: NAVIGATION TREE ----- */
+        .sidebar-nav {
+            width: 260px;
+            height: 100%;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-dim);
+            display: flex;
+            flex-direction: column;
+            z-index: 20;
+        }
+
+        .brand-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--text-primary);
+            color: var(--bg-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .brand-header:hover .brand-icon {
+            transform: scale(1.1) rotate(5deg);
+            background: var(--danger-red);
+        }
+
+        .brand-name {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 32px 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .nav-menu::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb {
+            background: var(--border-dim);
+        }
+
+        .nav-section h4 {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+            padding-left: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 51, 102, 0.05);
+            /* Red tinted for Hunt Mode */
+            color: var(--danger-red);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 20px;
+            width: 3px;
+            background: var(--danger-red);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .nav-item:hover:not(.active) {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .sidebar-footer {
+            padding: 32px;
+            border-top: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .sidebar-footer:hover {
+            background: var(--bg-elevated);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--bg-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--danger-red);
+            border: 1px solid var(--border-dim);
+            font-size: 0.85rem;
+        }
+
+        .user-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .user-name {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+        }
+
+        /* ----- MIDDLE PANEL: WORKSPACE ----- */
+        .workspace {
+            flex: 1;
+            display: flex;
+            background: var(--bg-base);
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .workspace::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .workspace::-webkit-scrollbar-thumb {
+            background: var(--border-dim);
+        }
+
+        /* Background Typography */
+        .ambient-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-display);
+            font-size: 25vw;
+            font-weight: 900;
+            color: rgba(255, 51, 102, 0.015);
+            white-space: nowrap;
+            z-index: 0;
+            pointer-events: none;
+            letter-spacing: -0.05em;
+        }
+
+        .bounty-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 80px 120px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 64px;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 40px;
+        }
+
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .sys-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--danger-red);
+            text-transform: uppercase;
+            border: 1px solid var(--danger-red);
+            padding: 6px 12px;
+            border-radius: 4px;
+            background: rgba(255, 51, 102, 0.05);
+            align-self: flex-start;
+        }
+
+        .sys-title {
+            font-family: var(--font-display);
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 0.9;
+            text-transform: uppercase;
+            letter-spacing: -0.04em;
+            background: linear-gradient(to bottom right, #ffffff, #888888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-hunt {
+            background: var(--danger-red);
+            color: #fff;
+            border: 1px solid var(--danger-red);
+            padding: 12px 24px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-hunt:hover {
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.4);
+            filter: brightness(1.2);
+        }
+
+        /* Requests Grid */
+        .requests-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .request-card {
+            background: rgba(10, 10, 14, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .request-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 4px;
+            width: 100%;
+            background: var(--border-dim);
+            transition: background 0.3s;
+        }
+
+        .request-card:hover {
+            border-color: var(--border-bright);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .request-card:hover::before {
+            background: var(--danger-red);
+        }
+
+        .req-meta-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+        }
+
+        .req-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-dim);
+            color: var(--text-primary);
+        }
+
+        .req-status.pending {
+            color: var(--warning-amber);
+            border-color: rgba(255, 170, 0, 0.3);
+        }
+
+        .req-status.completed {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .req-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .req-desc {
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            flex: 1;
+            /* Pushes content down */
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .req-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 1px dashed var(--border-dim);
+            margin-top: auto;
+        }
+
+        .req-date {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+        }
+
+        .req-btn {
+            background: transparent;
+            color: var(--danger-red);
+            border: 1px solid var(--danger-red);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .req-btn:hover {
+            background: var(--danger-red);
+            color: #fff;
+        }
+
+        .empty-state {
+            grid-column: span 2;
+            padding: 80px;
+            text-align: center;
+            background: var(--bg-surface);
+            border: 1px dashed var(--border-dim);
+            border-radius: 12px;
+            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        @media (max-width: 1100px) {
+            .bounty-container {
+                padding: 48px;
+            }
+
+            .requests-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .empty-state {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar-nav {
+                width: 80px;
+            }
+
+            .brand-name,
+            .nav-item span,
+            .nav-badge,
+            .user-info {
+                display: none;
+            }
+
+            .header-area {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 24px;
+            }
+
+            .sys-title {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-text">BOUNTY_FEED</div>
+
+    <div id="app">
+        <!-- LEFT PANEL: Navigation Tree -->
+        <aside class="sidebar-nav">
+            <a href="dashboard.html" class="brand-header">
+                <div class="brand-icon">
+                    <i data-lucide="terminal" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div class="brand-name">StudentsHelper</div>
+            </a>
+
+            <div class="nav-menu">
+                <div class="nav-section">
+                    <h4>Workspace</h4>
+                    <a href="dashboard.html" class="nav-item">
+                        <i data-lucide="cpu" style="width: 18px; height: 18px;"></i>
+                        <span>Overview</span>
+                    </a>
+                    <a href="community-chat.html" class="nav-item">
+                        <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
+                        <span>Network</span>
+                        <span class="nav-badge">3</span>
+                    </a>
+                    <a href="leaderboard.html" class="nav-item">
+                        <i data-lucide="bar-chart-2" style="width: 18px; height: 18px;"></i>
+                        <span>Ledger</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Operations</h4>
+                    <a href="my-requests.html" class="nav-item">
+                        <i data-lucide="folder-open" style="width: 18px; height: 18px;"></i>
+                        <span>Active Bounties</span>
+                    </a>
+                    <a href="help-others.html" class="nav-item">
+                        <i data-lucide="crosshair" style="width: 18px; height: 18px;"></i>
+                        <span>Hunt Mode</span>
+                    </a>
+                    <a href="view-requests.html" class="nav-item active">
+                        <i data-lucide="list" style="width: 18px; height: 18px;"></i>
+                        <span>Target Feed</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>System</h4>
+                    <a href="profile.html" class="nav-item">
+                        <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                        <span>Identity</span>
+                    </a>
+                    <a href="settings.html" class="nav-item">
+                        <i data-lucide="sliders" style="width: 18px; height: 18px;"></i>
+                        <span>Config</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-footer" onclick="logout()">
+                <div class="user-avatar" id="sidebarAvatar">JD</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebarName">John Doe</div>
+                    <div class="user-role">NODE_LVL_4</div>
+                </div>
+                <i data-lucide="power"
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+            </div>
+        </aside>
+
+        <!-- MIDDLE PANEL: Workspace -->
+        <main class="workspace">
+            <div class="bounty-container">
+
+                <div class="header-area">
+                    <div class="header-content">
+                        <div class="sys-badge">
+                            <i data-lucide="radar" style="width: 14px; height: 14px;"></i> System Scanner
+                        </div>
+                        <h1 class="sys-title">Bounty Feed.</h1>
+                    </div>
+                </div>
+
+                <div class="requests-grid" id="requestsContainer">
+                    <!-- Cards will be dynamically injected here... -->
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        lucide.createIcons();
+
+        function logout() {
+            window.location.href = "login.html";
+        }
+
+        const container = document.getElementById("requestsContainer");
+        const requests = JSON.parse(localStorage.getItem("allRequests")) || [];
+
+        // Reverse the array to show newest first, though let's keep it as is if there's no sorted need
+        if (requests.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i data-lucide="search-x" style="width: 48px; height: 48px; opacity: 0.5;"></i>
+                    <p>[ SYSTEM IDLE - NO TARGETS DETECTED ]</p>
+                </div>
+            `;
+            lucide.createIcons();
+        } else {
+            requests.forEach((req, index) => {
+                const card = document.createElement("div");
+                card.className = "request-card";
+
+                let iconStr = "terminal";
+                if (req.type === "Notes") iconStr = "file-text";
+                if (req.type === "Tech Help") iconStr = "code";
+                if (req.type === "Tutoring") iconStr = "video";
+
+                const isPending = req.status === "Pending" || req.status === "Active" || req.status === "Open";
+                const statusClass = isPending ? "pending" : "completed";
+                const statusIcon = isPending ? "clock" : "check-circle";
+
+                card.innerHTML = `
+                    <div class="req-meta-top">
+                        <span style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="${iconStr}" style="width: 14px; height: 14px; color: var(--text-tertiary);"></i>
+                            ${req.type || "SYS_REQ"}
+                        </span>
+                        <span class="req-status ${statusClass}">
+                            <i data-lucide="${statusIcon}" style="width: 12px; height: 12px;"></i>
+                            ${req.status}
+                        </span>
+                    </div>
+                    <h3 class="req-title">${req.title}</h3>
+                    <p class="req-desc">${req.description || "No description provided format detected."}</p>
+                    <div class="req-footer">
+                        <span class="req-date"><i data-lucide="calendar" style="width: 12px; height: 12px; vertical-align:-2px; margin-right:4px;"></i> ${req.date || "UNKNOWN"}</span>
+                        ${isPending ? `<button class="req-btn" onclick="openHelpRequest(${index})">Access Target <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i></button>` : `<span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-tertiary); text-transform:uppercase;">[ BOUNTY CLOSED ]</span>`}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function openHelpRequest(index) {
+            localStorage.setItem("selectedRequestIndex", index);
+            window.location.href = "help-request.html";
+        }
+    </script>
+</body>
+
+</html>

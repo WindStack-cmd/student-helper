@@ -1,0 +1,529 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudentsHelper | Terminal</title>
+    <!-- Outfit for display, JetBrains for data, Inter for body -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base: #030305;
+            --bg-surface: #0a0a0e;
+            --bg-elevated: #111118;
+
+            --text-primary: #ffffff;
+            --text-secondary: #84849a;
+            --text-tertiary: #4a4a5e;
+
+            --accent-lime: #ccff00;
+            --accent-purple: #7b42fa;
+            --accent-blue: #00e5ff;
+
+            --border-dim: rgba(255, 255, 255, 0.05);
+            --border-bright: rgba(255, 255, 255, 0.15);
+
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            position: relative;
+        }
+
+        /* Ambient background typography */
+        .ambient-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-display);
+            font-size: 25vw;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.01);
+            white-space: nowrap;
+            z-index: 0;
+            pointer-events: none;
+            letter-spacing: -0.05em;
+        }
+
+        #app {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ----- LEFT PERSISTENT SIDEBAR ----- */
+        .sidebar {
+            width: 80px;
+            height: 100%;
+            border-right: 1px solid var(--border-dim);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 0;
+            background: rgba(3, 3, 5, 0.8);
+            backdrop-filter: blur(20px);
+            z-index: 20;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--text-primary);
+            color: var(--bg-base);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: auto;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+        }
+
+        .brand-icon:hover {
+            transform: scale(1.1) rotate(5deg);
+            background: var(--accent-lime);
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .nav-item {
+            color: var(--text-tertiary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            color: var(--text-primary);
+            background: var(--border-dim);
+        }
+
+        .nav-item.active {
+            color: var(--accent-lime);
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ----- MAIN CONTENT ----- */
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 500px 1fr;
+            height: 100%;
+        }
+
+        /* Left Side: Editorial Typography & Actions */
+        .editorial-hero {
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-dim);
+            padding: 64px 48px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            justify-content: center;
+        }
+
+        .editorial-hero::before {
+            content: '';
+            position: absolute;
+            top: 20%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(123, 66, 250, 0.1) 0%, transparent 60%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .system-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent-lime);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 24px;
+            padding: 8px 16px;
+            border: 1px solid var(--border-bright);
+            border-radius: 100px;
+            background: rgba(204, 255, 0, 0.05);
+            align-self: flex-start;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .main-title {
+            font-family: var(--font-display);
+            font-size: 5.5rem;
+            line-height: 0.9;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.04em;
+            margin-bottom: 32px;
+            color: var(--text-primary);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .main-title span {
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .hero-desc {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 48px;
+            max-width: 400px;
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.1s;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .auth-actions {
+            display: flex;
+            gap: 16px;
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .btn-editorial {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 16px 24px;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+            border: 1px solid var(--text-primary);
+            background: transparent;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .btn-editorial.primary {
+            background: var(--text-primary);
+            color: var(--bg-base);
+        }
+
+        .btn-editorial:hover {
+            transform: translateY(-2px);
+            box-shadow: 4px 4px 0 var(--border-dim);
+        }
+
+        .btn-editorial.primary:hover {
+            background: var(--accent-lime);
+            border-color: var(--accent-lime);
+            box-shadow: 4px 4px 0 rgba(204, 255, 0, 0.2);
+        }
+
+        /* Right Side: Visual Data / Network Activity */
+        .live-canvas {
+            position: relative;
+            padding: 48px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* A rough grid pattern for the whole right side */
+        .live-canvas::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-size: 32px 32px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Stacking cards inside the canvas */
+        .data-stack {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            max-width: 800px;
+            margin: auto 0;
+        }
+
+        /* Data cards replacing standard feature boxes */
+        .metric-card {
+            background: rgba(17, 17, 24, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-bright);
+            padding: 32px;
+            border-radius: 16px;
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            align-items: center;
+            gap: 32px;
+            animation: slideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateX(40px);
+        }
+
+        .metric-card:nth-child(2) {
+            animation-delay: 0.1s;
+            border-color: rgba(0, 229, 255, 0.3);
+        }
+
+        .metric-card:nth-child(3) {
+            animation-delay: 0.2s;
+            border-color: rgba(123, 66, 250, 0.3);
+        }
+
+        .m-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            background: var(--bg-surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-lime);
+            border: 1px solid var(--border-bright);
+        }
+
+        .metric-card:nth-child(2) .m-icon {
+            color: var(--accent-blue);
+        }
+
+        .metric-card:nth-child(3) .m-icon {
+            color: var(--accent-purple);
+        }
+
+        .m-info h3 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .m-info p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            max-width: 400px;
+        }
+
+        .m-data {
+            text-align: right;
+        }
+
+        .m-data .big-num {
+            font-family: var(--font-mono);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .m-data .sub-num {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent-lime);
+            margin-top: 8px;
+        }
+
+        .metric-card:nth-child(2) .sub-num {
+            color: var(--accent-blue);
+        }
+
+        .metric-card:nth-child(3) .sub-num {
+            color: var(--accent-purple);
+        }
+
+        /* Animations */
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-text">SYSTEM.ON</div>
+
+    <div id="app">
+        <!-- Slim Persistent Sidebar -->
+        <aside class="sidebar">
+            <a href="index.html" class="brand-icon" title="StudentsHelper">
+                <i data-lucide="terminal" style="width: 20px; height: 20px;"></i>
+            </a>
+
+            <div class="sidebar-nav">
+                <a href="index.html" class="nav-item active" title="Terminal">
+                    <i data-lucide="monitor"></i>
+                </a>
+                <a href="pages/dashboard.html" class="nav-item" title="Dashboard">
+                    <i data-lucide="cpu"></i>
+                </a>
+                <a href="pages/leaderboard.html" class="nav-item" title="Leaderboard">
+                    <i data-lucide="bar-chart-2"></i>
+                </a>
+                <a href="pages/community-chat.html" class="nav-item" title="Network">
+                    <i data-lucide="radio"></i>
+                </a>
+            </div>
+
+            <div class="sidebar-bottom">
+                <a href="pages/about.html" class="nav-item" title="About System">
+                    <i data-lucide="book-open"></i>
+                </a>
+                <a href="pages/contact.html" class="nav-item" title="System Log">
+                    <i data-lucide="help-circle"></i>
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-container">
+            <!-- LEFT: Editorial Typography Block -->
+            <section class="editorial-hero">
+                <div class="system-badge">
+                    <i data-lucide="activity" style="width: 14px; height: 14px;"></i>
+                    Nodes Active: 12,402
+                </div>
+
+                <h1 class="main-title">Solve<br><span>Any Problem</span><br>Fast</h1>
+
+                <p class="hero-desc">
+                    Access a localized network of academic peers. Cut through the noise and get direct answers, code
+                    reviews, and project help instantly without algorithmic friction.
+                </p>
+
+                <div class="auth-actions">
+                    <a href="pages/register.html" class="btn-editorial primary">
+                        Init Session <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                    </a>
+                    <a href="pages/login.html" class="btn-editorial">
+                        Terminal Auth
+                    </a>
+                </div>
+            </section>
+
+            <!-- RIGHT: Data Grid / Vibe -->
+            <section class="live-canvas">
+                <div class="data-stack">
+
+                    <div class="metric-card">
+                        <div class="m-icon"><i data-lucide="zap" style="width: 32px; height: 32px;"></i></div>
+                        <div class="m-info">
+                            <h3>Lightning Routing</h3>
+                            <p>Requests broadcast immediately to qualified peers in your local network layer.</p>
+                        </div>
+                        <div class="m-data">
+                            <div class="big-num">2<span
+                                    style="font-size: 1rem; color: var(--text-secondary);">min</span></div>
+                            <div class="sub-num">AVG Match Time</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="m-icon"><i data-lucide="shield-check" style="width: 32px; height: 32px;"></i></div>
+                        <div class="m-info">
+                            <h3>Verified Nodes</h3>
+                            <p>All endpoints are authenticated using rigorous university credentials and peer ledgers.
+                            </p>
+                        </div>
+                        <div class="m-data">
+                            <div class="big-num">100<span
+                                    style="font-size: 1rem; color: var(--text-secondary);">%</span></div>
+                            <div class="sub-num">Auth Enforced</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="m-icon"><i data-lucide="trophy" style="width: 32px; height: 32px;"></i></div>
+                        <div class="m-info">
+                            <h3>Reputation Ledger</h3>
+                            <p>Contribute cycles to the network and earn immutable ranking in the global namespace.</p>
+                        </div>
+                        <div class="m-data">
+                            <div class="big-num">50<span style="font-size: 1rem; color: var(--text-secondary);">K</span>
+                            </div>
+                            <div class="sub-num">Active Bounties</div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETWORK LEDGER | StudentsHelper</title>
+    <!-- Fonts for Cyber Editorial theme -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base: #030305;
+            --bg-surface: #0a0a0e;
+            --bg-elevated: #111118;
+
+            --text-primary: #ffffff;
+            --text-secondary: #84849a;
+            --text-tertiary: #4a4a5e;
+
+            --accent-lime: #ccff00;
+            --accent-purple: #7b42fa;
+            --accent-blue: #00e5ff;
+
+            --border-dim: rgba(255, 255, 255, 0.05);
+            --border-bright: rgba(255, 255, 255, 0.15);
+
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --danger-red: #ff3366;
+            --success-green: #ccff00;
+            --warning-amber: #ffaa00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #app {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ----- LEFT PANEL: NAVIGATION TREE ----- */
+        .sidebar-nav {
+            width: 260px;
+            height: 100%;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-dim);
+            display: flex;
+            flex-direction: column;
+            z-index: 20;
+        }
+
+        .brand-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--text-primary);
+            color: var(--bg-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .brand-header:hover .brand-icon {
+            transform: scale(1.1) rotate(5deg);
+            background: var(--accent-lime);
+        }
+
+        .brand-name {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 32px 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .nav-menu::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb {
+            background: var(--border-dim);
+        }
+
+        .nav-section h4 {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+            padding-left: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-item.active {
+            background: rgba(0, 229, 255, 0.05);
+            /* Blue tinted for Ledger */
+            color: var(--accent-blue);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 20px;
+            width: 3px;
+            background: var(--accent-blue);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .nav-item:hover:not(.active) {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--text-primary);
+            color: var(--bg-base);
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .sidebar-footer {
+            padding: 32px;
+            border-top: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .sidebar-footer:hover {
+            background: var(--bg-elevated);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--bg-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--accent-blue);
+            border: 1px solid var(--border-dim);
+            font-size: 0.85rem;
+        }
+
+        .user-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .user-name {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+        }
+
+        /* ----- MIDDLE PANEL: WORKSPACE ----- */
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            background: var(--bg-base);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Background Typography */
+        .ambient-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-display);
+            font-size: 30vw;
+            font-weight: 900;
+            color: rgba(0, 229, 255, 0.01);
+            white-space: nowrap;
+            z-index: 0;
+            pointer-events: none;
+            letter-spacing: -0.05em;
+        }
+
+        /* LEFT PANEL: The Hero/Podium */
+        .board-hero {
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-dim);
+            padding: 64px 48px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        .board-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(50%, -50%);
+        }
+
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 5rem;
+            line-height: 0.9;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.04em;
+            margin-bottom: 24px;
+            background: linear-gradient(to bottom right, #fff, var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .time-filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 64px;
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid var(--border-dim);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--text-primary);
+            color: var(--bg-base);
+            border-color: var(--text-primary);
+        }
+
+        /* Top Player Spotlight */
+        .spotlight-card {
+            margin-top: auto;
+            background: rgba(17, 17, 24, 0.8);
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            padding: 32px;
+            position: relative;
+            backdrop-filter: blur(16px);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .spotlight-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background: var(--accent-blue);
+        }
+
+        .spotlight-badge {
+            position: absolute;
+            top: -12px;
+            right: 24px;
+            background: var(--accent-blue);
+            color: var(--bg-base);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .spotlight-user {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .spotlight-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-bright);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--accent-blue);
+        }
+
+        .spotlight-info h3 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .spotlight-info p {
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .spotlight-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            border-top: 1px solid var(--border-dim);
+            padding-top: 24px;
+        }
+
+        .stat-block .label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 0.70rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .stat-block .val {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-block .val.highlight {
+            color: var(--accent-blue);
+        }
+
+        /* RIGHT PANEL: The List */
+        .board-list {
+            padding: 48px;
+            overflow-y: auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .board-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .board-list::-webkit-scrollbar-thumb {
+            background: var(--border-dim);
+        }
+
+        /* Current user sticky banner */
+        .user-status-banner {
+            position: sticky;
+            top: 0;
+            background: rgba(17, 17, 24, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            z-index: 10;
+            animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .user-status-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .my-rank {
+            background: transparent;
+            border: 1px solid var(--accent-lime);
+            color: var(--accent-lime);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 1.25rem;
+            padding: 12px 16px;
+            border-radius: 8px;
+        }
+
+        .user-status-text h4 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .user-status-text p {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .btn-hunt {
+            background: transparent;
+            border: 1px solid var(--accent-lime);
+            color: var(--accent-lime);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-hunt:hover {
+            background: var(--accent-lime);
+            color: var(--bg-base);
+            box-shadow: 0 0 15px rgba(204, 255, 0, 0.4);
+        }
+
+        /* The Table/List rows */
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .log-table th {
+            text-align: left;
+            padding: 16px 24px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-dim);
+        }
+
+        .log-table td {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-dim);
+            vertical-align: middle;
+            transition: background 0.2s;
+        }
+
+        .ranking-row {
+            opacity: 0;
+            transform: translateX(20px);
+            animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .ranking-row:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .ranking-row:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .ranking-row:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .ranking-row:nth-child(4) {
+            animation-delay: 0.25s;
+        }
+
+        .ranking-row:nth-child(5) {
+            animation-delay: 0.3s;
+        }
+
+        .ranking-row:nth-child(6) {
+            animation-delay: 0.35s;
+        }
+
+        .ranking-row:hover td {
+            background: rgba(255, 255, 255, 0.02);
+            border-color: var(--border-bright);
+        }
+
+        .row-rank {
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-tertiary);
+        }
+
+        .ranking-row:nth-child(1) .row-rank {
+            color: var(--accent-lime);
+        }
+
+        .ranking-row:nth-child(2) .row-rank {
+            color: var(--text-primary);
+        }
+
+        .ranking-row:nth-child(3) .row-rank {
+            color: #cd7f32;
+        }
+
+        .row-user {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .row-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--bg-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-dim);
+            color: var(--text-secondary);
+        }
+
+        .row-name {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--text-primary);
+        }
+
+        .row-rep {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--accent-blue);
+            text-align: right;
+            font-size: 1.1rem;
+        }
+
+        .row-rep span {
+            font-size: 0.70rem;
+            color: var(--text-tertiary);
+            margin-left: 4px;
+        }
+
+        .row-badges {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .b-icon {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: 1px dashed var(--border-dim);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .b-icon:hover {
+            color: var(--text-primary);
+            border-color: var(--text-primary);
+            border-style: solid;
+        }
+
+        .btn-load-more {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--border-dim);
+            color: var(--text-secondary);
+            padding: 16px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 32px;
+        }
+
+        .btn-load-more:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        /* Animations */
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .board-hero {
+                border-right: none;
+                border-bottom: 1px solid var(--border-dim);
+                padding: 48px;
+            }
+
+            .board-list {
+                padding: 48px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar-nav {
+                width: 80px;
+            }
+
+            .brand-name,
+            .nav-item span,
+            .nav-badge,
+            .user-info {
+                display: none;
+            }
+
+            .time-filters {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-text">LEDGER</div>
+
+    <div id="app">
+        <!-- LEFT PANEL: Navigation Tree -->
+        <aside class="sidebar-nav">
+            <a href="../index.html" class="brand-header">
+                <div class="brand-icon">
+                    <i data-lucide="terminal" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div class="brand-name">StudentsHelper</div>
+            </a>
+
+            <div class="nav-menu">
+                <div class="nav-section">
+                    <h4>Workspace</h4>
+                    <a href="dashboard.html" class="nav-item">
+                        <i data-lucide="cpu" style="width: 18px; height: 18px;"></i>
+                        <span>Overview</span>
+                    </a>
+                    <a href="community-chat.html" class="nav-item">
+                        <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
+                        <span>Network</span>
+                        <span class="nav-badge">3</span>
+                    </a>
+                    <a href="leaderboard.html" class="nav-item active">
+                        <i data-lucide="bar-chart-2" style="width: 18px; height: 18px;"></i>
+                        <span>Ledger</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Operations</h4>
+                    <a href="my-requests.html" class="nav-item">
+                        <i data-lucide="folder-open" style="width: 18px; height: 18px;"></i>
+                        <span>Active Bounties</span>
+                    </a>
+                    <a href="help-others.html" class="nav-item">
+                        <i data-lucide="crosshair" style="width: 18px; height: 18px;"></i>
+                        <span>Hunt Mode</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>System</h4>
+                    <a href="profile.html" class="nav-item">
+                        <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                        <span>Identity</span>
+                    </a>
+                    <a href="settings.html" class="nav-item">
+                        <i data-lucide="sliders" style="width: 18px; height: 18px;"></i>
+                        <span>Config</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-footer" onclick="logout()">
+                <div class="user-avatar" id="sidebarAvatar">JD</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebarName">John Doe</div>
+                    <div class="user-role">NODE_LVL_4</div>
+                </div>
+                <i data-lucide="power"
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+            </div>
+        </aside>
+
+        <!-- MIDDLE PANEL: Split Architecture -->
+        <main class="workspace">
+
+            <!-- LEFT: Hero & Spotlight -->
+            <div class="board-hero">
+                <h1 class="page-title">Sys<br>Ledger</h1>
+
+                <div class="time-filters">
+                    <button class="filter-btn active">Genesis</button>
+                    <button class="filter-btn">Cycle 03</button>
+                    <button class="filter-btn">Cycle 04</button>
+                </div>
+
+                <!-- Spotlight -> The current #1 -->
+                <div class="spotlight-card">
+                    <div class="spotlight-badge">APEX NODE</div>
+                    <div class="spotlight-user">
+                        <div class="spotlight-avatar"><i data-lucide="zap"></i></div>
+                        <div class="spotlight-info">
+                            <h3>John Doe</h3>
+                            <p>Computer Science '24</p>
+                        </div>
+                    </div>
+                    <div class="spotlight-stats">
+                        <div class="stat-block">
+                            <span class="label">Reputation</span>
+                            <span class="val highlight">3,250</span>
+                        </div>
+                        <div class="stat-block">
+                            <span class="label">Bounties Claimed</span>
+                            <span class="val">128</span>
+                        </div>
+                        <div class="stat-block" style="grid-column: span 2; margin-top: 12px;">
+                            <span class="label">Core Directives</span>
+                            <span
+                                style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700;">REACT</span>
+                            <span
+                                style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700; margin-left: 4px;">SYS_ARCH</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: The Rankings List -->
+            <div class="board-list">
+
+                <!-- Contextual Banner: Where the user stands -->
+                <div class="user-status-banner">
+                    <div class="user-status-left">
+                        <div class="my-rank">#1245</div>
+                        <div class="user-status-text">
+                            <h4>Target Acquired</h4>
+                            <p>Top 5% bracket. Need 120 REP to compile next node tier.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn-hunt" onclick="location.href='help-others.html'">
+                            Enter Hunt Mode <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Node ID</th>
+                            <th style="text-align: right;">Reputation</th>
+                            <th style="text-align: right;">Patches</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Row 1 -->
+                        <tr class="ranking-row">
+                            <td class="row-rank">01</td>
+                            <td class="row-user">
+                                <div class="row-avatar"><i data-lucide="star"></i></div>
+                                <div class="row-name">John Doe</div>
+                            </td>
+                            <td class="row-rep">3250 <span>REP</span></td>
+                            <td>
+                                <div class="row-badges">
+                                    <div class="b-icon" title="Bug Hunter"><i data-lucide="bug"
+                                            style="width: 14px; height: 14px;"></i></div>
+                                    <div class="b-icon" title="Fast Responder"><i data-lucide="zap"
+                                            style="width: 14px; height: 14px;"></i></div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Row 2 -->
+                        <tr class="ranking-row">
+                            <td class="row-rank">02</td>
+                            <td class="row-user">
+                                <div class="row-avatar">SJ</div>
+                                <div class="row-name">Sarah Johnson</div>
+                            </td>
+                            <td class="row-rep">2450 <span>REP</span></td>
+                            <td>
+                                <div class="row-badges">
+                                    <div class="b-icon" title="Code Reviewer"><i data-lucide="eye"
+                                            style="width: 14px; height: 14px;"></i></div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Row 3 -->
+                        <tr class="ranking-row">
+                            <td class="row-rank">03</td>
+                            <td class="row-user">
+                                <div class="row-avatar">EW</div>
+                                <div class="row-name">Emma Wilson</div>
+                            </td>
+                            <td class="row-rep">2120 <span>REP</span></td>
+                            <td>
+                                <div class="row-badges">
+                                    <div class="b-icon" title="Fast Responder"><i data-lucide="zap"
+                                            style="width: 14px; height: 14px;"></i></div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Row 4 -->
+                        <tr class="ranking-row">
+                            <td class="row-rank">04</td>
+                            <td class="row-user">
+                                <div class="row-avatar">MC</div>
+                                <div class="row-name">Marcus Chen</div>
+                            </td>
+                            <td class="row-rep">1890 <span>REP</span></td>
+                            <td>
+                                <div class="row-badges">
+                                    <div class="b-icon" title="Helpful"><i data-lucide="heart"
+                                            style="width: 14px; height: 14px;"></i></div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Row 5 -->
+                        <tr class="ranking-row">
+                            <td class="row-rank">05</td>
+                            <td class="row-user">
+                                <div class="row-avatar">DS</div>
+                                <div class="row-name">David Silva</div>
+                            </td>
+                            <td class="row-rep">1650 <span>REP</span></td>
+                            <td>
+                                <div class="row-badges">
+                                    <div class="b-icon" title="Top Answer"><i data-lucide="arrow-up"
+                                            style="width: 14px; height: 14px;"></i></div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Row 6 -->
+                        <tr class="ranking-row">
+                            <td class="row-rank">06</td>
+                            <td class="row-user">
+                                <div class="row-avatar">AR</div>
+                                <div class="row-name">Alex Rivera</div>
+                            </td>
+                            <td class="row-rep">1420 <span>REP</span></td>
+                            <td>
+                                <div class="row-badges"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <button class="btn-load-more">Scan More Nodes...</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function logout() {
+            window.location.href = "login.html";
+        }
+    </script>
+</body>
+
+</html>
