@@ -843,22 +843,48 @@
         }
 
         // Stub form submission for layout preview
-        document.getElementById('registerForm').addEventListener('submit', function (e) {
-            e.preventDefault();
-            const btn = document.getElementById('registerBtn');
-            const msg = document.getElementById('messageContainer');
+    document.getElementById("registerForm").addEventListener("submit", async function(e){
 
-            btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width: 18px; animation: spin 1s linear infinite;"></i> Creating Record...';
-            lucide.createIcons();
+e.preventDefault()
 
-            setTimeout(() => {
-                msg.className = 'message success';
-                msg.innerHTML = '<i data-lucide="check-circle"></i> NODE REGISTERED';
-                lucide.createIcons();
-                msg.style.display = 'flex';
-                setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
-            }, 1000);
-        });
+const firstName = document.getElementById("firstName").value
+const lastName = document.getElementById("lastName").value
+const email = document.getElementById("email").value
+const password = document.getElementById("password").value
+
+const name = firstName + " " + lastName
+
+const response = await fetch("http://127.0.0.1:5000/register",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+name:name,
+email:email,
+password:password
+})
+
+})
+
+const data = await response.json()
+
+const msg = document.getElementById("messageContainer")
+
+msg.style.display = "flex"
+msg.className = "message success"
+msg.innerHTML = data.message
+
+if(data.message === "User registered successfully"){
+setTimeout(()=>{
+window.location.href="login.html"
+},1000)
+}
+
+})
     </script>
 </body>
 

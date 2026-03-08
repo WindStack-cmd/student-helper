@@ -851,76 +851,8 @@
                         <div class="tab">My Data</div>
                         <div class="tab">Archived</div>
                     </div>
-
-                    <div class="data-list">
-                        <!-- Item 1 -->
-                        <div class="data-row">
-                            <div class="row-main">
-                                <div class="row-icon"
-                                    style="color: var(--accent-lime); border-color: rgba(204,255,0,0.3);">
-                                    <i data-lucide="code" style="width: 20px; height: 20px;"></i>
-                                </div>
-                                <div>
-                                    <div class="row-title">Need help debugging React useEffect</div>
-                                    <div class="row-desc">ID.5092 • CompSci • Web.Dev</div>
-                                </div>
-                            </div>
-                            <div class="row-status-col">
-                                <span class="status-badge status-active">
-                                    <span class="dot"
-                                        style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-                                    Linked
-                                </span>
-                            </div>
-                            <div class="row-date">Connected to: Sarah K.</div>
-                            <button class="btn-icon" style="border: none; background: transparent;"><i
-                                    data-lucide="arrow-right"></i></button>
-                        </div>
-
-                        <!-- Item 2 -->
-                        <div class="data-row">
-                            <div class="row-main">
-                                <div class="row-icon"
-                                    style="color: var(--warning-amber); border-color: rgba(255,170,0,0.3);">
-                                    <i data-lucide="book-open" style="width: 20px; height: 20px;"></i>
-                                </div>
-                                <div>
-                                    <div class="row-title">Calculus III Integration Mapping</div>
-                                    <div class="row-desc">ID.1942 • Mathematics • Exam Prep</div>
-                                </div>
-                            </div>
-                            <div class="row-status-col">
-                                <span class="status-badge status-pending">
-                                    <span class="dot"
-                                        style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-                                    Awaiting Peer
-                                </span>
-                            </div>
-                            <div class="row-date">Broadcasted -2hrs</div>
-                            <button class="btn-icon" style="border: none; background: transparent;"><i
-                                    data-lucide="arrow-right"></i></button>
-                        </div>
-
-                        <!-- Item 3 -->
-                        <div class="data-row">
-                            <div class="row-main">
-                                <div class="row-icon" style="color: var(--text-secondary);">
-                                    <i data-lucide="check-square" style="width: 20px; height: 20px;"></i>
-                                </div>
-                                <div>
-                                    <div class="row-title">Review History Protocol Draft</div>
-                                    <div class="row-desc">ID.9941 • Humanities • Analysis</div>
-                                </div>
-                            </div>
-                            <div class="row-status-col">
-                                <span class="status-badge status-done">
-                                    <i data-lucide="check" style="width: 12px; height: 12px;"></i>
-                                    Closed
-                                </span>
-                            </div>
-                            <div class="row-date">T-24hrs</div>
-                            <button class="btn-icon" style="border: none; background: transparent;"><i
-                                    data-lucide="arrow-right"></i></button>
+                <div class="data-list" id="requestsContainer">
+                  
                         </div>
                     </div>
                 </div>
@@ -978,9 +910,63 @@
         </aside>
     </div>
 
-    <script>
-        lucide.createIcons();
-    </script>
+ <script>
+
+lucide.createIcons();
+
+async function loadRequests(){
+
+const response = await fetch("http://127.0.0.1:5000/get_requests")
+
+const data = await response.json()
+
+const container = document.getElementById("requestsContainer")
+
+container.innerHTML=""
+
+data.forEach(req => {
+
+container.innerHTML += `
+
+<div class="data-row">
+
+<div class="row-main">
+
+<div class="row-icon">
+<i data-lucide="help-circle"></i>
+</div>
+
+<div>
+<div class="row-title">${req.title}</div>
+<div class="row-desc">Posted by ${req.email}</div>
+</div>
+
+</div>
+
+<div class="row-status-col">
+<span class="status-badge status-active">
+LIVE
+</span>
+</div>
+
+<div class="row-date">
+New Request
+</div>
+
+</div>
+
+`
+
+})
+
+lucide.createIcons()
+
+}
+
+loadRequests()
+
+</script>
+
 </body>
 
 </html>
