@@ -715,6 +715,11 @@ if(data.message === "Login successful"){
 msg.className="message success"
 msg.innerHTML="ACCESS GRANTED"
 
+
+// SAVE USER EMAIL
+localStorage.setItem("userEmail", email)
+
+
 setTimeout(()=>{
 window.location.href="dashboard.html"
 },1000)

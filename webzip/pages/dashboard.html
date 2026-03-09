@@ -928,7 +928,7 @@ data.forEach(req => {
 
 container.innerHTML += `
 
-<div class="data-row">
+<div class="data-row" onclick="openRequest(1)">
 
 <div class="row-main">
 
@@ -967,6 +967,15 @@ loadRequests()
 
 </script>
 
+<script>
+
+function openRequest(id){
+
+window.location.href="request-details.html?id="+id
+
+}
+
+</script>
 </body>
 
 </html>

@@ -579,55 +579,46 @@
     </div>
 
     <script src="js/script.js"></script>
-    <script>
-        lucide.createIcons();
+   <script>
 
-        function logout() {
-            window.location.href = "login.html";
-        }
+async function submitHelpRequest(event){
 
-        function submitHelpRequest(event) {
-            event.preventDefault();
+event.preventDefault()
 
-            const btn = document.getElementById('submitBtn');
-            const originalText = btn.innerHTML;
+const btn = document.getElementById("submitBtn")
 
-            // Show loading state
-            btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width: 16px; animation: spin 1s linear infinite;"></i> Publishing...';
-            btn.style.opacity = '0.8';
-            btn.style.pointerEvents = 'none';
-            lucide.createIcons();
+btn.innerHTML="Publishing..."
 
-            setTimeout(() => {
-                let title = document.getElementById("requestTitle").value;
-                let helpType = document.getElementById("helpType").value;
-                let description = document.getElementById("requestDesc").value;
+const title = document.getElementById("requestTitle").value
+const description = document.getElementById("requestDesc").value
 
-                // Update dashboard data
-                let dashboardData = JSON.parse(localStorage.getItem("dashboardData")) || { requestsMade: 0, pendingRequests: 0 };
-                dashboardData.requestsMade = (dashboardData.requestsMade || 0) + 1;
-                dashboardData.pendingRequests = (dashboardData.pendingRequests || 0) + 1;
-                localStorage.setItem("dashboardData", JSON.stringify(dashboardData));
+const email = localStorage.getItem("userEmail")
 
-                // Save request to localStorage
-                let requests = JSON.parse(localStorage.getItem("allRequests")) || [];
+const response = await fetch("http://127.0.0.1:5000/post_request",{
 
-                const newRequest = {
-                    title: title,
-                    type: helpType,
-                    description: description,
-                    status: "Pending",
-                    date: new Date().toLocaleDateString()
-                };
+method:"POST",
 
-                requests.push(newRequest);
-                localStorage.setItem("allRequests", JSON.stringify(requests));
+headers:{
+"Content-Type":"application/json"
+},
 
-                // Redirect
-                window.location.href = "my-requests.html";
-            }, 800);
-        }
-    </script>
+body:JSON.stringify({
+title:title,
+description:description,
+email:email
+})
+
+})
+
+const data = await response.json()
+
+alert(data.message)
+
+window.location.href="dashboard.html"
+
+}
+
+</script>
 
 </body>
 

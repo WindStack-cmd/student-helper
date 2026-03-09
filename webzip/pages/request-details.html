@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Request Details | Student Helper</title>
+
+<style>
+
+body{
+    background:#0a0a0a;
+    color:white;
+    font-family:Arial, Helvetica, sans-serif;
+    padding:40px;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+}
+
+.card{
+    background:#111;
+    padding:25px;
+    margin-bottom:25px;
+    border-radius:10px;
+}
+
+h1{
+    margin-bottom:10px;
+}
+
+textarea{
+    width:100%;
+    height:120px;
+    padding:10px;
+    background:#1a1a1a;
+    border:1px solid #333;
+    color:white;
+}
+
+button{
+    margin-top:10px;
+    padding:10px 20px;
+    background:#ccff00;
+    border:none;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.answer{
+    border-top:1px solid #333;
+    padding:10px 0;
+}
+
+small{
+    color:#aaa;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Request Details</h1>
+
+<!-- Request Info -->
+<div class="card">
+
+<h2 id="requestTitle">Loading...</h2>
+
+<p id="requestDescription"></p>
+
+</div>
+
+
+<!-- Answers Section -->
+<div class="card">
+
+<h3>Answers</h3>
+
+<div id="answersList"></div>
+
+</div>
+
+
+<!-- Post Answer -->
+<div class="card">
+
+<h3>Post Answer</h3>
+
+<textarea id="answerText" placeholder="Write your answer here..."></textarea>
+
+<button onclick="postAnswer()">Submit Answer</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+const params = new URLSearchParams(window.location.search)
+const requestId = params.get("id")
+
+
+
+async function loadRequest(){
+
+const response = await fetch("http://127.0.0.1:5000/get_requests")
+
+const data = await response.json()
+
+const request = data.find(r => r.id == requestId)
+
+if(request){
+
+document.getElementById("requestTitle").innerText = request.title
+
+document.getElementById("requestDescription").innerText = request.description
+
+}
+
+}
+
+
+
+async function loadAnswers(){
+
+const response = await fetch(`http://127.0.0.1:5000/get_answers/${requestId}`)
+
+const answers = await response.json()
+
+const container = document.getElementById("answersList")
+
+container.innerHTML=""
+
+answers.forEach(ans=>{
+
+const div = document.createElement("div")
+
+div.className="answer"
+
+div.innerHTML=`
+
+<p>${ans.answer}</p>
+
+<small>By ${ans.email}</small>
+
+`
+
+container.appendChild(div)
+
+})
+
+}
+
+
+
+async function postAnswer(){
+
+const answerText = document.getElementById("answerText").value
+
+if(answerText.trim()==""){
+
+alert("Write an answer first")
+
+return
+
+}
+
+const response = await fetch("http://127.0.0.1:5000/post_answer",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+request_id:requestId,
+
+email:"test@gmail.com",
+
+answer:answerText
+
+})
+
+})
+
+const data = await response.json()
+
+alert(data.message)
+
+document.getElementById("answerText").value=""
+
+loadAnswers()
+
+}
+
+
+
+loadRequest()
+
+loadAnswers()
+
+</script>
+
+
+</body>
+</html>
