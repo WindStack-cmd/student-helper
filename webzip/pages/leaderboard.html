@@ -989,13 +989,46 @@
         </main>
     </div>
 
-    <script>
-        lucide.createIcons();
+    <div class="workspace-panel">
 
-        function logout() {
-            window.location.href = "login.html";
-        }
-    </script>
+<div id="leaderboardContainer"></div>
+
+</div>
+   <script>
+
+async function loadLeaderboard(){
+
+const response = await fetch("http://127.0.0.1:5000/leaderboard")
+
+const data = await response.json()
+
+const container = document.getElementById("leaderboardContainer")
+
+container.innerHTML=""
+
+data.forEach((user,index)=>{
+
+container.innerHTML+=`
+
+<div class="leader-row">
+
+<span>#${index+1}</span>
+
+<span>${user.name}</span>
+
+<span>${user.points} pts</span>
+
+</div>
+
+`
+
+})
+
+}
+
+loadLeaderboard()
+
+</script>
 </body>
 
 </html>

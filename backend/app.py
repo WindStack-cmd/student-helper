@@ -198,6 +198,59 @@ def get_answers(request_id):
 
     return jsonify(answers)
 
+@app.route("/leaderboard", methods=["GET"])
+def leaderboard():
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute(
+        "SELECT email, points FROM users ORDER BY points DESC LIMIT 10"
+    )
+
+    users = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(users)
+
+
+@app.route("/accept_answer", methods=["POST"])
+def accept_answer():
+
+    data = request.json
+    answer_id = data["answer_id"]
+    request_id = data["request_id"]
+    email = data["email"]
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # mark answer accepted
+    cursor.execute(
+        "UPDATE answers SET accepted = TRUE WHERE id = %s",
+        (answer_id,)
+    )
+
+    # mark request solved
+    cursor.execute(
+        "UPDATE requests SET solved = TRUE WHERE id = %s",
+        (request_id,)
+    )
+
+    # give points to helper
+    cursor.execute(
+        "UPDATE users SET points = points + 20 WHERE email = %s",
+        (email,)
+    )
+
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Answer accepted"})
 # -----------------------------
 # RUN SERVER
 # -----------------------------

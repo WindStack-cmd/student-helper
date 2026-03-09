@@ -59,118 +59,125 @@ small{
 }
 
 </style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request Details</title>
+
+<link rel="stylesheet" href="../css/style.css">
+
 </head>
 
 <body>
 
-<div class="container">
-
 <h1>Request Details</h1>
 
-<!-- Request Info -->
-<div class="card">
+<div id="requestContainer"></div>
 
-<h2 id="requestTitle">Loading...</h2>
+<br>
 
-<p id="requestDescription"></p>
+<h2>Answers</h2>
 
-</div>
+<div id="answersContainer"></div>
 
-
-<!-- Answers Section -->
-<div class="card">
-
-<h3>Answers</h3>
-
-<div id="answersList"></div>
-
-</div>
-
-
-<!-- Post Answer -->
-<div class="card">
+<br>
 
 <h3>Post Answer</h3>
 
-<textarea id="answerText" placeholder="Write your answer here..."></textarea>
+<textarea id="answerText" rows="6" cols="60" placeholder="Write your answer here"></textarea>
+
+<br><br>
 
 <button onclick="postAnswer()">Submit Answer</button>
 
-</div>
-
-</div>
-
-
 <script>
 
-const params = new URLSearchParams(window.location.search)
-const requestId = params.get("id")
+const urlParams = new URLSearchParams(window.location.search)
+const requestId = urlParams.get("id")
 
-
+// ---------------------
+// Load Request
+// ---------------------
 
 async function loadRequest(){
 
 const response = await fetch("http://127.0.0.1:5000/get_requests")
-
 const data = await response.json()
 
-const request = data.find(r => r.id == requestId)
+const container = document.getElementById("requestContainer")
 
-if(request){
+data.forEach(req => {
 
-document.getElementById("requestTitle").innerText = request.title
+if(req.id == requestId){
 
-document.getElementById("requestDescription").innerText = request.description
+container.innerHTML = `
 
-}
+<h2>${req.title}</h2>
 
-}
+<p>${req.description}</p>
 
-
-
-async function loadAnswers(){
-
-const response = await fetch(`http://127.0.0.1:5000/get_answers/${requestId}`)
-
-const answers = await response.json()
-
-const container = document.getElementById("answersList")
-
-container.innerHTML=""
-
-answers.forEach(ans=>{
-
-const div = document.createElement("div")
-
-div.className="answer"
-
-div.innerHTML=`
-
-<p>${ans.answer}</p>
-
-<small>By ${ans.email}</small>
+<p>Posted by: ${req.email}</p>
 
 `
 
-container.appendChild(div)
+}
 
 })
 
 }
 
+loadRequest()
 
+// ---------------------
+// Load Answers
+// ---------------------
+
+async function loadAnswers(){
+
+const response = await fetch("http://127.0.0.1:5000/get_answers/"+requestId)
+
+const data = await response.json()
+
+const container = document.getElementById("answersContainer")
+
+container.innerHTML=""
+
+data.forEach(ans => {
+
+container.innerHTML += `
+
+<div style="border:1px solid #ccc;padding:10px;margin-bottom:10px">
+
+<p>${ans.answer}</p>
+
+<p>By: ${ans.email}</p>
+
+<button onclick="acceptAnswer(${ans.id}, ${ans.request_id}, '${ans.email}')">
+Accept Answer
+</button>
+
+</div>
+
+`
+
+})
+
+}
+
+loadAnswers()
+
+// ---------------------
+// Post Answer
+// ---------------------
 
 async function postAnswer(){
 
-const answerText = document.getElementById("answerText").value
+const answer = document.getElementById("answerText").value
 
-if(answerText.trim()==""){
-
-alert("Write an answer first")
-
-return
-
-}
+const email = localStorage.getItem("email")
 
 const response = await fetch("http://127.0.0.1:5000/post_answer",{
 
@@ -181,13 +188,9 @@ headers:{
 },
 
 body:JSON.stringify({
-
 request_id:requestId,
-
-email:"test@gmail.com",
-
-answer:answerText
-
+answer:answer,
+email:email
 })
 
 })
@@ -202,14 +205,38 @@ loadAnswers()
 
 }
 
+// ---------------------
+// Accept Answer
+// ---------------------
 
+async function acceptAnswer(answerId,requestId,email){
 
-loadRequest()
+const response = await fetch("http://127.0.0.1:5000/accept_answer",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+answer_id:answerId,
+request_id:requestId,
+email:email
+})
+
+})
+
+const data = await response.json()
+
+alert(data.message)
 
 loadAnswers()
 
+}
+
 </script>
 
-
 </body>
+
 </html>

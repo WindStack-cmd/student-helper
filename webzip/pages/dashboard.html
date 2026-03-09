@@ -909,26 +909,38 @@
             </div>
         </aside>
     </div>
-
- <script>
+<script>
 
 lucide.createIcons();
 
 async function loadRequests(){
 
-const response = await fetch("http://127.0.0.1:5000/get_requests")
+try{
 
-const data = await response.json()
+const response = await fetch("http://127.0.0.1:5000/get_requests");
 
-const container = document.getElementById("requestsContainer")
+const data = await response.json();
 
-container.innerHTML=""
+const container = document.getElementById("requestsContainer");
+
+container.innerHTML="";
+
+if(data.length === 0){
+
+container.innerHTML = `
+<div style="padding:30px;font-family:var(--font-mono);color:var(--text-secondary);">
+NO_ACTIVE_REQUESTS
+</div>
+`;
+
+return;
+}
 
 data.forEach(req => {
 
 container.innerHTML += `
 
-<div class="data-row" onclick="openRequest(1)">
+<div class="data-row" onclick="openRequest(${req.id})">
 
 <div class="row-main">
 
@@ -950,30 +962,36 @@ LIVE
 </div>
 
 <div class="row-date">
-New Request
+NEW_REQUEST
 </div>
 
 </div>
 
-`
+`;
 
-})
+});
 
-lucide.createIcons()
+lucide.createIcons();
+
+}catch(error){
+
+document.getElementById("requestsContainer").innerHTML = `
+<div style="padding:30px;font-family:var(--font-mono);color:red;">
+ERROR_LOADING_NETWORK_FEED
+</div>
+`;
 
 }
 
-loadRequests()
-
-</script>
-
-<script>
+}
 
 function openRequest(id){
 
-window.location.href="request-details.html?id="+id
+window.location.href="request-details.html?id="+id;
 
 }
+
+loadRequests();
 
 </script>
 </body>
