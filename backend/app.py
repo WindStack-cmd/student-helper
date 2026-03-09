@@ -5,83 +5,118 @@ import mysql.connector
 app = Flask(__name__)
 CORS(app)
 
-# MySQL connection
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Mohak@12",
-    database="student_helper"
-)
+# -----------------------------
+# DATABASE CONNECTION FUNCTION
+# -----------------------------
 
-cursor = db.cursor()
+def get_db_connection():
+    return mysql.connector.connect(
+        host="127.0.0.1",
+        user="root",
+        password="Mohak@12",
+        database="student_helper",
+        ssl_disabled=True
+    )
+
+# -----------------------------
+# HOME ROUTE
+# -----------------------------
 
 @app.route("/")
 def home():
     return "Student Helper Backend Running"
 
+# -----------------------------
+# REGISTER USER
+# -----------------------------
 
 @app.route("/register", methods=["POST"])
 def register():
-
     data = request.json
+
     name = data["name"]
     email = data["email"]
     password = data["password"]
 
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     sql = "INSERT INTO users (name,email,password) VALUES (%s,%s,%s)"
-    values = (name,email,password)
+    val = (name,email,password)
 
-    cursor.execute(sql,values)
-    db.commit()
+    cursor.execute(sql,val)
+    conn.commit()
 
-    return jsonify({
-        "message":"User registered successfully"
-    })
+    cursor.close()
+    conn.close()
 
+    return jsonify({"message":"User registered successfully"})
+
+# -----------------------------
+# LOGIN USER
+# -----------------------------
 
 @app.route("/login", methods=["POST"])
 def login():
-
     data = request.json
+
     email = data["email"]
     password = data["password"]
 
-    sql = "SELECT * FROM users WHERE email=%s AND password=%s"
-    values = (email,password)
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    cursor.execute(sql,values)
+    sql = "SELECT * FROM users WHERE email=%s AND password=%s"
+    val = (email,password)
+
+    cursor.execute(sql,val)
+
     user = cursor.fetchone()
 
-    if user:
-        return jsonify({
-            "message":"Login successful"
-        })
+    cursor.close()
+    conn.close()
 
-    return jsonify({
-        "message":"Invalid email or password"
-    })
+    if user:
+        return jsonify({"message":"Login successful"})
+    else:
+        return jsonify({"message":"Invalid email or password"}), 401
+
+# -----------------------------
+# POST HELP REQUEST
+# -----------------------------
 
 @app.route("/post_request", methods=["POST"])
 def post_request():
-
     data = request.json
 
     title = data["title"]
     description = data["description"]
     email = data["email"]
 
-    sql = "INSERT INTO requests (title, description, user_email) VALUES (%s,%s,%s)"
-    val = (title, description, email)
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    cursor.execute(sql, val)
-    db.commit()
+    sql = "INSERT INTO requests (title,description,email) VALUES (%s,%s,%s)"
+    val = (title,description,email)
+
+    cursor.execute(sql,val)
+    conn.commit()
+
+    cursor.close()
+    conn.close()
 
     return jsonify({"message":"Request posted successfully"})
 
+# -----------------------------
+# GET ALL REQUESTS
+# -----------------------------
+
 @app.route("/get_requests", methods=["GET"])
 def get_requests():
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM requests ORDER BY created_at DESC")
+    cursor.execute("SELECT * FROM requests")
 
     rows = cursor.fetchall()
 
@@ -95,7 +130,77 @@ def get_requests():
             "email": r[3]
         })
 
+    cursor.close()
+    conn.close()
+
     return jsonify(requests)
+
+# -----------------------------
+# POST ANSWER
+# -----------------------------
+
+@app.route("/post_answer", methods=["POST"])
+def post_answer():
+
+    try:
+
+        data = request.json
+
+        request_id = data.get("request_id")
+        answer = data.get("answer")
+        email = data.get("email", "anonymous")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        sql = "INSERT INTO answers (request_id,answer,email) VALUES (%s,%s,%s)"
+        val = (request_id,answer,email)
+
+        cursor.execute(sql,val)
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"message":"Answer posted successfully"})
+
+    except Exception as e:
+
+        return jsonify({"error": str(e)})
+# -----------------------------
+# GET ANSWERS
+# -----------------------------
+
+@app.route("/get_answers/<int:request_id>", methods=["GET"])
+def get_answers(request_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    sql = "SELECT * FROM answers WHERE request_id=%s"
+    val = (request_id,)
+
+    cursor.execute(sql,val)
+
+    rows = cursor.fetchall()
+
+    answers = []
+
+    for r in rows:
+        answers.append({
+            "id": r[0],
+            "request_id": r[1],
+            "answer": r[2],
+            "email": r[3]
+        })
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(answers)
+
+# -----------------------------
+# RUN SERVER
+# -----------------------------
 
 if __name__ == "__main__":
     app.run(debug=True)
