@@ -717,7 +717,8 @@ msg.innerHTML="ACCESS GRANTED"
 
 
 // SAVE USER EMAIL
-localStorage.setItem("userEmail", email)
+localStorage.setItem("userEmail", data.email)
+localStorage.setItem("firstName", data.first_name)
 
 
 setTimeout(()=>{

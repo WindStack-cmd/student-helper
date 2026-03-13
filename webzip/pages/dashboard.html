@@ -783,31 +783,49 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer">
-                <div class="user-avatar">JD</div>
-                <div class="user-info">
-                    <div class="user-name">John Doe</div>
-                    <div class="user-role">NODE_LVL_4</div>
-                </div>
-                <i data-lucide="power"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
-            </div>
+         <div class="sidebar-footer">
+
+    <div id="userAvatar" class="user-avatar">U</div>
+
+    <div class="user-info">
+        <div id="userName" class="user-name">LOADING...</div>
+        <div class="user-role">NODE_LVL_4</div>
+    </div>
+
+    <i data-lucide="power"
+    onclick="logoutUser()"
+       style="color: var(--danger-red); width:16px; height:16px; margin-left:auto;"></i>
+
+</div>
         </aside>
 
         <!-- MIDDLE PANEL: Main Workspace -->
         <main class="workspace">
             <header class="workspace-header">
                 <h1 class="workspace-title">Sys.Overview</h1>
-                <div class="workspace-actions">
-                    <button class="btn-icon"><i data-lucide="search" style="width: 18px; height: 18px;"></i></button>
-                    <a href="request-help.html" style="text-decoration: none;" class="btn-primary">
-                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                        Init Request
-                    </a>
-                </div>
+
+               <div class="workspace-actions">
+
+<button class="btn-icon" onclick="loadNotifications()">
+<i data-lucide="bell" style="width:18px;height:18px;"></i>
+</button>
+
+<button class="btn-icon">
+<i data-lucide="search" style="width: 18px; height: 18px;"></i>
+</button>
+
+<a href="request-help.html" style="text-decoration: none;" class="btn-primary">
+<i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+Init Request
+</a>
+
+</div>
             </header>
 
             <div class="workspace-content">
+                <div id="notificationContainer"
+style="margin-bottom:20px;border:1px solid #222;padding:15px;border-radius:8px;background:#0a0a0e;">
+</div>
                 <!-- Key Metrics Overview -->
                 <div class="metrics-grid">
                     <div class="metric-card">
@@ -909,6 +927,8 @@
             </div>
         </aside>
     </div>
+
+
 <script>
 
 lucide.createIcons();
@@ -993,6 +1013,86 @@ window.location.href="request-details.html?id="+id;
 
 loadRequests();
 
+async function loadNotifications(){
+
+try{
+
+const email = localStorage.getItem("email")
+
+const response = await fetch(
+"http://127.0.0.1:5000/notifications/" + email
+)
+
+const data = await response.json()
+
+const container = document.getElementById("notificationContainer")
+
+container.innerHTML = ""
+
+if(data.length === 0){
+
+container.innerHTML = `
+<div style="font-family:var(--font-mono);color:var(--text-secondary);padding:10px;">
+NO_NEW_NOTIFICATIONS
+</div>
+`
+
+return
+}
+
+data.forEach(n => {
+
+container.innerHTML += `
+
+<div style="
+padding:10px;
+border-bottom:1px solid #333;
+font-family:var(--font-mono);
+">
+
+🔔 ${n.message}
+
+</div>
+
+`
+
+})
+
+}catch(error){
+
+document.getElementById("notificationContainer").innerHTML = `
+<div style="color:red;padding:10px;">
+ERROR_LOADING_NOTIFICATIONS
+</div>
+`
+
+}
+
+}
+
+const name = localStorage.getItem("firstName")
+
+if(name){
+
+document.getElementById("userName").innerText = name
+
+document.getElementById("userAvatar").innerText =
+name.charAt(0).toUpperCase()
+
+}
+
+
+
+function logoutUser(){
+
+// clear login session
+localStorage.removeItem("userEmail")
+localStorage.removeItem("firstName")
+
+// redirect to login page
+window.location.href="../index.html"
+
+}
 </script>
 </body>
 

@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, send
 import mysql.connector
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # -----------------------------
 # DATABASE CONNECTION FUNCTION
@@ -29,57 +31,80 @@ def home():
 # -----------------------------
 # REGISTER USER
 # -----------------------------
-
 @app.route("/register", methods=["POST"])
 def register():
+
     data = request.json
 
-    name = data["name"]
-    email = data["email"]
-    password = data["password"]
+    first_name = data.get("first_name")
+    email = data.get("email")
+    password = data.get("password")
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
-    sql = "INSERT INTO users (name,email,password) VALUES (%s,%s,%s)"
-    val = (name,email,password)
+    # check if user already exists
+    cursor.execute(
+        "SELECT * FROM users WHERE email=%s",
+        (email,)
+    )
 
-    cursor.execute(sql,val)
+    user = cursor.fetchone()
+
+    if user:
+        return jsonify({"message": "User already exists"})
+
+    # insert user
+    cursor.execute(
+        "INSERT INTO users (first_name, email, password, points) VALUES (%s,%s,%s,%s)",
+        (first_name, email, password, 0)
+    )
+
     conn.commit()
 
     cursor.close()
     conn.close()
 
-    return jsonify({"message":"User registered successfully"})
+    return jsonify({"message": "Registration successful"})
 
-# -----------------------------
+#-----------------------------
 # LOGIN USER
-# -----------------------------
+#-----------------------------
 
 @app.route("/login", methods=["POST"])
 def login():
+
     data = request.json
 
-    email = data["email"]
-    password = data["password"]
+    email = data.get("email")
+    password = data.get("password")
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
-    sql = "SELECT * FROM users WHERE email=%s AND password=%s"
-    val = (email,password)
-
-    cursor.execute(sql,val)
+    cursor.execute(
+        "SELECT email, name, password FROM users WHERE email=%s",
+        (email,)
+    )
 
     user = cursor.fetchone()
 
     cursor.close()
     conn.close()
 
-    if user:
-        return jsonify({"message":"Login successful"})
-    else:
-        return jsonify({"message":"Invalid email or password"}), 401
+    if user and user["password"] == password:
+
+        return jsonify({
+            "message": "Login successful",
+            "email": user["email"],
+            "first_name": user["name"]
+        })
+
+    return jsonify({
+        "message": "Invalid email or password"
+    })
+
+
 
 # -----------------------------
 # POST HELP REQUEST
@@ -142,31 +167,49 @@ def get_requests():
 @app.route("/post_answer", methods=["POST"])
 def post_answer():
 
-    try:
+    data = request.json
 
-        data = request.json
+    request_id = data["request_id"]
+    answer = data["answer"]
+    email = data["email"]
 
-        request_id = data.get("request_id")
-        answer = data.get("answer")
-        email = data.get("email", "anonymous")
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+    # insert answer
+    sql = "INSERT INTO answers (request_id, answer, email) VALUES (%s,%s,%s)"
+    val = (request_id, answer, email)
 
-        sql = "INSERT INTO answers (request_id,answer,email) VALUES (%s,%s,%s)"
-        val = (request_id,answer,email)
+    cursor.execute(sql,val)
+    conn.commit()
 
-        cursor.execute(sql,val)
-        conn.commit()
+    # ------------------------------
+    # FIND REQUEST OWNER
+    # ------------------------------
 
-        cursor.close()
-        conn.close()
+    cursor.execute(
+        "SELECT email FROM requests WHERE id=%s",
+        (request_id,)
+    )
 
-        return jsonify({"message":"Answer posted successfully"})
+    owner = cursor.fetchone()["email"]
 
-    except Exception as e:
+    # ------------------------------
+    # CREATE NOTIFICATION
+    # ------------------------------
 
-        return jsonify({"error": str(e)})
+    cursor.execute(
+        "INSERT INTO notifications (email,message) VALUES (%s,%s)",
+        (owner,"Someone answered your request")
+    )
+
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message":"Answer posted successfully"})
+        
 # -----------------------------
 # GET ANSWERS
 # -----------------------------
@@ -251,9 +294,17 @@ def accept_answer():
     conn.close()
 
     return jsonify({"message": "Answer accepted"})
+
+@socketio.on("message")
+def handle_message(msg):
+
+    print("Message:", msg)
+
+    send(msg, broadcast=True)
+
 # -----------------------------
 # RUN SERVER
 # -----------------------------
 
 if __name__ == "__main__":
-    app.run(debug=True)
+  socketio.run(app, debug=True)

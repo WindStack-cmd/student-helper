@@ -616,26 +616,34 @@
     </div>
 
     <script>
-        lucide.createIcons();
+  async function loadNotifications(){
 
-        function logout() {
-            window.location.href = "login.html";
-        }
+const email = localStorage.getItem("email")
 
-        function clearNotifs() {
-            const stream = document.getElementById('eventStream');
-            stream.style.opacity = '0.5';
+const response = await fetch(
+"http://127.0.0.1:5000/notifications/"+email
+)
 
-            setTimeout(() => {
-                stream.innerHTML = `
-                    <div style="padding: 40px; text-align: center; color: var(--text-tertiary); font-family: var(--font-mono); text-transform: uppercase;">
-                        [ LOG CACHE EMPTIED. AWAITING NEW EVENTS. ]
-                    </div>
-                `;
-                stream.style.opacity = '1';
-                lucide.createIcons();
-            }, 600);
-        }
+const data = await response.json()
+
+const container =
+document.getElementById("notificationContainer")
+
+container.innerHTML=""
+
+data.forEach(n => {
+
+container.innerHTML += `
+
+<div class="notification">
+${n.message}
+</div>
+
+`
+
+})
+
+}
     </script>
 </body>
 

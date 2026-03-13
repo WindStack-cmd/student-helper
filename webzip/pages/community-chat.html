@@ -10,6 +10,8 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
     <style>
         :root {
             --bg-base: #030305;
@@ -885,10 +887,10 @@
                 </div>
             </header>
 
-            <div class="workspace-content">
+            <div class="workspace-content" id="chatMessages">
                 <!-- Composer Box -->
                 <div class="post-composer">
-                    <textarea class="composer-input" rows="2"
+                    <textarea id="chatInput" class="composer-input" rows="2"
                         placeholder="Initiate network broadcast... Describe your query or share data."></textarea>
                     <div class="composer-actions">
                         <div class="composer-tools">
@@ -899,7 +901,7 @@
                             <button class="tool-btn"><i data-lucide="smile"
                                     style="width: 18px; height: 18px;"></i></button>
                         </div>
-                        <button class="btn-primary" style="height: 36px; font-size: 0.75rem;">Transmit</button>
+                        <button onclick="sendMessage()" class="btn-primary" style="height: 36px; font-size: 0.75rem;">Transmit</button>
                     </div>
                 </div>
 
@@ -1124,9 +1126,42 @@
         </aside>
     </div>
 
-    <script>
-        lucide.createIcons();
-    </script>
+   <script>
+
+lucide.createIcons();
+
+const socket = io("http://127.0.0.1:5000")
+
+const chatBox = document.getElementById("chatMessages")
+
+socket.on("message", function(msg){
+
+chatBox.innerHTML += `
+
+<article class="feed-post">
+<div class="post-body">
+<h2>Network Message</h2>
+<p>${msg}</p>
+</div>
+</article>
+
+`
+
+})
+
+function sendMessage(){
+
+const input = document.getElementById("chatInput")
+
+if(input.value.trim() === "") return
+
+socket.send(input.value)
+
+input.value=""
+
+}
+
+</script>
 </body>
 
 </html>
