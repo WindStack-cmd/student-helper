@@ -833,7 +833,7 @@ style="margin-bottom:20px;border:1px solid #222;padding:15px;border-radius:8px;b
                             <span class="metric-title">Bounties Cleared</span>
                             <i data-lucide="check-circle-2" class="metric-icon" style="width: 24px; height: 24px;"></i>
                         </div>
-                        <div class="metric-value">24</div>
+                        <<div class="metric-value" id="solvedCount">24</div>
                         <div class="metric-trend trend-up">
                             <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> +12% CYCLE_DELTA
                         </div>
@@ -844,7 +844,7 @@ style="margin-bottom:20px;border:1px solid #222;padding:15px;border-radius:8px;b
                             <span class="metric-title">Ledger Stake</span>
                             <i data-lucide="award" class="metric-icon" style="width: 24px; height: 24px;"></i>
                         </div>
-                        <div class="metric-value">840</div>
+                        <div class="metric-value" id="pointsCount">840</div>
                         <div class="metric-trend text-secondary">
                             <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i> TOP_5_PCT
                         </div>
@@ -855,7 +855,7 @@ style="margin-bottom:20px;border:1px solid #222;padding:15px;border-radius:8px;b
                             <span class="metric-title">Pending Jobs</span>
                             <i data-lucide="activity" class="metric-icon" style="width: 24px; height: 24px;"></i>
                         </div>
-                        <div class="metric-value">02</div>
+                        <div class="metric-value" id="pendingCount">02</div>
                         <div class="metric-trend text-tertiary">
                             AWAITING_ALLOCATION
                         </div>
@@ -1017,7 +1017,7 @@ async function loadNotifications(){
 
 try{
 
-const email = localStorage.getItem("email")
+const email = localStorage.getItem("userEmail")
 
 const response = await fetch(
 "http://127.0.0.1:5000/notifications/" + email
@@ -1093,6 +1093,26 @@ localStorage.removeItem("firstName")
 window.location.href="../index.html"
 
 }
+
+async function loadDashboardMetrics(){
+
+const email = localStorage.getItem("userEmail")
+
+const response = await fetch(
+"http://127.0.0.1:5000/dashboard_metrics?email="+email
+)
+
+const data = await response.json()
+
+document.getElementById("solvedCount").innerText = data.solved
+document.getElementById("pointsCount").innerText = data.points
+document.getElementById("pendingCount").innerText = data.pending
+
+}
+
+loadDashboardMetrics()
+
+
 </script>
 </body>
 

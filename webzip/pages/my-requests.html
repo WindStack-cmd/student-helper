@@ -630,78 +630,120 @@
             </div>
         </main>
     </div>
+<script>
+lucide.createIcons();
 
-    <script>
-        lucide.createIcons();
+function logout() {
+    window.location.href = "login.html";
+}
 
-        function logout() {
-            window.location.href = "login.html";
-        }
+const tbody = document.getElementById("requestsContainer");
+const logContainer = document.getElementById("logContainer");
+const emptyContainer = document.getElementById("emptyContainer");
 
-        const tbody = document.getElementById("requestsContainer");
-        const logContainer = document.getElementById("logContainer");
-        const emptyContainer = document.getElementById("emptyContainer");
+function generatePulseHash() {
+    return "0x" + Math.floor(Math.random()*16777215)
+        .toString(16)
+        .toUpperCase()
+        .padStart(6,'0');
+}
 
-        // Grab from localStorage
-        const allRequests = JSON.parse(localStorage.getItem("allRequests")) || [];
 
-        // Generate mock hashes for visual flavor
-        function generatePulseHash() {
-            return `0x` + Math.floor(Math.random() * 16777215).toString(16).toUpperCase().padStart(6, '0');
-        }
+async function loadRequests(){
 
-        if (!allRequests || allRequests.length === 0) {
-            emptyContainer.style.display = "block";
-            emptyContainer.innerHTML = `
-                <div class="empty-state">
-                    <i data-lucide="hard-drive"></i>
-                    <h2>Ledger Empty</h2>
-                    <p>You have not broadcasted any help requests to the network.</p>
-                </div>
-            `;
-            lucide.createIcons();
-        } else {
-            logContainer.style.display = "block";
-            allRequests.forEach((req, idx) => {
-                const tr = document.createElement("tr");
+try{
 
-                const acceptedInfoHtml = req.acceptedBy
-                    ? `<div class="claimant-box">
-                           <span class="claimant-id"><i data-lucide="user-check" style="width: 12px; height: 12px; display:inline;"></i> ${req.acceptedBy}</span>
-                           <span class="claimant-date">${req.acceptedOn || "Unknown Date"}</span>
-                       </div>`
-                    : `<span style="color: var(--text-tertiary); font-style: italic;">Awaiting Claim</span>`;
+const res = await fetch("http://127.0.0.1:5000/get_requests");
 
-                const statusClass = req.status.toLowerCase() === "pending" ? "pending" : "completed";
-                const hash = generatePulseHash();
+const data = await res.json();
 
-                tr.innerHTML = `
-                    <td class="col-id">${hash}</td>
-                    <td class="col-details">
-                        <div class="bounty-title">${req.title}</div>
-                        <p class="bounty-desc">${req.description || "No description logged."}</p>
-                        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-tertiary); margin-top: 8px;">
-                            TIMESTAMP: ${req.date || new Date().toLocaleDateString()}
-                        </div>
-                    </td>
-                    <td class="col-status">
-                        <span class="status-badge ${statusClass}">
-                            ${req.status === "Pending" ? '<i data-lucide="loader-2" style="width: 12px; height: 12px; animation: spin 2s linear infinite;"></i>' : '<i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>'}
-                            ${req.status}
-                        </span>
-                    </td>
-                    <td class="col-claimant">
-                        ${acceptedInfoHtml}
-                    </td>
-                `;
+tbody.innerHTML = "";
 
-                tbody.appendChild(tr);
-            });
+if(!data || data.length === 0){
 
-            lucide.createIcons();
-        }
+emptyContainer.style.display = "block";
 
-    </script>
+emptyContainer.innerHTML = `
+<div class="empty-state">
+<i data-lucide="hard-drive"></i>
+<h2>Ledger Empty</h2>
+<p>No active bounties on the network.</p>
+</div>
+`;
+
+lucide.createIcons();
+return;
+
+}
+
+logContainer.style.display = "block";
+
+data.forEach(req => {
+
+const tr = document.createElement("tr");
+
+const hash = generatePulseHash();
+
+tr.innerHTML = `
+<td class="col-id">${hash}</td>
+
+<td class="col-details">
+<div class="bounty-title">${req.title}</div>
+
+<p class="bounty-desc">
+${req.description || "No description logged."}
+</p>
+
+<div style="font-family: var(--font-mono); font-size:0.75rem; color:var(--text-tertiary); margin-top:8px;">
+TIMESTAMP: ${new Date().toLocaleDateString()}
+</div>
+</td>
+
+<td class="col-status">
+<span class="status-badge pending">
+<i data-lucide="loader-2" style="width:12px;height:12px;animation:spin 2s linear infinite;"></i>
+OPEN
+</span>
+</td>
+
+<td class="col-claimant">
+<span style="color: var(--text-tertiary); font-style: italic;">
+Awaiting Claim
+</span>
+</td>
+`;
+
+tbody.appendChild(tr);
+
+});
+
+lucide.createIcons();
+
+}
+
+catch(error){
+
+console.error("ERROR_LOADING_REQUESTS", error);
+
+emptyContainer.style.display = "block";
+
+emptyContainer.innerHTML = `
+<div class="empty-state">
+<i data-lucide="alert-triangle"></i>
+<h2>Network Error</h2>
+<p>Unable to load requests from server.</p>
+</div>
+`;
+
+lucide.createIcons();
+
+}
+
+}
+
+loadRequests();
+
+</script>
     <style>
         @keyframes spin {
             100% {
@@ -709,6 +751,29 @@
             }
         }
     </style>
+
+    <script>
+
+const name = localStorage.getItem("firstName")
+const email = localStorage.getItem("userEmail")
+
+if(name){
+
+const avatar = document.getElementById("sidebarAvatar")
+const username = document.getElementById("sidebarName")
+
+if(avatar){
+avatar.innerText = name.charAt(0).toUpperCase()
+}
+
+if(username){
+username.innerText = name
+}
+
+}
+
+</script>
+
 </body>
 
 </html>

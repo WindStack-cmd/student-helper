@@ -3,9 +3,13 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, send
 import mysql.connector
 
+
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
+
+
 socketio = SocketIO(app, cors_allowed_origins="*")
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 # -----------------------------
 # DATABASE CONNECTION FUNCTION
@@ -83,7 +87,7 @@ def login():
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute(
-        "SELECT email, name, password FROM users WHERE email=%s",
+        "SELECT email, first_name, password FROM users WHERE email=%s",
         (email,)
     )
 
@@ -97,40 +101,73 @@ def login():
         return jsonify({
             "message": "Login successful",
             "email": user["email"],
-            "first_name": user["name"]
+            "first_name": user["first_name"]
         })
 
     return jsonify({
         "message": "Invalid email or password"
     })
+ 
 
+#-----------------------------
+# DASHBOARD METRICS
+#-----------------------------
 
+@app.route("/dashboard_metrics")
+def dashboard_metrics():
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # total points from users table
+    cursor.execute("SELECT SUM(points) as total_points FROM users")
+    points_data = cursor.fetchone()
+
+    points = points_data["total_points"] if points_data["total_points"] else 0
+
+    # total requests
+    cursor.execute("SELECT COUNT(*) as pending FROM requests")
+    pending_data = cursor.fetchone()
+
+    pending = pending_data["pending"] if pending_data else 0
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({
+        "solved": 0,
+        "points": points,
+        "pending": pending
+    })
 
 # -----------------------------
-# POST HELP REQUEST
+# POST REQUEST
 # -----------------------------
 
 @app.route("/post_request", methods=["POST"])
 def post_request():
+
     data = request.json
 
-    title = data["title"]
-    description = data["description"]
-    email = data["email"]
+    title = data.get("title")
+    description = data.get("description")
+    email = data.get("email")
+    bounty = data.get("bounty")
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    sql = "INSERT INTO requests (title,description,email) VALUES (%s,%s,%s)"
-    val = (title,description,email)
+    cursor.execute(
+        "INSERT INTO requests (title, description, user_email, bounty, status) VALUES (%s,%s,%s,%s,'open')",
+        (title, description, email, bounty)
+    )
 
-    cursor.execute(sql,val)
     conn.commit()
 
     cursor.close()
     conn.close()
 
-    return jsonify({"message":"Request posted successfully"})
+    return jsonify({"message": "Request posted successfully"})
 
 # -----------------------------
 # GET ALL REQUESTS
@@ -138,6 +175,7 @@ def post_request():
 
 @app.route("/get_requests", methods=["GET"])
 def get_requests():
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -152,12 +190,14 @@ def get_requests():
             "id": r[0],
             "title": r[1],
             "description": r[2],
-            "email": r[3]
+            "email": r[3],
+            "created_at": r[4],
+            "status": r[5],
+            "bounty": r[6]
         })
 
     cursor.close()
     conn.close()
-
     return jsonify(requests)
 
 # -----------------------------
@@ -241,6 +281,10 @@ def get_answers(request_id):
 
     return jsonify(answers)
 
+# -----------------------------
+# GET LEADERBOARD
+# -----------------------------
+
 @app.route("/leaderboard", methods=["GET"])
 def leaderboard():
 
@@ -258,6 +302,9 @@ def leaderboard():
 
     return jsonify(users)
 
+# -----------------------------
+# ACCEPT ANSWER
+#-----------------------------
 
 @app.route("/accept_answer", methods=["POST"])
 def accept_answer():
@@ -308,3 +355,5 @@ def handle_message(msg):
 
 if __name__ == "__main__":
   socketio.run(app, debug=True)
+
+  SECRET_KEY = "mysecret123"

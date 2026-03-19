@@ -717,39 +717,11 @@
         }
 
         const container = document.getElementById("helpRequestsContainer");
-        // Using sample data to populate the grid initially if localStorage is empty for demonstration of the redesign
-        let allRequests = JSON.parse(localStorage.getItem("allRequests")) || [
-            {
-                title: "Need help with React useEffect dependencies",
-                type: "Programming",
-                description: "I keep getting an infinite loop when updating state inside my useEffect. Can someone review my code snippet?",
-                status: "Pending",
-                date: new Date().toLocaleDateString()
-            },
-            {
-                title: "Linear Algebra: Eigenvalues clarification",
-                type: "Mathematics",
-                description: "Struggling to compute the characteristic polynomial for a 4x4 matrix.",
-                status: "Pending",
-                date: new Date().toLocaleDateString()
-            },
-            {
-                title: "Review essay on Macroeconomics",
-                type: "Economics",
-                description: "Need someone to proofread my 5-page essay on inflation dynamics and Federal Reserve policies.",
-                status: "Completed",
-                date: new Date().toLocaleDateString(),
-                acceptedBy: "admin@system.node",
-                acceptedOn: new Date().toLocaleDateString()
-            }
-        ];
+   
+        
 
-        // Ensure we save dummy data if it was completely empty to ensure the UI shows up
-        if (!localStorage.getItem("allRequests")) {
-            localStorage.setItem("allRequests", JSON.stringify(allRequests));
-        }
+       
 
-        if (allRequests.length === 0) {
             container.style.display = 'block';
             container.innerHTML = `
                 <div class="empty-state">
@@ -759,9 +731,7 @@
                 </div>
             `;
             lucide.createIcons();
-        } else {
-            renderRequests();
-        }
+        
 
         function renderRequests() {
             container.innerHTML = "";
@@ -870,7 +840,86 @@
                 modal.style.display = "none";
             }
         };
+
+
+async function loadHuntMode(){
+
+const res = await fetch("http://127.0.0.1:5000/get_requests")
+
+const data = await res.json()
+
+const container = document.getElementById("helpRequestsContainer")
+
+container.innerHTML = ""
+
+data.forEach(req => {
+
+container.innerHTML += `
+<div class="bounty-card">
+
+<div class="bounty-header">
+<div>
+<div class="bounty-type">Programming</div>
+<div class="bounty-title">${req.title}</div>
+</div>
+</div>
+
+<p class="bounty-desc">${req.description}</p>
+
+<div class="bounty-meta">
+
+<span class="status-badge pending">
+<i data-lucide="clock" style="width:12px;height:12px;"></i>
+OPEN
+</span>
+
+<div style="display:flex; gap:8px;">
+
+<button class="btn-view" onclick="openRequest(${req.id})">
+INSPECT
+</button>
+
+<button class="btn-hunt">
+CAPTURE
+</button>
+
+</div>
+
+</div>
+
+</div>
+`
+
+})
+
+lucide.createIcons()
+
+}
+
+loadHuntMode()
+
     </script>
+
+    <script>
+
+const name = localStorage.getItem("firstName")
+
+if(name){
+
+const avatar = document.getElementById("sidebarAvatar")
+const username = document.getElementById("sidebarName")
+
+if(avatar){
+avatar.innerText = name.charAt(0).toUpperCase()
+}
+
+if(username){
+username.innerText = name
+}
+
+}
+
+</script>
 </body>
 
 </html>

@@ -695,6 +695,27 @@
             localStorage.setItem("dashboardData", JSON.stringify(dashboardData));
         }
     </script>
+
+    <script>
+
+const name = localStorage.getItem("firstName")
+
+if(name){
+
+const avatar = document.getElementById("sidebarAvatar")
+const username = document.getElementById("sidebarName")
+
+if(avatar){
+avatar.innerText = name.charAt(0).toUpperCase()
+}
+
+if(username){
+username.innerText = name
+}
+
+}
+
+</script>
 </body>
 
 </html>

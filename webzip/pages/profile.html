@@ -708,8 +708,8 @@
                     <div class="node-avatar-lg" id="mainAvatar">JD</div>
                     <div class="identity-header">
                         <div>
-                            <h2 class="id-name" id="profileName">John Doe</h2>
-                            <div class="id-mail" id="profileEmail">john.doe@university.edu</div>
+                            <h1 id="profileName">Name</h1>
+                             <p id="profileEmail">Email</p>
                             <div class="id-badges">
                                 <span class="sys-badge">Target: Student</span>
                                 <span class="sys-badge prime"><i data-lucide="shield-check"
@@ -733,12 +733,12 @@
                         <div class="config-form">
                             <div class="form-group">
                                 <label class="form-label">Identifier String</label>
-                                <input type="text" class="form-input" value="John Doe">
+                                <input type="text" class="form-input" id="profileNameInput">
                             </div>
 
                             <div class="form-group">
                                 <label class="form-label">Network Maildrop</label>
-                                <input type="email" class="form-input" value="john.doe@university.edu" disabled>
+                                <input type="email" class="form-input" id="profileEmailInput" disabled>
                                 <span
                                     style="font-family: var(--font-mono); font-size: 0.70rem; color: var(--success-green); margin-top: 8px; display: flex; align-items: center; gap: 4px;">
                                     <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i>
@@ -806,13 +806,47 @@
         </main>
     </div>
 
-    <script>
-        lucide.createIcons();
+   <script>
+    lucide.createIcons();
 
-        function logout() {
-            window.location.href = "login.html";
-        }
-    </script>
+    function logout() {
+        localStorage.removeItem("loggedInUser")
+        window.location.href = "login.html";
+    }
+
+    function loadProfile() {
+
+        const user = JSON.parse(localStorage.getItem("loggedInUser"))
+
+       if (!user) {
+         alert("Session expired, please login again")
+         window.location.href = "login.html"
+         return
+    }
+
+    console.log("User:", user)
+    
+        // 🔥 Main pro
+        // file
+        document.getElementById("profileName").innerText = user.first_name
+        document.getElementById("profileEmail").innerText = user.email
+
+        // 🔥 Inputs
+        document.getElementById("profileNameInput").value = user.first_name
+        document.getElementById("profileEmailInput").value = user.email
+
+        // 🔥 Avatar (big)
+        document.getElementById("mainAvatar").innerText =
+            user.first_name.charAt(0).toUpperCase()
+
+        // 🔥 Sidebar (same page)
+        document.getElementById("sidebarName").innerText = user.first_name
+        document.getElementById("sidebarAvatar").innerText =
+            user.first_name.charAt(0).toUpperCase()
+    }
+
+    document.addEventListener("DOMContentLoaded", loadProfile)
+</script>
 </body>
 
 </html>
