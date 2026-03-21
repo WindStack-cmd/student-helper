@@ -890,6 +890,8 @@
             <div class="workspace-content" id="chatMessages">
                 <!-- Composer Box -->
                 <div class="post-composer">
+
+                
                     <textarea id="chatInput" class="composer-input" rows="2"
                         placeholder="Initiate network broadcast... Describe your query or share data."></textarea>
                     <div class="composer-actions">
@@ -901,134 +903,15 @@
                             <button class="tool-btn"><i data-lucide="smile"
                                     style="width: 18px; height: 18px;"></i></button>
                         </div>
+
+                         <!-- DYNAMIC POSTS WILL COME HERE -->
+                         <div id="postsContainer"></div>
+
                         <button onclick="sendMessage()" class="btn-primary" style="height: 36px; font-size: 0.75rem;">Transmit</button>
                     </div>
                 </div>
 
-                <!-- Feed Post 1 -->
-                <article class="feed-post">
-                    <div class="post-header">
-                        <div class="post-author">
-                            <div class="author-pfp pfp-1">AL</div>
-                            <div class="author-meta">
-                                <h4>Alex Lawson</h4>
-                                <p>NODE.7725 • T-14m</p>
-                            </div>
-                        </div>
-                        <div class="bounty-badge">
-                            <i data-lucide="circle-dashed" style="width: 14px; height: 14px;"></i> BOUNTY: 50 PTS
-                        </div>
-                    </div>
-
-                    <div class="post-body">
-                        <h2>Need assistance parsing nested JSON structures in Python</h2>
-                        <p>I'm attempting to extract a deeply nested array of objects from a real-time API response. My
-                            current recursive function keeps hitting a stack overflow error after depth 12. Can someone
-                            review my AST map?</p>
-
-                        <div class="post-tags">
-                            <span class="post-tag">Python</span>
-                            <span class="post-tag">Data-Parsing</span>
-                            <span class="post-tag">CompSci</span>
-                        </div>
-                    </div>
-
-                    <div class="post-footer">
-                        <div class="interaction-group">
-                            <button class="interact-btn">
-                                <i data-lucide="messages-square" style="width: 16px; height: 16px;"></i> 4 Replies
-                            </button>
-                            <button class="interact-btn">
-                                <i data-lucide="share-2" style="width: 16px; height: 16px;"></i> Route
-                            </button>
-                        </div>
-                        <button class="btn-solve">Initiate Fix</button>
-                    </div>
-                </article>
-
-                <!-- Feed Post 2 -->
-                <article class="feed-post">
-                    <div class="post-header">
-                        <div class="post-author">
-                            <div class="author-pfp pfp-2">MK</div>
-                            <div class="author-meta">
-                                <h4>Maya Kim</h4>
-                                <p>NODE.1994 • T-45m</p>
-                            </div>
-                        </div>
-                        <div class="bounty-badge solved">
-                            <i data-lucide="check" style="width: 14px; height: 14px;"></i> RESOLVED
-                        </div>
-                    </div>
-
-                    <div class="post-body">
-                        <h2>Review required: Advanced Calculus III problem set</h2>
-                        <p>Specifically struggling with Stokes' Theorem applications on non-orientable surfaces. Could
-                            an advanced Mathematics major walk me through question 4b?</p>
-
-                        <div class="post-tags">
-                            <span class="post-tag">Mathematics</span>
-                            <span class="post-tag">Calculus</span>
-                        </div>
-                    </div>
-
-                    <div class="post-footer">
-                        <div class="interaction-group">
-                            <button class="interact-btn">
-                                <i data-lucide="messages-square" style="width: 16px; height: 16px;"></i> 12 Replies
-                            </button>
-                            <button class="interact-btn">
-                                <i data-lucide="share-2" style="width: 16px; height: 16px;"></i> Route
-                            </button>
-                        </div>
-                        <div
-                            style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">
-                            Resolved by Node.4011
-                        </div>
-                    </div>
-                </article>
-
-                <!-- Feed Post 3 -->
-                <article class="feed-post">
-                    <div class="post-header">
-                        <div class="post-author">
-                            <div class="author-pfp pfp-3">DJ</div>
-                            <div class="author-meta">
-                                <h4>David Jensen</h4>
-                                <p>NODE.8112 • T-2h</p>
-                            </div>
-                        </div>
-                        <!-- No bounty badge purely discussion -->
-                    </div>
-
-                    <div class="post-body">
-                        <h2>Discussion: The shift from Monolithic Architectures to Microservices</h2>
-                        <p>I feel like universities are still teaching monoliths heavily, while the industry has
-                            completely migrated. What are your thoughts on supplementing standard syllabus with
-                            self-taught Docker/K8s environments?</p>
-
-                        <div class="post-tags">
-                            <span class="post-tag">Discussion</span>
-                            <span class="post-tag">DevOps</span>
-                            <span class="post-tag">Architecture</span>
-                        </div>
-                    </div>
-
-                    <div class="post-footer">
-                        <div class="interaction-group">
-                            <button class="interact-btn" style="color: var(--accent-lime);">
-                                <i data-lucide="messages-square"
-                                    style="width: 16px; height: 16px; fill: currentColor;"></i> 45 Replies
-                            </button>
-                            <button class="interact-btn">
-                                <i data-lucide="share-2" style="width: 16px; height: 16px;"></i> Route
-                            </button>
-                        </div>
-                        <button class="interact-btn"
-                            style="background: rgba(255,255,255,0.05); padding: 8px 16px; border-radius: 4px;">Join
-                            Thread</button>
-                    </div>
-                </article>
+                
 
                 <!-- Loading Marker -->
                 <div
@@ -1126,40 +1009,66 @@
         </aside>
     </div>
 
-   <script>
+  <script>
 
-lucide.createIcons();
+async function loadPosts() {
 
-const socket = io("http://127.0.0.1:5000")
+    const res = await fetch("http://127.0.0.1:5000/get_posts")
+    const data = await res.json()
 
-const chatBox = document.getElementById("chatMessages")
+    const container = document.getElementById("postsContainer")
+    container.innerHTML = ""
 
-socket.on("message", function(msg){
+    data.forEach(post => {
 
-chatBox.innerHTML += `
+        const initials = post.first_name
+            .split(" ")
+            .map(n => n[0])
+            .join("")
+            .toUpperCase()
 
-<article class="feed-post">
-<div class="post-body">
-<h2>Network Message</h2>
-<p>${msg}</p>
-</div>
-</article>
+        const div = document.createElement("article")
+        div.className = "feed-post"
 
-`
+        div.innerHTML = `
+            <div class="post-header">
+                <div class="post-author">
+                    <div class="author-pfp">${initials}</div>
+                    <div class="author-meta">
+                        <h4>${post.first_name}</h4>
+                        <p>NODE • Just now</p>
+                    </div>
+                </div>
 
-})
+                ${post.bounty ? `
+                <div class="bounty-badge">
+                    BOUNTY: ${post.bounty} PTS
+                </div>` : ``}
+            </div>
 
-function sendMessage(){
+            <div class="post-body">
+                <h2>${post.title || "User Post"}</h2>
+                <p>${post.content}</p>
+            </div>
 
-const input = document.getElementById("chatInput")
+            <div class="post-footer">
+                <div class="interaction-group">
+                    <button class="interact-btn">Replies</button>
+                </div>
 
-if(input.value.trim() === "") return
+                <button class="btn-solve" onclick="acceptPost('${post.id}')">
+                    Initiate Fix
+                </button>
+            </div>
+        `
 
-socket.send(input.value)
-
-input.value=""
-
+        container.appendChild(div)
+    })
 }
+
+loadPosts()
+
+
 
 </script>
 <script>

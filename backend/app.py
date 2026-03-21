@@ -140,6 +140,29 @@ def dashboard_metrics():
         "pending": pending
     })
 
+#-----------------------------
+# LEADERBOARD   
+#-----------------------------
+
+@app.route("/leaderboard", methods=["GET"])
+def leaderboard():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT first_name, email, reputation, bounties_completed
+        FROM users
+        ORDER BY reputation DESC
+    """)
+
+    users = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(users)
+
+
 # -----------------------------
 # POST REQUEST
 # -----------------------------
@@ -281,26 +304,6 @@ def get_answers(request_id):
 
     return jsonify(answers)
 
-# -----------------------------
-# GET LEADERBOARD
-# -----------------------------
-
-@app.route("/leaderboard", methods=["GET"])
-def leaderboard():
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    cursor.execute(
-        "SELECT email, points FROM users ORDER BY points DESC LIMIT 10"
-    )
-
-    users = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    return jsonify(users)
 
 # -----------------------------
 # ACCEPT ANSWER
@@ -350,10 +353,105 @@ def handle_message(msg):
     send(msg, broadcast=True)
 
 # -----------------------------
+# UPDATE REPUTATION 
+#-----------------------------
+
+    @app.route("/update_reputation", methods=["POST"])
+    def update_reputation():
+     data = request.json
+     email = data.get("email")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE users
+        SET reputation = reputation + 50,
+            bounties_completed = bounties_completed + 1
+        WHERE email = %s
+    """, (email,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Updated"})
+
+# -----------------------------
+# GET ALL POSTS
+#-----------------------------
+
+    @app.route("/get_posts", methods=["GET"])
+    def get_posts():
+     conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT p.*, u.first_name 
+        FROM posts p
+        JOIN users u ON p.user_email = u.email
+        ORDER BY p.created_at DESC
+    """)
+
+    posts = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(posts)
+
+# -----------------------------
+# CREATE POST
+#-----------------------------
+
+@app.route("/create_post", methods=["POST"])
+def create_post():
+    data = request.json
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO posts (user_email, content, bounty)
+        VALUES (%s, %s, %s)
+    """, (
+        data["email"],
+        data["content"],
+        data["bounty"]
+    ))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Post created"})
+
+# -----------------------------
+# ACCEPT POST
+#-----------------------------
+
+@app.route("/accept_post", methods=["POST"])
+def accept_post():
+    data = request.json
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE posts
+        SET accepted_by = %s
+        WHERE id = %s
+    """, (data["email"], data["post_id"]))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "accepted"})
+
+# -----------------------------
 # RUN SERVER
 # -----------------------------
 
 if __name__ == "__main__":
   socketio.run(app, debug=True)
-
-  SECRET_KEY = "mysecret123"

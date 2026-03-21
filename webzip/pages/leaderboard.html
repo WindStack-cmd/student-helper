@@ -885,101 +885,10 @@
                             <th style="text-align: right;">Patches</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- Row 1 -->
-                        <tr class="ranking-row">
-                            <td class="row-rank">01</td>
-                            <td class="row-user">
-                                <div class="row-avatar"><i data-lucide="star"></i></div>
-                                <div class="row-name">John Doe</div>
-                            </td>
-                            <td class="row-rep">3250 <span>REP</span></td>
-                            <td>
-                                <div class="row-badges">
-                                    <div class="b-icon" title="Bug Hunter"><i data-lucide="bug"
-                                            style="width: 14px; height: 14px;"></i></div>
-                                    <div class="b-icon" title="Fast Responder"><i data-lucide="zap"
-                                            style="width: 14px; height: 14px;"></i></div>
-                                </div>
-                            </td>
-                        </tr>
+                    <tbody id="leaderboardBody">
+                        
 
-                        <!-- Row 2 -->
-                        <tr class="ranking-row">
-                            <td class="row-rank">02</td>
-                            <td class="row-user">
-                                <div class="row-avatar">SJ</div>
-                                <div class="row-name">Sarah Johnson</div>
-                            </td>
-                            <td class="row-rep">2450 <span>REP</span></td>
-                            <td>
-                                <div class="row-badges">
-                                    <div class="b-icon" title="Code Reviewer"><i data-lucide="eye"
-                                            style="width: 14px; height: 14px;"></i></div>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Row 3 -->
-                        <tr class="ranking-row">
-                            <td class="row-rank">03</td>
-                            <td class="row-user">
-                                <div class="row-avatar">EW</div>
-                                <div class="row-name">Emma Wilson</div>
-                            </td>
-                            <td class="row-rep">2120 <span>REP</span></td>
-                            <td>
-                                <div class="row-badges">
-                                    <div class="b-icon" title="Fast Responder"><i data-lucide="zap"
-                                            style="width: 14px; height: 14px;"></i></div>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Row 4 -->
-                        <tr class="ranking-row">
-                            <td class="row-rank">04</td>
-                            <td class="row-user">
-                                <div class="row-avatar">MC</div>
-                                <div class="row-name">Marcus Chen</div>
-                            </td>
-                            <td class="row-rep">1890 <span>REP</span></td>
-                            <td>
-                                <div class="row-badges">
-                                    <div class="b-icon" title="Helpful"><i data-lucide="heart"
-                                            style="width: 14px; height: 14px;"></i></div>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Row 5 -->
-                        <tr class="ranking-row">
-                            <td class="row-rank">05</td>
-                            <td class="row-user">
-                                <div class="row-avatar">DS</div>
-                                <div class="row-name">David Silva</div>
-                            </td>
-                            <td class="row-rep">1650 <span>REP</span></td>
-                            <td>
-                                <div class="row-badges">
-                                    <div class="b-icon" title="Top Answer"><i data-lucide="arrow-up"
-                                            style="width: 14px; height: 14px;"></i></div>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Row 6 -->
-                        <tr class="ranking-row">
-                            <td class="row-rank">06</td>
-                            <td class="row-user">
-                                <div class="row-avatar">AR</div>
-                                <div class="row-name">Alex Rivera</div>
-                            </td>
-                            <td class="row-rep">1420 <span>REP</span></td>
-                            <td>
-                                <div class="row-badges"></div>
-                            </td>
-                        </tr>
+                        
                     </tbody>
                 </table>
 
@@ -994,61 +903,82 @@
 <div id="leaderboardContainer"></div>
 
 </div>
-   <script>
+ 
+<script>
+lucide.createIcons();
 
-async function loadLeaderboard(){
+async function loadLeaderboard() {
 
-const response = await fetch("http://127.0.0.1:5000/leaderboard")
+    const tbody = document.querySelector(".leaderboard-table tbody") 
+        || document.querySelector("tbody"); // fallback
 
-const data = await response.json()
+    tbody.innerHTML = ""
 
-const container = document.getElementById("leaderboardContainer")
+    try {
 
-container.innerHTML=""
+        const res = await fetch("http://127.0.0.1:5000/leaderboard")
+        const data = await res.json()
 
-data.forEach((user,index)=>{
+        data.forEach((user, index) => {
 
-container.innerHTML+=`
+            const initials = user.first_name
+                .split(" ")
+                .map(n => n[0])
+                .join("")
+                .toUpperCase()
 
-<div class="leader-row">
+            const row = document.createElement("tr")
 
-<span>#${index+1}</span>
+            row.innerHTML = `
+                <td>${String(index + 1).padStart(2, "0")}</td>
 
-<span>${user.name}</span>
+                <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div class="avatar-box">${initials}</div>
+                        <div>${user.first_name}</div>
+                    </div>
+                </td>
 
-<span>${user.points} pts</span>
+                <td>${user.reputation} <span style="opacity:0.6;">REP</span></td>
 
-</div>
+                <td>
+                    <div class="patch-box"></div>
+                </td>
+            `
 
-`
+            tbody.appendChild(row)
+        })
 
-})
+        lucide.createIcons()
 
+    } catch (err) {
+        console.error("Leaderboard error:", err)
+    }
 }
 
 loadLeaderboard()
-
 </script>
 
 <script>
 
-const name = localStorage.getItem("firstName")
+const user = JSON.parse(localStorage.getItem("loggedInUser"))
 
-if(name){
+if(user){
 
-const avatar = document.getElementById("sidebarAvatar")
-const username = document.getElementById("sidebarName")
+    const avatar = document.getElementById("sidebarAvatar")
+    const username = document.getElementById("sidebarName")
 
-if(avatar){
-avatar.innerText = name.charAt(0).toUpperCase()
+    if(avatar){
+        avatar.innerText = user.first_name.charAt(0).toUpperCase()
+    }
+
+    if(username){
+        username.innerText = user.first_name
+    }
+
+}else{
+    window.location.href = "login.html"
 }
-
-if(username){
-username.innerText = name
-}
-
-}
-
 </script>
 </body>
 
