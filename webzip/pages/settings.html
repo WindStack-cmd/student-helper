@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -663,7 +663,7 @@
                 <h1 class="workspace-title"><i data-lucide="settings"
                         style="color: var(--text-secondary); width: 28px; height: 28px;"></i> Sys.Config</h1>
                 <div class="workspace-actions">
-                    <button class="btn-sys-main" onclick="alert('Configuration Compiled and Saved')">
+                    <button class="btn-sys-main" onclick="compileSettings()">
                         <i data-lucide="save" style="width: 16px; height: 16px;"></i>
                         Compile Settings
                     </button>
@@ -710,11 +710,9 @@
                                     </div>
                                     <p class="card-desc">Last rotated: 45 days ago. Regular key rotation is strictly
                                         advised for node integrity.</p>
-                                    <a href="change-password.html" style="text-decoration: none;">
-                                        <button class="btn-sys-main"
-                                            style="width: 100%; justify-content: center; height: 36px;">Rotate
-                                            Key</button>
-                                    </a>
+                                    <button class="btn-sys-main" onclick="rotateKey()"
+                                        style="width: 100%; justify-content: center; height: 36px;">Rotate
+                                        Key</button>
                                 </div>
 
                                 <div class="config-card">
@@ -725,9 +723,9 @@
                                     <p class="card-desc">Two-factor authentication adds an extra layer of structural
                                         integrity.</p>
                                     <label class="term-toggle">
-                                        <input type="checkbox">
+                                        <input type="checkbox" id="toggle2fa">
                                         <div class="toggle-box"></div>
-                                        <span>Status: Offline</span>
+                                        <span id="label2fa">Status: Offline</span>
                                     </label>
                                 </div>
                             </div>
@@ -752,9 +750,9 @@
                                     <p class="card-desc">Receive a direct ping when a help request matching your core
                                         modules is broadcasted.</p>
                                     <label class="term-toggle">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" id="toggleBounty" checked>
                                         <div class="toggle-box"></div>
-                                        <span>Status: Active</span>
+                                        <span id="labelBounty">Status: Active</span>
                                     </label>
                                 </div>
 
@@ -766,9 +764,9 @@
                                     <p class="card-desc">Notify upon incoming transmission from another node on the
                                         network.</p>
                                     <label class="term-toggle">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" id="toggleComms" checked>
                                         <div class="toggle-box"></div>
-                                        <span>Status: Active</span>
+                                        <span id="labelComms">Status: Active</span>
                                     </label>
                                 </div>
                             </div>
@@ -812,44 +810,86 @@
             window.location.href = "login.html";
         }
 
-        // Setup mock interactions for tabs and toggles
-        document.querySelectorAll('.term-toggle input').forEach(toggle => {
-            toggle.addEventListener('change', (e) => {
-                const span = e.target.parentElement.querySelector('span');
-                if (e.target.checked) span.textContent = 'Status: Active';
-                else span.textContent = 'Status: Offline';
+        const toggles = [
+            { id: 'toggle2fa', key: 'setting2fa' },
+            { id: 'toggleBounty', key: 'settingBounty' },
+            { id: 'toggleComms', key: 'settingComms' }
+        ];
+
+        toggles.forEach(t => {
+            const el = document.getElementById(t.id);
+            if (!el) return;
+            const saved = localStorage.getItem(t.key);
+            if (saved !== null) {
+                el.checked = saved === 'true';
+            }
+            updateLabel(el);
+
+            el.addEventListener('change', (e) => {
+                localStorage.setItem(t.key, e.target.checked);
+                updateLabel(e.target);
             });
         });
 
-        document.querySelectorAll('.config-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-            });
+        function updateLabel(inputEl) {
+            const span = inputEl.parentElement.querySelector('span');
+            if(span) {
+                if (inputEl.checked) {
+                    span.textContent = inputEl.id === 'toggle2fa' ? 'Status: Online' : 'Status: Active';
+                } else {
+                    span.textContent = 'Status: Offline';
+                }
+            }
+        }
+
+        function rotateKey() {
+            if (confirm("Are you sure you want to rotate your access key? You will be asked to log in again.")) {
+                alert("Access key rotated successfully");
+            }
+        }
+
+        function compileSettings() {
+            const compiled = toggles.map(t => {
+                const el = document.getElementById(t.id);
+                return `${t.key}: ${el ? el.checked : false}`;
+            }).join("\\n");
+            console.log("Compiling settings:\\n" + compiled);
+            alert("Settings compiled and saved");
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const avatar = document.getElementById("sidebarAvatar");
+                    const username = document.getElementById("sidebarName");
+                    if (avatar) avatar.innerText = user.first_name.charAt(0).toUpperCase();
+                    if (username) username.innerText = user.first_name;
+                } catch(e) {}
+            } else {
+                window.location.href = "../index.html";
+            }
         });
     </script>
 
     <script>
-
-const name = localStorage.getItem("firstName")
-const email = localStorage.getItem("userEmail")
-
-if(name){
-
-const avatar = document.getElementById("sidebarAvatar")
-const username = document.getElementById("sidebarName")
-
-if(avatar){
-avatar.innerText = name.charAt(0).toUpperCase()
-}
-
-if(username){
-username.innerText = name
-}
-
-}
-
-</script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const name = user.first_name || user.name || "User";
+                    const email = user.email || "user@system.node";
+                    
+                    document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
+                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
+                    document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
+                } catch(e) {}
+            }
+        });
+    </script>
 </body>
+
 
 </html>

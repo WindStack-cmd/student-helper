@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1017,7 +1017,8 @@ async function loadNotifications(){
 
 try{
 
-const email = localStorage.getItem("userEmail")
+const userStr = localStorage.getItem("loggedInUser");
+const email = userStr ? JSON.parse(userStr).email : null;
 
 const response = await fetch(
 "http://127.0.0.1:5000/notifications/" + email
@@ -1070,24 +1071,19 @@ ERROR_LOADING_NOTIFICATIONS
 
 }
 
-const name = localStorage.getItem("firstName")
-
-if(name){
-
-document.getElementById("userName").innerText = name
-
-document.getElementById("userAvatar").innerText =
-name.charAt(0).toUpperCase()
-
+const userStr = localStorage.getItem("loggedInUser");
+if(userStr){
+    try {
+        const user = JSON.parse(userStr);
+        document.getElementById("userName").innerText = user.first_name;
+        document.getElementById("userAvatar").innerText = user.first_name.charAt(0).toUpperCase();
+        const roleEl = document.querySelector(".user-role");
+        if(roleEl) roleEl.innerText = user.email;
+    } catch(e) {}
 }
 
-
-
 function logoutUser(){
-
-// clear login session
-localStorage.removeItem("userEmail")
-localStorage.removeItem("firstName")
+    localStorage.removeItem("loggedInUser");
 
 // redirect to login page
 window.location.href="../index.html"
@@ -1096,7 +1092,8 @@ window.location.href="../index.html"
 
 async function loadDashboardMetrics(){
 
-const email = localStorage.getItem("userEmail")
+const userStr = localStorage.getItem("loggedInUser");
+const email = userStr ? JSON.parse(userStr).email : null;
 
 const response = await fetch(
 "http://127.0.0.1:5000/dashboard_metrics?email="+email
@@ -1114,6 +1111,24 @@ loadDashboardMetrics()
 
 
 </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const name = user.first_name || user.name || "User";
+                    const email = user.email || "user@system.node";
+                    
+                    document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
+                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
+                    document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
+                } catch(e) {}
+            }
+        });
+    </script>
 </body>
+
 
 </html>

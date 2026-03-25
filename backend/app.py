@@ -5,8 +5,7 @@ import mysql.connector
 
 
 app = Flask(__name__)
-CORS(app)
-
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -146,21 +145,31 @@ def dashboard_metrics():
 
 @app.route("/leaderboard", methods=["GET"])
 def leaderboard():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""
-        SELECT first_name, email, reputation, bounties_completed
-        FROM users
-        ORDER BY reputation DESC
-    """)
+        try:
+            cursor.execute("""
+                SELECT first_name, email, reputation, bounties_completed
+                FROM users
+                ORDER BY reputation DESC
+            """)
+            users = cursor.fetchall()
+        except mysql.connector.Error:
+            cursor.execute("""
+                SELECT first_name, email, points as reputation, 0 as bounties_completed
+                FROM users
+                ORDER BY points DESC
+            """)
+            users = cursor.fetchall()
 
-    users = cursor.fetchall()
+        cursor.close()
+        conn.close()
 
-    cursor.close()
-    conn.close()
-
-    return jsonify(users)
+        return jsonify(users)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # -----------------------------
@@ -356,10 +365,10 @@ def handle_message(msg):
 # UPDATE REPUTATION 
 #-----------------------------
 
-    @app.route("/update_reputation", methods=["POST"])
-    def update_reputation():
-     data = request.json
-     email = data.get("email")
+@app.route("/update_reputation", methods=["POST"])
+def update_reputation():
+    data = request.json
+    email = data.get("email")
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -381,9 +390,9 @@ def handle_message(msg):
 # GET ALL POSTS
 #-----------------------------
 
-    @app.route("/get_posts", methods=["GET"])
-    def get_posts():
-     conn = get_db_connection()
+@app.route("/get_posts", methods=["GET"])
+def get_posts():
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
@@ -437,9 +446,14 @@ def accept_post():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    try:
+        cursor.execute("ALTER TABLE requests ADD COLUMN captured_by VARCHAR(255)")
+    except mysql.connector.Error:
+        pass
+
     cursor.execute("""
-        UPDATE posts
-        SET accepted_by = %s
+        UPDATE requests
+        SET status = 'captured', captured_by = %s
         WHERE id = %s
     """, (data["email"], data["post_id"]))
 
@@ -454,4 +468,4 @@ def accept_post():
 # -----------------------------
 
 if __name__ == "__main__":
-  socketio.run(app, debug=True)
+    socketio.run(app, debug=True)

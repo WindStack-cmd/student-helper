@@ -908,51 +908,58 @@
 lucide.createIcons();
 
 async function loadLeaderboard() {
-
-    const tbody = document.querySelector(".leaderboard-table tbody") 
-        || document.querySelector("tbody"); // fallback
-
-    tbody.innerHTML = ""
+    const tbody = document.getElementById("leaderboardBody") || document.querySelector("tbody");
+    if(!tbody) return;
+    
+    const fallbackHTML = tbody.innerHTML;
 
     try {
-
-        const res = await fetch("http://127.0.0.1:5000/leaderboard")
-        const data = await res.json()
+        const res = await fetch("http://127.0.0.1:5000/leaderboard");
+        if (!res.ok) {
+            throw new Error("HTTP Status " + res.status);
+        }
+        const data = await res.json();
+        
+        tbody.innerHTML = "";
 
         data.forEach((user, index) => {
-
-            const initials = user.first_name
-                .split(" ")
-                .map(n => n[0])
-                .join("")
-                .toUpperCase()
-
-            const row = document.createElement("tr")
+            const initials = user.first_name ? user.first_name.charAt(0).toUpperCase() : "U";
+            const row = document.createElement("tr");
+            row.className = "ranking-row";
 
             row.innerHTML = `
-                <td>${String(index + 1).padStart(2, "0")}</td>
-
+                <td><div class="row-rank">#${String(index + 1).padStart(2, "0")}</div></td>
                 <td>
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <div class="avatar-box">${initials}</div>
-                        <div>${user.first_name}</div>
+                    <div class="row-user">
+                        <div class="row-avatar">${initials}</div>
+                        <div class="row-name">${user.first_name || user.email.split('@')[0]}</div>
                     </div>
                 </td>
-
-                <td>${user.reputation} <span style="opacity:0.6;">REP</span></td>
-
+                <td class="row-rep">${user.reputation || 0} <span>REP</span></td>
                 <td>
-                    <div class="patch-box"></div>
+                    <div class="row-badges">
+                        <div class="b-icon"><i data-lucide="${index === 0 ? 'award' : 'check'}"></i></div>
+                    </div>
                 </td>
-            `
+            `;
+            tbody.appendChild(row);
+        });
 
-            tbody.appendChild(row)
-        })
-
-        lucide.createIcons()
+        lucide.createIcons();
 
     } catch (err) {
-        console.error("Leaderboard error:", err)
+        console.error("Leaderboard error:", err);
+        if (tbody && tbody.innerHTML === "") {
+            tbody.innerHTML = fallbackHTML || `
+                <tr class="ranking-row">
+                    <td><div class="row-rank">#01</div></td>
+                    <td><div class="row-user"><div class="row-avatar">X</div><div class="row-name">STATIC FALLBACK</div></div></td>
+                    <td class="row-rep">999 <span>REP</span></td>
+                    <td><div class="row-badges"><div class="b-icon"><i data-lucide="award"></i></div></div></td>
+                </tr>
+            `;
+            lucide.createIcons();
+        }
     }
 }
 
@@ -980,6 +987,24 @@ if(user){
     window.location.href = "login.html"
 }
 </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const name = user.first_name || user.name || "User";
+                    const email = user.email || "user@system.node";
+                    
+                    document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
+                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
+                    document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
+                } catch(e) {}
+            }
+        });
+    </script>
 </body>
+
 
 </html>

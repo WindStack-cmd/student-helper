@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -713,122 +713,10 @@
         lucide.createIcons();
 
         function logout() {
-            window.location.href = "login.html";
+            localStorage.removeItem("loggedInUser");
+            window.location.href = "../index.html";
         }
 
-        const container = document.getElementById("helpRequestsContainer");
-   
-        
-
-       
-
-            container.style.display = 'block';
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i data-lucide="radar"></i>
-                    <h2>No Signals Found</h2>
-                    <p>Network scan clear. Check back later for active bounties.</p>
-                </div>
-            `;
-            lucide.createIcons();
-        
-
-        function renderRequests() {
-            container.innerHTML = "";
-
-            allRequests.forEach((req, index) => {
-                const div = document.createElement("div");
-                div.className = "bounty-card";
-
-                const loggedInUser = JSON.parse(localStorage.getItem("loggedInUser"));
-                let acceptedInfoHtml = "";
-
-                if (req.acceptedBy) {
-                    if (loggedInUser && req.acceptedBy === loggedInUser.email) {
-                        acceptedInfoHtml = `
-                            <div class="accepted-info">
-                                <i data-lucide="check" style="width: 14px; height: 14px; display:inline; vertical-align:-2px;"></i> Claimed By You
-                                ${req.acceptedOn ? `[${req.acceptedOn}]` : ""}
-                            </div>
-                        `;
-                    } else {
-                        acceptedInfoHtml = `
-                            <div class="accepted-info" style="color: var(--text-secondary); border-color: var(--border-dim); background: rgba(255,255,255,0.05);">
-                                Claimed By: ${req.acceptedBy}
-                                ${req.acceptedOn ? `[${req.acceptedOn}]` : ""}
-                            </div>
-                        `;
-                    }
-                }
-
-                const statusClass = req.status.toLowerCase() === "pending" ? "pending" : "completed";
-                const iconMap = { "Programming": "code", "Mathematics": "sigma", "Economics": "trending-up", "General": "file-text" };
-                const iconType = iconMap[req.type] || "file-text";
-
-                div.innerHTML = `
-                    <div class="bounty-header">
-                        <div>
-                            <div class="bounty-type"><i data-lucide="${iconType}" style="width: 14px; height: 14px; display:inline; vertical-align:-3px; margin-right: 4px;"></i> ${req.type || "General"}</div>
-                            <div class="bounty-title">${req.title}</div>
-                        </div>
-                    </div>
-                    
-                    <p class="bounty-desc">${req.description || "No description provided."}</p>
-
-                    ${acceptedInfoHtml}
-
-                    <div class="bounty-meta">
-                        <span class="status-badge ${statusClass}">
-                            ${req.status === "Pending" ? '<i data-lucide="clock" style="width: 12px; height: 12px;"></i>' : '<i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>'} 
-                            ${req.status}
-                        </span>
-                        
-                        <div style="display:flex; gap: 8px;">
-                            <button class="btn-view" onclick="viewRequest(${index})">Inspect</button>
-                            ${req.status === "Pending" ? `<button class="btn-hunt" onclick="acceptRequest(${index})">Capture</button>` : ""}
-                        </div>
-                    </div>
-                `;
-
-                container.appendChild(div);
-            });
-
-            // Re-render icons inside new DOM nodes
-            lucide.createIcons();
-        }
-
-        function acceptRequest(index) {
-            const loggedInUser = JSON.parse(localStorage.getItem("loggedInUser")) || { email: 'guest@system.node' };
-
-            allRequests[index].status = "Completed";
-            allRequests[index].acceptedBy = loggedInUser.email;
-            allRequests[index].acceptedOn = new Date().toLocaleDateString();
-
-            localStorage.setItem("allRequests", JSON.stringify(allRequests));
-
-            let dashboardData = JSON.parse(localStorage.getItem("dashboardData")) || { helpedOthers: 0 };
-            dashboardData.helpedOthers = (dashboardData.helpedOthers || 0) + 1;
-            localStorage.setItem("dashboardData", JSON.stringify(dashboardData));
-
-            renderRequests();
-            alert("Bounty Captured.\nNetwork ledger updated.");
-        }
-
-        function viewRequest(index) {
-            const modal = document.getElementById("requestModal");
-            const req = allRequests[index];
-
-            document.getElementById("modalTitle").innerHTML = `<i data-lucide="file-search" style="display:inline; color: var(--danger-red);"></i> ${req.title}`;
-            document.getElementById("modalDetails").innerHTML = `
-                <p><strong>Class:</strong> ${req.type || "General"}</p>
-                <p><strong>Log Entry:</strong><br><br> ${req.description}</p>
-                <p><strong>State:</strong> <span style="color: ${req.status === 'Pending' ? 'var(--warning-amber)' : 'var(--text-secondary)'}">${req.status}</span></p>
-                <p><strong>Timestamp:</strong> ${req.date}</p>
-            `;
-
-            lucide.createIcons();
-            modal.style.display = "block";
-        }
 
         function closeRequestModal() {
             document.getElementById("requestModal").style.display = "none";
@@ -842,94 +730,141 @@
         };
 
 
-async function loadHuntMode(){
+        window.currentRequests = [];
 
-const res = await fetch("http://127.0.0.1:5000/get_requests")
+        async function loadHuntMode() {
+            try {
+                const res = await fetch("http://127.0.0.1:5000/get_requests");
+                if (!res.ok) throw new Error("Network response was not ok");
+                const data = await res.json();
+                window.currentRequests = data;
 
-const data = await res.json()
+                const container = document.getElementById("helpRequestsContainer");
+                container.innerHTML = "";
 
-const container = document.getElementById("helpRequestsContainer")
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                <div class="empty-state">
+                    <i data-lucide="radar"></i>
+                    <h2>No Signals Found</h2>
+                    <p>Network scan clear. Check back later for active bounties.</p>
+                </div>
+            `;
+                    return;
+                }
 
-container.innerHTML = ""
+                data.forEach(req => {
+                    container.innerHTML += `
+            <div class="bounty-card">
+                <div class="bounty-header">
+                    <div>
+                        <div class="bounty-type">Programming</div>
+                        <div class="bounty-title">${req.title}</div>
+                    </div>
+                </div>
+                <p class="bounty-desc">${req.description}</p>
+                <div class="bounty-meta">
+                    <span class="status-badge pending" style="cursor:pointer;" onclick="window.location.href='request-details.html?id=${req.id}'">
+                        <i data-lucide="clock" style="width:12px;height:12px;"></i>
+                        OPEN
+                    </span>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn-view" onclick="inspectRequest(${req.id})">INSPECT</button>
+                        <button id="cap-btn-${req.id}" class="btn-hunt" onclick="captureRequest(${req.id})">CAPTURE</button>
+                    </div>
+                </div>
+            </div>
+            `;
+                });
+                lucide.createIcons();
+            } catch (e) {
+                console.error("Failed to load requests", e);
+            }
+        }
 
-data.forEach(req => {
+        function inspectRequest(id) {
+            const req = window.currentRequests.find(r => r.id === id);
+            if (!req) return;
+            const modal = document.getElementById("requestModal");
+            document.getElementById("modalTitle").innerHTML = `<i data-lucide="file-search" style="display:inline; color: var(--danger-red);"></i> ${req.title}`;
+            document.getElementById("modalDetails").innerHTML = `
+        <p><strong>Poster Email:</strong> ${req.email}</p>
+        <p><strong>Bounty:</strong> ${req.bounty || 0} PTS</p>
+        <p><strong>Log Entry:</strong><br><br> ${req.description}</p>
+    `;
+            lucide.createIcons();
+            modal.style.display = "block";
+        }
 
-container.innerHTML += `
-<div class="bounty-card">
+        async function captureRequest(id) {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (!userStr) {
+                alert("Please login first");
+                return;
+            }
+            const email = JSON.parse(userStr).email;
+            const btn = document.getElementById("cap-btn-" + id);
+            if (btn) btn.innerText = "Capturing...";
 
-<div class="bounty-header">
-<div>
-<div class="bounty-type">Programming</div>
-<div class="bounty-title">${req.title}</div>
-</div>
-</div>
+            try {
+                const res = await fetch("http://127.0.0.1:5000/accept_post", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ post_id: id, email: email })
+                });
+                if (res.ok) {
+                    if (btn) {
+                        btn.innerText = "Captured";
+                        btn.disabled = true;
+                        btn.style.opacity = "0.5";
+                        btn.style.cursor = "not-allowed";
+                    }
+                    alert("Success! Request captured.");
+                } else {
+                    alert("Failed to capture: " + res.status);
+                    if (btn) btn.innerText = "CAPTURE";
+                }
+            } catch (e) {
+                alert("Error capturing request");
+                if (btn) btn.innerText = "CAPTURE";
+            }
+        }
 
-<p class="bounty-desc">${req.description}</p>
-
-<div class="bounty-meta">
-
-<span class="status-badge pending">
-<i data-lucide="clock" style="width:12px;height:12px;"></i>
-OPEN
-</span>
-
-<div style="display:flex; gap:8px;">
-
-<button class="btn-view" onclick="openRequest(${req.id})">
-INSPECT
-</button>
-
-<button class="btn-hunt">
-CAPTURE
-</button>
-
-</div>
-
-</div>
-
-</div>
-`
-
-})
-
-lucide.createIcons()
-
-}
-
-loadHuntMode()
+        loadHuntMode()
 
     </script>
 
 
-   await fetch("http://127.0.0.1:5000/update_reputation", {
-     method: "POST",
-     headers: {
-        "Content-Type": "application/json"
-     },
-     body: JSON.stringify({
-         email: loggedInUser.email
-     })
-})
+    const userStr = localStorage.getItem("loggedInUser");
+    if(userStr){
+    try {
+    const user = JSON.parse(userStr);
+    const avatar = document.getElementById("sidebarAvatar");
+    const username = document.getElementById("sidebarName");
+    if(avatar) avatar.innerText = user.first_name.charAt(0).toUpperCase();
+    if(username) username.innerText = user.first_name;
+    } catch(e) {}
+    }
+
+    </script>
+
     <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const name = user.first_name || user.name || "User";
+                    const email = user.email || "user@system.node";
 
-const name = localStorage.getItem("firstName")
-
-if(name){
-
-const avatar = document.getElementById("sidebarAvatar")
-const username = document.getElementById("sidebarName")
-
-if(avatar){
-avatar.innerText = name.charAt(0).toUpperCase()
-}
-
-if(username){
-username.innerText = name
-}
-
-}
-
-</script>
+                    document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
+                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
+                    document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
+                } catch (e) { }
+            }
+        });
+    </script>
 </body>
+
 
 </html>

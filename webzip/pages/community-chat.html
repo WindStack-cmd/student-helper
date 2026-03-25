@@ -1012,85 +1012,152 @@
   <script>
 
 async function loadPosts() {
+    try {
+        const res = await fetch("http://127.0.0.1:5000/get_posts")
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json()
 
-    const res = await fetch("http://127.0.0.1:5000/get_posts")
-    const data = await res.json()
+        const container = document.getElementById("postsContainer")
+        container.innerHTML = ""
 
-    const container = document.getElementById("postsContainer")
-    container.innerHTML = ""
+        data.forEach(post => {
+            const initials = post.first_name ? post.first_name.split(" ").map(n => n[0]).join("").toUpperCase() : "U"
+            const div = document.createElement("article")
+            div.className = "feed-post"
 
-    data.forEach(post => {
-
-        const initials = post.first_name
-            .split(" ")
-            .map(n => n[0])
-            .join("")
-            .toUpperCase()
-
-        const div = document.createElement("article")
-        div.className = "feed-post"
-
-        div.innerHTML = `
-            <div class="post-header">
-                <div class="post-author">
-                    <div class="author-pfp">${initials}</div>
-                    <div class="author-meta">
-                        <h4>${post.first_name}</h4>
-                        <p>NODE • Just now</p>
+            div.innerHTML = `
+                <div class="post-header">
+                    <div class="post-author">
+                        <div class="author-pfp">${initials}</div>
+                        <div class="author-meta">
+                            <h4>${post.first_name || "User"}</h4>
+                            <p>NODE • Just now</p>
+                        </div>
                     </div>
+
+                    ${post.bounty ? `
+                    <div class="bounty-badge">
+                        BOUNTY: ${post.bounty} PTS
+                    </div>` : ``}
                 </div>
 
-                ${post.bounty ? `
-                <div class="bounty-badge">
-                    BOUNTY: ${post.bounty} PTS
-                </div>` : ``}
-            </div>
-
-            <div class="post-body">
-                <h2>${post.title || "User Post"}</h2>
-                <p>${post.content}</p>
-            </div>
-
-            <div class="post-footer">
-                <div class="interaction-group">
-                    <button class="interact-btn">Replies</button>
+                <div class="post-body">
+                    <h2>${post.title || "User Post"}</h2>
+                    <p>${post.content}</p>
                 </div>
 
-                <button class="btn-solve" onclick="acceptPost('${post.id}')">
-                    Initiate Fix
-                </button>
-            </div>
-        `
+                <div class="post-footer">
+                    <div class="interaction-group">
+                        <button class="interact-btn">Replies</button>
+                    </div>
 
-        container.appendChild(div)
-    })
+                    <button class="btn-solve" onclick="acceptPost('${post.id}')">
+                        Initiate Fix
+                    </button>
+                </div>
+            `
+
+            container.appendChild(div)
+        })
+    } catch(e) {
+        console.error("Failed to load posts", e);
+    }
+}
+
+async function sendMessage() {
+    const inputStr = document.getElementById("chatInput").value;
+    if (!inputStr) return;
+    const userStr = localStorage.getItem("loggedInUser");
+    if (!userStr) {
+        alert("Please log in first");
+        return;
+    }
+    const user = JSON.parse(userStr);
+
+    try {
+        const res = await fetch("http://127.0.0.1:5000/create_post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: user.email, content: inputStr, bounty: 0 })
+        });
+        if (res.ok) {
+            document.getElementById("chatInput").value = "";
+            loadPosts();
+        } else {
+            alert("Failed to send message: " + res.status);
+        }
+    } catch(e) {
+        alert("Error sending message");
+    }
+}
+
+async function loadLeaderboard() {
+    try {
+        const res = await fetch("http://127.0.0.1:5000/leaderboard");
+        if (!res.ok) return;
+        const data = await res.json();
+        const container = document.querySelector(".trending-nodes");
+        if (data && data.length > 0) {
+            container.innerHTML = "";
+            data.slice(0, 3).forEach((u, i) => {
+                const initials = u.first_name ? u.first_name.charAt(0).toUpperCase() : "U";
+                const colors = ["var(--warning-amber)", "var(--accent-purple)", "var(--accent-blue)"];
+                const color = colors[i] || colors[0];
+                container.innerHTML += `
+                    <div class="trending-node">
+                        <div class="node-rank">#${i+1}</div>
+                        <div class="node-pfp" style="color: ${color};">${initials}</div>
+                        <div class="node-info">
+                            <div class="node-id">${u.first_name || u.email.split('@')[0]}</div>
+                            <div class="node-score">+${u.reputation || 0} PTS</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    } catch (e) {
+        console.error("Leaderboard fetch failed", e);
+    }
 }
 
 loadPosts()
+loadLeaderboard()
 
 
 
 </script>
 <script>
 
-const name = localStorage.getItem("firstName")
-
-if(name){
-
-const avatar = document.getElementById("sidebarAvatar")
-const username = document.getElementById("sidebarName")
-
-if(avatar){
-avatar.innerText = name.charAt(0).toUpperCase()
-}
-
-if(username){
-username.innerText = name
-}
-
+const userStr = localStorage.getItem("loggedInUser");
+if(userStr){
+    try {
+        const user = JSON.parse(userStr);
+        const avatar = document.getElementById("sidebarAvatar");
+        const username = document.getElementById("sidebarName");
+        if(avatar) avatar.innerText = user.first_name.charAt(0).toUpperCase();
+        if(username) username.innerText = user.first_name;
+    } catch(e) {}
 }
 
 </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const name = user.first_name || user.name || "User";
+                    const email = user.email || "user@system.node";
+                    
+                    document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
+                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
+                    document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
+                } catch(e) {}
+            }
+        });
+    </script>
 </body>
+
 
 </html>
