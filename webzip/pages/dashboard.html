@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -783,20 +783,19 @@
                 </div>
             </div>
 
-         <div class="sidebar-footer">
+            <div class="sidebar-footer">
 
-    <div id="userAvatar" class="user-avatar">U</div>
+                <div id="userAvatar" class="user-avatar">U</div>
 
-    <div class="user-info">
-        <div id="userName" class="user-name">LOADING...</div>
-        <div class="user-role">NODE_LVL_4</div>
-    </div>
+                <div class="user-info">
+                    <div id="userName" class="user-name">LOADING...</div>
+                    <div class="user-role">NODE_LVL_4</div>
+                </div>
 
-    <i data-lucide="power"
-    onclick="logoutUser()"
-       style="color: var(--danger-red); width:16px; height:16px; margin-left:auto;"></i>
+                <i data-lucide="power" onclick="logoutUser()"
+                    style="color: var(--danger-red); width:16px; height:16px; margin-left:auto;"></i>
 
-</div>
+            </div>
         </aside>
 
         <!-- MIDDLE PANEL: Main Workspace -->
@@ -804,28 +803,28 @@
             <header class="workspace-header">
                 <h1 class="workspace-title">Sys.Overview</h1>
 
-               <div class="workspace-actions">
+                <div class="workspace-actions">
 
-<button class="btn-icon" onclick="loadNotifications()">
-<i data-lucide="bell" style="width:18px;height:18px;"></i>
-</button>
+                    <button class="btn-icon" onclick="loadNotifications()">
+                        <i data-lucide="bell" style="width:18px;height:18px;"></i>
+                    </button>
 
-<button class="btn-icon">
-<i data-lucide="search" style="width: 18px; height: 18px;"></i>
-</button>
+                    <button class="btn-icon">
+                        <i data-lucide="search" style="width: 18px; height: 18px;"></i>
+                    </button>
 
-<a href="request-help.html" style="text-decoration: none;" class="btn-primary">
-<i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-Init Request
-</a>
+                    <a href="request-help.html" style="text-decoration: none;" class="btn-primary">
+                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                        Init Request
+                    </a>
 
-</div>
+                </div>
             </header>
 
             <div class="workspace-content">
                 <div id="notificationContainer"
-style="margin-bottom:20px;border:1px solid #222;padding:15px;border-radius:8px;background:#0a0a0e;">
-</div>
+                    style="margin-bottom:20px;border:1px solid #222;padding:15px;border-radius:8px;background:#0a0a0e;">
+                </div>
                 <!-- Key Metrics Overview -->
                 <div class="metrics-grid">
                     <div class="metric-card">
@@ -833,132 +832,133 @@ style="margin-bottom:20px;border:1px solid #222;padding:15px;border-radius:8px;b
                             <span class="metric-title">Bounties Cleared</span>
                             <i data-lucide="check-circle-2" class="metric-icon" style="width: 24px; height: 24px;"></i>
                         </div>
-                        <<div class="metric-value" id="solvedCount">24</div>
-                        <div class="metric-trend trend-up">
-                            <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> +12% CYCLE_DELTA
-                        </div>
+                        <<div class="metric-value" id="solvedCount">24
                     </div>
-
-                    <div class="metric-card">
-                        <div class="metric-header">
-                            <span class="metric-title">Ledger Stake</span>
-                            <i data-lucide="award" class="metric-icon" style="width: 24px; height: 24px;"></i>
-                        </div>
-                        <div class="metric-value" id="pointsCount">840</div>
-                        <div class="metric-trend text-secondary">
-                            <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i> TOP_5_PCT
-                        </div>
-                    </div>
-
-                    <div class="metric-card">
-                        <div class="metric-header">
-                            <span class="metric-title">Pending Jobs</span>
-                            <i data-lucide="activity" class="metric-icon" style="width: 24px; height: 24px;"></i>
-                        </div>
-                        <div class="metric-value" id="pendingCount">02</div>
-                        <div class="metric-trend text-tertiary">
-                            AWAITING_ALLOCATION
-                        </div>
+                    <div class="metric-trend trend-up">
+                        <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> +12% CYCLE_DELTA
                     </div>
                 </div>
 
-                <!-- Workspace List View -->
-                <div class="workspace-panel">
-                    <div class="panel-tabs">
-                        <div class="tab active">Network Feed</div>
-                        <div class="tab">My Data</div>
-                        <div class="tab">Archived</div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Ledger Stake</span>
+                        <i data-lucide="award" class="metric-icon" style="width: 24px; height: 24px;"></i>
                     </div>
+                    <div class="metric-value" id="pointsCount">840</div>
+                    <div class="metric-trend text-secondary">
+                        <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i> TOP_5_PCT
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Pending Jobs</span>
+                        <i data-lucide="activity" class="metric-icon" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="metric-value" id="pendingCount">02</div>
+                    <div class="metric-trend text-tertiary">
+                        AWAITING_ALLOCATION
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workspace List View -->
+            <div class="workspace-panel">
+                <div class="panel-tabs">
+                    <div class="tab active">Network Feed</div>
+                    <div class="tab">My Data</div>
+                    <div class="tab">Archived</div>
+                </div>
                 <div class="data-list" id="requestsContainer">
-                  
-                        </div>
-                    </div>
-                </div>
 
-            </div>
-        </main>
-
-        <!-- RIGHT PANEL: Inspector Layout -->
-        <aside class="inspector-panel">
-            <div class="inspector-header">
-                <h3>Identity Protocol</h3>
-            </div>
-
-            <div class="inspector-content">
-                <div class="level-card">
-                    <div class="level-header">
-                        <span>Node Ranking</span>
-                        <span>Lvl. 4</span>
-                    </div>
-                    <div class="level-bar-bg">
-                        <div class="level-bar-fill"></div>
-                    </div>
-                    <div
-                        style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary); text-align: center;">
-                        180 PTS TO NEXT TIER</div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label"><i data-lucide="clock" style="width: 14px; height: 14px;"></i> Initialized
-                    </div>
-                    <div class="info-value" style="font-family: var(--font-mono); font-size: 0.85rem;">Cycle_2024.10
-                    </div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label"><i data-lucide="layers" style="width: 14px; height: 14px;"></i> Core Modules
-                    </div>
-                    <div class="tag-list">
-                        <span class="sys-tag">Python</span>
-                        <span class="sys-tag"
-                            style="border-color: var(--accent-blue); color: var(--accent-blue);">Algorithms</span>
-                        <span class="sys-tag">DataStructs</span>
-                    </div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label"><i data-lucide="target" style="width: 14px; height: 14px;"></i> Active
-                        Objectives</div>
-                    <div class="info-value" style="font-size: 0.85rem; color: var(--text-secondary);">
-                        Currently focusing on distributed systems optimization and helping peers with baseline
-                        compilation errors.
-                    </div>
                 </div>
             </div>
-        </aside>
+    </div>
+
+    </div>
+    </main>
+
+    <!-- RIGHT PANEL: Inspector Layout -->
+    <aside class="inspector-panel">
+        <div class="inspector-header">
+            <h3>Identity Protocol</h3>
+        </div>
+
+        <div class="inspector-content">
+            <div class="level-card">
+                <div class="level-header">
+                    <span>Node Ranking</span>
+                    <span>Lvl. 4</span>
+                </div>
+                <div class="level-bar-bg">
+                    <div class="level-bar-fill"></div>
+                </div>
+                <div
+                    style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary); text-align: center;">
+                    180 PTS TO NEXT TIER</div>
+            </div>
+
+            <div class="info-group">
+                <div class="info-label"><i data-lucide="clock" style="width: 14px; height: 14px;"></i> Initialized
+                </div>
+                <div class="info-value" style="font-family: var(--font-mono); font-size: 0.85rem;">Cycle_2024.10
+                </div>
+            </div>
+
+            <div class="info-group">
+                <div class="info-label"><i data-lucide="layers" style="width: 14px; height: 14px;"></i> Core Modules
+                </div>
+                <div class="tag-list">
+                    <span class="sys-tag">Python</span>
+                    <span class="sys-tag"
+                        style="border-color: var(--accent-blue); color: var(--accent-blue);">Algorithms</span>
+                    <span class="sys-tag">DataStructs</span>
+                </div>
+            </div>
+
+            <div class="info-group">
+                <div class="info-label"><i data-lucide="target" style="width: 14px; height: 14px;"></i> Active
+                    Objectives</div>
+                <div class="info-value" style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Currently focusing on distributed systems optimization and helping peers with baseline
+                    compilation errors.
+                </div>
+            </div>
+        </div>
+    </aside>
     </div>
 
 
-<script>
+    <script>
 
-lucide.createIcons();
+        lucide.createIcons();
 
-async function loadRequests(){
+        async function loadRequests() {
 
-try{
+            try {
 
-const response = await fetch("http://127.0.0.1:5000/get_requests");
+                const response = await fetch("http://127.0.0.1:5000/get_requests");
 
-const data = await response.json();
+                const data = await response.json();
 
-const container = document.getElementById("requestsContainer");
+                const container = document.getElementById("requestsContainer");
 
-container.innerHTML="";
+                container.innerHTML = "";
 
-if(data.length === 0){
+                if (data.length === 0) {
 
-container.innerHTML = `
+                    container.innerHTML = `
 <div style="padding:30px;font-family:var(--font-mono);color:var(--text-secondary);">
 NO_ACTIVE_REQUESTS
 </div>
 `;
 
-return;
-}
+                    return;
+                }
 
-data.forEach(req => {
+                data.forEach(req => {
 
-container.innerHTML += `
+                    container.innerHTML += `
 
 <div class="data-row" onclick="openRequest(${req.id})">
 
@@ -989,61 +989,61 @@ NEW_REQUEST
 
 `;
 
-});
+                });
 
-lucide.createIcons();
+                lucide.createIcons();
 
-}catch(error){
+            } catch (error) {
 
-document.getElementById("requestsContainer").innerHTML = `
+                document.getElementById("requestsContainer").innerHTML = `
 <div style="padding:30px;font-family:var(--font-mono);color:red;">
 ERROR_LOADING_NETWORK_FEED
 </div>
 `;
 
-}
+            }
 
-}
+        }
 
-function openRequest(id){
+        function openRequest(id) {
 
-window.location.href="request-details.html?id="+id;
+            window.location.href = "request-details.html?id=" + id;
 
-}
+        }
 
-loadRequests();
+        loadRequests();
 
-async function loadNotifications(){
+        async function loadNotifications() {
 
-try{
+            try {
 
-const userStr = localStorage.getItem("loggedInUser");
-const email = userStr ? JSON.parse(userStr).email : null;
+                const userStr = localStorage.getItem("loggedInUser");
+                const email = userStr ? JSON.parse(userStr).email : null;
 
-const response = await fetch(
-"http://127.0.0.1:5000/notifications/" + email
-)
+                const response = await fetch(
+                    "http://127.0.0.1:5000/notifications/" + email
+                )
 
-const data = await response.json()
+                const data = await response.json()
 
-const container = document.getElementById("notificationContainer")
+                const container = document.getElementById("notificationContainer")
 
-container.innerHTML = ""
+                container.innerHTML = ""
 
-if(data.length === 0){
+                if (data.length === 0) {
 
-container.innerHTML = `
+                    container.innerHTML = `
 <div style="font-family:var(--font-mono);color:var(--text-secondary);padding:10px;">
 NO_NEW_NOTIFICATIONS
 </div>
 `
 
-return
-}
+                    return
+                }
 
-data.forEach(n => {
+                data.forEach(n => {
 
-container.innerHTML += `
+                    container.innerHTML += `
 
 <div style="
 padding:10px;
@@ -1057,60 +1057,60 @@ font-family:var(--font-mono);
 
 `
 
-})
+                })
 
-}catch(error){
+            } catch (error) {
 
-document.getElementById("notificationContainer").innerHTML = `
+                document.getElementById("notificationContainer").innerHTML = `
 <div style="color:red;padding:10px;">
 ERROR_LOADING_NOTIFICATIONS
 </div>
 `
 
-}
+            }
 
-}
+        }
 
-const userStr = localStorage.getItem("loggedInUser");
-if(userStr){
-    try {
-        const user = JSON.parse(userStr);
-        document.getElementById("userName").innerText = user.first_name;
-        document.getElementById("userAvatar").innerText = user.first_name.charAt(0).toUpperCase();
-        const roleEl = document.querySelector(".user-role");
-        if(roleEl) roleEl.innerText = user.email;
-    } catch(e) {}
-}
+        const userStr = localStorage.getItem("loggedInUser");
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                document.getElementById("userName").innerText = user.first_name;
+                document.getElementById("userAvatar").innerText = user.first_name.charAt(0).toUpperCase();
+                const roleEl = document.querySelector(".user-role");
+                if (roleEl) roleEl.innerText = user.email;
+            } catch (e) { }
+        }
 
-function logoutUser(){
-    localStorage.removeItem("loggedInUser");
+        function logoutUser() {
+            localStorage.removeItem("loggedInUser");
 
-// redirect to login page
-window.location.href="../index.html"
+            // redirect to login page
+            window.location.href = "../index.html"
 
-}
+        }
 
-async function loadDashboardMetrics(){
+        async function loadDashboardMetrics() {
 
-const userStr = localStorage.getItem("loggedInUser");
-const email = userStr ? JSON.parse(userStr).email : null;
+            const userStr = localStorage.getItem("loggedInUser");
+            const email = userStr ? JSON.parse(userStr).email : null;
 
-const response = await fetch(
-"http://127.0.0.1:5000/dashboard_metrics?email="+email
-)
+            const response = await fetch(
+                "http://127.0.0.1:5000/dashboard_metrics?email=" + email
+            )
 
-const data = await response.json()
+            const data = await response.json()
 
-document.getElementById("solvedCount").innerText = data.solved
-document.getElementById("pointsCount").innerText = data.points
-document.getElementById("pendingCount").innerText = data.pending
+            document.getElementById("solvedCount").innerText = data.solved
+            document.getElementById("pointsCount").innerText = data.points
+            document.getElementById("pendingCount").innerText = data.pending
 
-}
+        }
 
-loadDashboardMetrics()
+        loadDashboardMetrics()
 
 
-</script>
+    </script>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
@@ -1120,11 +1120,11 @@ loadDashboardMetrics()
                     const user = JSON.parse(userStr);
                     const name = user.first_name || user.name || "User";
                     const email = user.email || "user@system.node";
-                    
+
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
                     document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
                     document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
-                } catch(e) {}
+                } catch (e) { }
             }
         });
     </script>

@@ -832,23 +832,7 @@
 
         loadHuntMode()
 
-    </script>
-
-
-    const userStr = localStorage.getItem("loggedInUser");
-    if(userStr){
-    try {
-    const user = JSON.parse(userStr);
-    const avatar = document.getElementById("sidebarAvatar");
-    const username = document.getElementById("sidebarName");
-    if(avatar) avatar.innerText = user.first_name.charAt(0).toUpperCase();
-    if(username) username.innerText = user.first_name;
-    } catch(e) {}
-    }
-
-    </script>
-
-    <script>
+    </script>    <script>
         document.addEventListener("DOMContentLoaded", () => {
             const userStr = localStorage.getItem("loggedInUser");
             if (userStr) {

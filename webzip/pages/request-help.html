@@ -602,35 +602,41 @@ async function submitHelpRequest(event){
 event.preventDefault()
 
 const btn = document.getElementById("submitBtn")
-
+const originalText = btn.innerHTML
 btn.innerHTML="Publishing..."
 
 const title = document.getElementById("requestTitle").value
 const description = document.getElementById("requestDesc").value
 
-const email = localStorage.getItem("userEmail")
+let email = "user@system.node"
+const userStr = localStorage.getItem("loggedInUser")
+if (userStr) {
+    try {
+        email = JSON.parse(userStr).email
+    } catch(e) {}
+}
 
-const response = await fetch("http://127.0.0.1:5000/post_request",{
+try {
+    const response = await fetch("http://127.0.0.1:5000/post_request",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            title:title,
+            description:description,
+            email:email,
+            bounty: 50
+        })
+    })
 
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-title:title,
-description:description,
-email:email
-})
-
-})
-
-const data = await response.json()
-
-alert(data.message)
-
-window.location.href="dashboard.html"
+    const data = await response.json()
+    alert(data.message)
+    window.location.href="dashboard.html"
+} catch (error) {
+    alert("Error saving request. Please check if backend is running properly.");
+    btn.innerHTML = originalText;
+}
 
 }
 
@@ -638,6 +644,11 @@ window.location.href="dashboard.html"
 
 
     <script>
+        function logout() {
+            localStorage.removeItem("loggedInUser");
+            window.location.href = "../index.html";
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             const userStr = localStorage.getItem("loggedInUser");
             if (userStr) {
