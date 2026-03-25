@@ -1,678 +1,164 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEW.NODE | StudentsHelper</title>
-    <!-- Fonts for Cyber Editorial theme -->
+    <meta name="description" content="Create your StudentsHelper account — join the academic peer-help network.">
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="../css/global.css">
     <style>
-        :root {
-            --bg-base: #030305;
-            --bg-surface: #0a0a0e;
-            --bg-elevated: #111118;
+        /* ── Register-Specific Styles ── */
 
-            --text-primary: #ffffff;
-            --text-secondary: #84849a;
-            --text-tertiary: #4a4a5e;
-
-            --accent-lime: #ccff00;
-            --accent-purple: #7b42fa;
-            --accent-blue: #00e5ff;
-
-            --border-dim: rgba(255, 255, 255, 0.05);
-            --border-bright: rgba(255, 255, 255, 0.15);
-
-            --font-display: 'Outfit', sans-serif;
-            --font-body: 'Inter', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-
-            --danger-red: #ff3366;
-            --success-green: #ccff00;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: var(--font-body);
-            -webkit-font-smoothing: antialiased;
-        }
-
-        body {
-            background-color: var(--bg-base);
-            color: var(--text-primary);
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-        }
-
-        #app {
-            display: flex;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        /* Ambient overlay */
         .ambient-text {
-            position: fixed;
-            top: -5%;
-            left: -5%;
-            font-family: var(--font-display);
+            top: -5%; left: -5%; bottom: auto; right: auto;
+            transform: none;
             font-size: 20vw;
-            font-weight: 900;
             color: rgba(255, 255, 255, 0.015);
-            white-space: nowrap;
-            z-index: 0;
-            pointer-events: none;
-            letter-spacing: -0.05em;
             line-height: 0.8;
         }
 
-        /* ----- LEFT PANEL: AUTH FORM ----- */
-        .auth-sidebar {
-            width: 600px;
-            height: 100%;
-            background-color: var(--bg-surface);
-            border-right: 1px solid var(--border-dim);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            z-index: 10;
-        }
+        .auth-sidebar { width: 600px; }
 
-        .auth-header {
-            padding: 32px 48px;
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid var(--border-dim);
-            flex-shrink: 0;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-        }
-
-        .brand-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--text-primary);
-            color: var(--bg-base);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .brand:hover .brand-icon {
-            transform: scale(1.1) rotate(5deg);
-            background: var(--accent-lime);
-        }
-
-        .brand-name {
-            font-family: var(--font-display);
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            color: var(--text-primary);
-            text-transform: uppercase;
-        }
-
-        /* Form Area */
-        .auth-content {
-            flex: 1;
-            padding: 48px;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-
-        .auth-content::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .auth-content::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .auth-content::-webkit-scrollbar-thumb {
-            background: var(--border-dim);
-            border-radius: 4px;
-        }
-
-        .auth-title {
-            font-family: var(--font-display);
-            font-size: 3.5rem;
-            font-weight: 900;
-            line-height: 1;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-            letter-spacing: -0.04em;
-            text-transform: uppercase;
-        }
-
-        .auth-subtitle {
-            color: var(--text-secondary);
-            font-size: 1rem;
-            margin-bottom: 40px;
-            line-height: 1.5;
-            font-family: var(--font-mono);
-            letter-spacing: -0.02em;
-        }
-
-        /* Social Auth */
-        .social-buttons {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 32px;
-        }
-
-        .btn-social {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            padding: 14px;
-            background: transparent;
-            border: 1px solid var(--border-dim);
-            border-radius: 8px;
-            color: var(--text-secondary);
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            text-decoration: none;
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-
-        .btn-social:hover {
-            border-color: var(--text-primary);
-            color: var(--text-primary);
-        }
-
-        .btn-social svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .auth-divider {
-            display: flex;
-            align-items: center;
-            text-align: center;
-            color: var(--text-tertiary);
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 32px;
-        }
-
-        .auth-divider::before,
-        .auth-divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid var(--border-dim);
-        }
-
-        .auth-divider:not(:empty)::before {
-            margin-right: 16px;
-        }
-
-        .auth-divider:not(:empty)::after {
-            margin-left: 16px;
-        }
-
-
-        /* Form Inputs */
-        .form-group {
-            margin-bottom: 24px;
-        }
-
+        /* Form Row Grid */
         .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 24px;
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 16px; margin-bottom: 24px;
         }
 
-        .form-row .form-group {
-            margin-bottom: 0;
-        }
-
-        .form-label {
-            display: flex;
-            justify-content: space-between;
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
-        }
-
-        .input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 16px;
-            color: var(--text-tertiary);
-            width: 18px;
-            height: 18px;
-            pointer-events: none;
-        }
-
-        .form-input {
-            width: 100%;
-            background: var(--bg-elevated);
-            border: 1px solid var(--border-dim);
-            border-radius: 8px;
-            padding: 16px 16px 16px 48px;
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            outline: none;
-        }
-
-        .no-icon .form-input {
-            padding-left: 16px;
-        }
-
-        .form-input:focus {
-            border-color: var(--text-primary);
-            background: transparent;
-        }
-
-        .form-input::placeholder {
-            color: var(--text-tertiary);
-        }
-
-        .password-toggle {
-            position: absolute;
-            right: 16px;
-            background: none;
-            border: none;
-            color: var(--text-tertiary);
-            cursor: pointer;
-            padding: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s ease;
-        }
-
-        .password-toggle:hover {
-            color: var(--text-primary);
-        }
+        .form-row .form-group { margin-bottom: 0; }
 
         /* Role Selection Grid */
         .role-selector {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 32px;
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 12px; margin-bottom: 32px;
         }
 
-        .role-option {
-            position: relative;
-        }
+        .role-option { position: relative; }
 
         .role-option input[type="radio"] {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
+            position: absolute; opacity: 0; width: 0; height: 0;
         }
 
         .role-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            background: transparent;
-            border: 1px solid var(--border-dim);
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 24px; background: transparent;
+            border: 1px solid var(--border-dim); border-radius: 8px;
+            cursor: pointer; text-align: center; height: 100%;
             transition: all 0.2s ease;
         }
 
         .role-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+            width: 48px; height: 48px; border-radius: 12px;
             background: var(--bg-elevated);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-            border: 1px solid var(--border-dim);
-            transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-secondary); margin-bottom: 16px;
+            border: 1px solid var(--border-dim); transition: all 0.2s ease;
         }
 
         .role-card span {
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            text-transform: uppercase;
-            margin-bottom: 8px;
+            font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700;
+            color: var(--text-primary); text-transform: uppercase; margin-bottom: 8px;
         }
 
-        .role-card p {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
+        .role-card p { font-size: 0.85rem; color: var(--text-secondary); }
 
-        .role-option input[type="radio"]:checked+.role-card {
+        .role-option input[type="radio"]:checked + .role-card {
             border-color: var(--accent-lime);
             background: rgba(204, 255, 0, 0.05);
         }
 
-        .role-option input[type="radio"]:checked+.role-card .role-icon {
-            background: var(--accent-lime);
-            color: var(--bg-base);
+        .role-option input[type="radio"]:checked + .role-card .role-icon {
+            background: var(--accent-lime); color: var(--bg-base);
             border-color: var(--accent-lime);
             box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
         }
 
-        /* Submit Button & Policies */
+        /* Terms */
         .terms-wrapper {
-            margin-bottom: 32px;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
+            margin-bottom: 32px; display: flex;
+            align-items: flex-start; gap: 12px;
         }
 
         .terms-wrapper input[type="checkbox"] {
-            accent-color: var(--accent-lime);
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            margin-top: 2px;
+            accent-color: var(--accent-lime); width: 18px; height: 18px;
+            cursor: pointer; margin-top: 2px;
         }
 
         .terms-wrapper label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
-            cursor: pointer;
+            font-size: 0.85rem; color: var(--text-secondary);
+            line-height: 1.5; cursor: pointer;
         }
 
         .terms-wrapper a {
-            color: var(--accent-purple);
-            text-decoration: none;
-            transition: opacity 0.2s;
+            color: var(--accent-purple); text-decoration: none; transition: opacity 0.2s;
         }
 
-        .terms-wrapper a:hover {
-            color: var(--text-primary);
-        }
+        .terms-wrapper a:hover { color: var(--text-primary); }
 
-        .btn-submit {
-            width: 100%;
-            padding: 16px;
-            border-radius: 8px;
-            background: var(--text-primary);
-            color: var(--bg-base);
-            border: 1px solid var(--text-primary);
-            font-family: var(--font-mono);
-            font-size: 0.95rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-
-        .btn-submit:hover {
-            background: var(--accent-lime);
-            border-color: var(--accent-lime);
-            box-shadow: 4px 4px 0 rgba(204, 255, 0, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .auth-footer {
-            margin-top: 32px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            text-align: center;
-        }
-
-        .auth-footer a {
-            color: var(--text-primary);
-            font-family: var(--font-mono);
-            font-weight: 700;
-            text-transform: uppercase;
-            text-decoration: none;
-            margin-left: 4px;
-            transition: color 0.2s ease;
-            font-size: 0.8rem;
-            border-bottom: 1px solid var(--border-dim);
-            padding-bottom: 2px;
-        }
-
-        .auth-footer a:hover {
-            color: var(--accent-lime);
-            border-color: var(--accent-lime);
-        }
-
-        /* Message feedback */
-        .message {
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 32px;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            display: none;
-            align-items: center;
-            gap: 12px;
-            border: 1px solid;
-            animation: slideIn 0.3s ease;
-        }
-
-        .message.success {
-            display: flex;
-            background: rgba(204, 255, 0, 0.1);
-            border-color: rgba(204, 255, 0, 0.3);
-            color: var(--success-green);
-        }
-
-        /* ----- RIGHT PANEL: VISUAL CANVAS ----- */
-        .canvas {
-            flex: 1;
-            position: relative;
-            background: var(--bg-base);
-            display: flex;
-            padding: 80px;
-            flex-direction: column;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .canvas::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-size: 4px 4px;
-            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
-            z-index: 0;
-            pointer-events: none;
-        }
+        /* Canvas Overrides */
+        .canvas { padding: 80px; flex-direction: column; justify-content: center; }
 
         .testimonial-block {
-            position: relative;
-            z-index: 1;
-            max-width: 600px;
+            position: relative; z-index: 1; max-width: 600px;
         }
 
         .testimonial-block::before {
-            content: '*';
-            position: absolute;
-            top: -60px;
-            left: -20px;
-            font-size: 8rem;
-            color: var(--accent-purple);
-            font-family: var(--font-display);
-            line-height: 1;
-            opacity: 0.2;
+            content: '*'; position: absolute; top: -60px; left: -20px;
+            font-size: 8rem; color: var(--accent-purple);
+            font-family: var(--font-display); line-height: 1; opacity: 0.2;
             animation: pulse 4s infinite;
         }
 
         .quote {
-            font-size: 2.5rem;
-            line-height: 1.2;
-            color: var(--text-primary);
-            font-weight: 500;
-            margin-bottom: 48px;
-            position: relative;
-            z-index: 2;
-            font-family: var(--font-display);
-            letter-spacing: -0.02em;
+            font-size: 2.5rem; line-height: 1.2; color: var(--text-primary);
+            font-weight: 500; margin-bottom: 48px; position: relative; z-index: 2;
+            font-family: var(--font-display); letter-spacing: -0.02em;
         }
 
-        .author {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-        }
+        .author { display: flex; align-items: center; gap: 24px; }
 
         .author-avatar {
-            width: 64px;
-            height: 64px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-bright);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: var(--font-mono);
-            font-weight: 700;
-            font-size: 1.2rem;
-            border-radius: 16px;
-            transform: rotate(-5deg);
+            width: 64px; height: 64px;
+            background: var(--bg-surface); border: 1px solid var(--border-bright);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-mono); font-weight: 700; font-size: 1.2rem;
+            border-radius: 16px; transform: rotate(-5deg);
         }
 
         .author-info h4 {
-            font-size: 1.1rem;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-            font-family: var(--font-mono);
-            text-transform: uppercase;
+            font-size: 1.1rem; color: var(--text-primary); margin-bottom: 4px;
+            font-family: var(--font-mono); text-transform: uppercase;
         }
 
-        .author-info p {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-        }
+        .author-info p { font-size: 0.95rem; color: var(--text-secondary); }
 
         .network-stats {
-            position: absolute;
-            bottom: 48px;
-            right: 48px;
-            display: flex;
-            gap: 48px;
-            z-index: 1;
-            font-family: var(--font-mono);
+            position: absolute; bottom: 48px; right: 48px;
+            display: flex; gap: 48px; z-index: 1; font-family: var(--font-mono);
         }
 
         .stat-group .val {
-            font-size: 2rem;
-            color: var(--accent-blue);
-            font-weight: 700;
-            line-height: 1;
-            margin-bottom: 8px;
+            font-size: 2rem; color: var(--accent-blue); font-weight: 700;
+            line-height: 1; margin-bottom: 8px;
         }
 
-        .stat-group:nth-child(2) .val {
-            color: var(--accent-lime);
-        }
+        .stat-group:nth-child(2) .val { color: var(--accent-lime); }
 
         .stat-group .lbl {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        /* Animations */
-        @keyframes pulse {
-            0% {
-                opacity: 0.2;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.5;
-                transform: scale(1.1);
-            }
-
-            100% {
-                opacity: 0.2;
-                transform: scale(1);
-            }
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            font-size: 0.75rem; color: var(--text-tertiary);
+            text-transform: uppercase; letter-spacing: 0.1em;
         }
 
         @media (max-width: 1024px) {
-            .canvas {
-                display: none;
-            }
-
-            .auth-sidebar {
-                width: 100%;
-                border-right: none;
-                align-items: center;
-            }
-
-            .auth-header {
-                width: 100%;
-                max-width: 600px;
-            }
-
-            .auth-content {
-                width: 100%;
-                max-width: 600px;
-                padding: 32px 48px;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
+            .auth-sidebar { width: 100%; }
+            .auth-header, .auth-content { max-width: 600px; }
+            .form-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -681,7 +167,6 @@
     <div class="ambient-text">NETWORK</div>
 
     <div id="app">
-        <!-- LEFT PANEL: Authentication Form -->
         <aside class="auth-sidebar">
             <header class="auth-header">
                 <a href="../index.html" class="brand">
@@ -701,21 +186,16 @@
                 <div class="social-buttons">
                     <button class="btn-social">
                         <svg viewBox="0 0 24 24">
-                            <path fill="currentColor"
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                            <path fill="currentColor"
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                            <path fill="currentColor"
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                            <path fill="currentColor"
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
                         Google
                     </button>
                     <button class="btn-social">
                         <svg viewBox="0 0 24 24">
-                            <path fill="currentColor"
-                                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                            <path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                         </svg>
                         GitHub
                     </button>
@@ -724,7 +204,6 @@
                 <div class="auth-divider">Or Execute Manual Registration</div>
 
                 <form id="registerForm">
-                    <!-- Select Role -->
                     <div class="form-label">Primary Objective</div>
                     <div class="role-selector">
                         <label class="role-option">
@@ -760,8 +239,7 @@
                         <label class="form-label" for="email">University Designation</label>
                         <div class="input-wrapper">
                             <i data-lucide="mail" class="input-icon"></i>
-                            <input type="email" id="email" class="form-input" placeholder="user@university.edu" required
-                                autocomplete="email">
+                            <input type="email" id="email" class="form-input" placeholder="user@university.edu" required autocomplete="email">
                         </div>
                     </div>
 
@@ -794,7 +272,6 @@
             </div>
         </aside>
 
-        <!-- RIGHT PANEL: Visual Canvas -->
         <main class="canvas">
             <div class="network-stats">
                 <div class="stat-group">
@@ -806,11 +283,9 @@
                     <div class="lbl">Network Uptime</div>
                 </div>
             </div>
-
             <div class="testimonial-block">
                 <blockquote class="quote">
-                    "This network fundamentally altered my throughput. Synchronous code reviews from top-ledger peers in
-                    minutes."
+                    "This network fundamentally altered my throughput. Synchronous code reviews from top-ledger peers in minutes."
                 </blockquote>
                 <div class="author">
                     <div class="author-avatar">MS</div>
@@ -824,14 +299,11 @@
     </div>
 
     <script>
-        // Initialize Lucide icons
         lucide.createIcons();
 
-        // Password toggle
         function togglePassword() {
             const passInput = document.getElementById('password');
             const icon = document.querySelector('.password-toggle i');
-
             if (passInput.type === 'password') {
                 passInput.type = 'text';
                 icon.setAttribute('data-lucide', 'eye-off');
@@ -842,49 +314,37 @@
             lucide.createIcons();
         }
 
-        // Stub form submission for layout preview
-    document.getElementById("registerForm").addEventListener("submit", async function(e){
+        document.getElementById("registerForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const firstName = document.getElementById("firstName").value;
+            const lastName = document.getElementById("lastName").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const name = firstName + " " + lastName;
 
-e.preventDefault()
+            try {
+                const response = await fetch("http://127.0.0.1:5000/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, email, password })
+                });
 
-const firstName = document.getElementById("firstName").value
-const lastName = document.getElementById("lastName").value
-const email = document.getElementById("email").value
-const password = document.getElementById("password").value
+                const data = await response.json();
+                const msg = document.getElementById("messageContainer");
+                msg.style.display = "flex";
+                msg.className = "message success";
+                msg.innerHTML = data.message;
 
-const name = firstName + " " + lastName
-
-const response = await fetch("http://127.0.0.1:5000/register",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-name:name,
-email:email,
-password:password
-})
-
-})
-
-const data = await response.json()
-
-const msg = document.getElementById("messageContainer")
-
-msg.style.display = "flex"
-msg.className = "message success"
-msg.innerHTML = data.message
-
-if(data.message === "User registered successfully"){
-setTimeout(()=>{
-window.location.href="login.html"
-},1000)
-}
-
-})
+                if (data.message === "User registered successfully") {
+                    setTimeout(() => { window.location.href = "login.html"; }, 1000);
+                }
+            } catch (error) {
+                const msg = document.getElementById("messageContainer");
+                msg.style.display = "flex";
+                msg.className = "message error";
+                msg.innerHTML = "SERVER ERROR";
+            }
+        });
     </script>
 </body>
 
