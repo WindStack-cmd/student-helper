@@ -1,0 +1,18 @@
+﻿335c536 chore: refactored all HTML pages to use global.css and sidebar.js
+2d850d2 Merged main branch and migrated backend to SQLite to resolve CORS and database connection errors
+a0d7a8c feat: Implement initial user authentication pages, dashboard, community chat, and core UI components.
+ad3960d Merge branch 'main' of https://github.com/WindStack-cmd/student-helper
+0a4de60 Static to Dynamic
+009820a fix: update request-help.html styling improvements
+3070b5c Merge branch 'main' into main - resolved conflicts by keeping local fetch logic
+8c3a052 chore: push all recent updates
+669b168 Phase 1: Extract global CSS, add reusable sidebar component, refactor 5 major pages
+f5d45a2 DATABSE
+1a63f5d Student Helper backend
+b9a31f8 Student Helper backend
+ca4440c Student Helper backend + dashboard + answer system + leaderboard
+371a869 Initial commit - Student Helper platform
+86b3e9d Added backend Flask API and dashboard integration
+1d38791 Added backend Flask API and dashboard integration
+0797cd6 backend added
+f3f9f5b Initial frontend project
