@@ -1013,115 +1013,75 @@
 
 async function loadPosts() {
     try {
-        const res = await fetch("http://127.0.0.1:5000/get_posts")
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json()
-
-        const container = document.getElementById("postsContainer")
-        container.innerHTML = ""
-
-        data.forEach(post => {
-            const initials = post.first_name ? post.first_name.split(" ").map(n => n[0]).join("").toUpperCase() : "U"
-            const div = document.createElement("article")
-            div.className = "feed-post"
-
-            div.innerHTML = `
+        const response = await fetch("http://127.0.0.1:5000/get_posts");
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const posts = await response.json();
+        const feed = document.getElementById("postsContainer"); 
+        if (!feed) return;
+        if (posts.length === 0) {
+            feed.innerHTML = '<p style="text-align:center;opacity:0.5">SCANNING NETWORK FOR MORE PROTOCOLS...</p>';
+            return;
+        }
+        feed.innerHTML = posts.map(post => `
+            <div class="post-card">
                 <div class="post-header">
-                    <div class="post-author">
-                        <div class="author-pfp">${initials}</div>
-                        <div class="author-meta">
-                            <h4>${post.first_name || "User"}</h4>
-                            <p>NODE • Just now</p>
-                        </div>
-                    </div>
-
-                    ${post.bounty ? `
-                    <div class="bounty-badge">
-                        BOUNTY: ${post.bounty} PTS
-                    </div>` : ``}
+                    <span class="post-author">${post.first_name || post.user_email}</span>
+                    <span class="post-bounty">${post.bounty || 0} PTS</span>
                 </div>
-
-                <div class="post-body">
-                    <h2>${post.title || "User Post"}</h2>
-                    <p>${post.content}</p>
-                </div>
-
-                <div class="post-footer">
-                    <div class="interaction-group">
-                        <button class="interact-btn">Replies</button>
-                    </div>
-
-                    <button class="btn-solve" onclick="acceptPost('${post.id}')">
-                        Initiate Fix
-                    </button>
-                </div>
-            `
-
-            container.appendChild(div)
-        })
+                <div class="post-content">${post.content}</div>
+            </div>
+        `).join('');
     } catch(e) {
-        console.error("Failed to load posts", e);
+        console.error("Failed to load posts:", e);
     }
 }
 
 async function sendMessage() {
-    const inputStr = document.getElementById("chatInput").value;
-    if (!inputStr) return;
-    const userStr = localStorage.getItem("loggedInUser");
-    if (!userStr) {
-        alert("Please log in first");
-        return;
-    }
-    const user = JSON.parse(userStr);
-
+    const textarea = document.getElementById("chatInput");
+    if (!textarea || !textarea.value.trim()) return;
+    const user = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
+    const email = user.email || "guest@mail.com";
     try {
-        const res = await fetch("http://127.0.0.1:5000/create_post", {
+        const response = await fetch("http://127.0.0.1:5000/create_post", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: user.email, content: inputStr, bounty: 0 })
+            body: JSON.stringify({ email: email, content: textarea.value.trim(), bounty: 0 })
         });
-        if (res.ok) {
-            document.getElementById("chatInput").value = "";
-            loadPosts();
-        } else {
-            alert("Failed to send message: " + res.status);
-        }
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        textarea.value = "";
+        await loadPosts();
     } catch(e) {
-        alert("Error sending message");
+        console.error("Transmit failed:", e);
     }
 }
 
 async function loadLeaderboard() {
     try {
-        const res = await fetch("http://127.0.0.1:5000/leaderboard");
-        if (!res.ok) return;
-        const data = await res.json();
-        const container = document.querySelector(".trending-nodes");
-        if (data && data.length > 0) {
-            container.innerHTML = "";
-            data.slice(0, 3).forEach((u, i) => {
-                const initials = u.first_name ? u.first_name.charAt(0).toUpperCase() : "U";
-                const colors = ["var(--warning-amber)", "var(--accent-purple)", "var(--accent-blue)"];
-                const color = colors[i] || colors[0];
-                container.innerHTML += `
-                    <div class="trending-node">
-                        <div class="node-rank">#${i+1}</div>
-                        <div class="node-pfp" style="color: ${color};">${initials}</div>
-                        <div class="node-info">
-                            <div class="node-id">${u.first_name || u.email.split('@')[0]}</div>
-                            <div class="node-score">+${u.reputation || 0} PTS</div>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-    } catch (e) {
-        console.error("Leaderboard fetch failed", e);
+        const response = await fetch("http://127.0.0.1:5000/leaderboard");
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const users = await response.json();
+        const top3 = users.slice(0, 3);
+        const container = document.querySelector(".trending-nodes"); // use actual container id
+        if (!container) return;
+        container.innerHTML = top3.map((u, i) => `
+            <div class="top-node-item">
+                <span class="node-rank">#${i+1}</span>
+                <span class="node-avatar">${u.first_name.substring(0,2).toUpperCase()}</span>
+                <div class="node-info">
+                    <span class="node-name">${u.first_name}</span>
+                    <span class="node-pts">+${u.reputation} PTS / Hr</span>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        console.error("Leaderboard fetch failed:", e);
     }
 }
 
-loadPosts()
-loadLeaderboard()
+document.addEventListener("DOMContentLoaded", () => {
+    loadPosts();
+    loadLeaderboard();
+});
 
 
 
