@@ -659,27 +659,131 @@
         async function loadLeaderboard() {
             try {
                 const response = await fetch("http://127.0.0.1:5000/leaderboard");
-                if (!response.ok) throw new Error("HTTP " + response.status);
-                const users = await response.json();
                 const tbody = document.querySelector(".log-table tbody");
+                
+                if (!response.ok) {
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
+                    return;
+                }
+                
+                const users = await response.json();
+                
                 if (!tbody) return;
-                tbody.innerHTML = users.map((user, index) => `
-                    <tr>
-                        <td>${String(index + 1).padStart(2, '0')}</td>
-                        <td>
-                            <span class="node-avatar-small">${user.first_name.substring(0,2).toUpperCase()}</span>
-                            ${user.first_name}
-                        </td>
-                        <td>${user.reputation} <span class="rep-label">REP</span></td>
-                        <td>${user.bounties_completed}</td>
-                    </tr>
-                `).join('');
+                if (!users || users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
+                } else {
+                    tbody.innerHTML = users.map((user, index) => {
+                        let rankStr = String(index + 1).padStart(2, '0');
+                        let initials = (user.first_name || "U").substring(0,2).toUpperCase();
+                        return `
+                            <tr class="ranking-row">
+                                <td class="row-rank">${rankStr}</td>
+                                <td class="row-user">
+                                    <div class="row-avatar">${initials}</div>
+                                    <div class="row-name">${user.first_name || "User"}</div>
+                                </td>
+                                <td class="row-rep">${user.reputation} <span>REP</span></td>
+                                <td>${user.bounties_completed}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                // Update My Rank Badge
+                const localUserRaw = localStorage.getItem("loggedInUser");
+                if (localUserRaw) {
+                    const localUser = JSON.parse(localUserRaw);
+                    const rankIndex = users.findIndex(u => u.email === localUser.email);
+                    const rankBadge = document.querySelector(".my-rank");
+                    if (rankBadge) {
+                        rankBadge.textContent = rankIndex >= 0 ? "#" + (rankIndex + 1) : "Unranked";
+                    }
+                }
             } catch(e) {
                 console.error("Leaderboard error:", e);
+                const tbody = document.querySelector(".log-table tbody");
+                if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
             }
         }
 
-        document.addEventListener("DOMContentLoaded", loadLeaderboard);
+        function setupFiltersAndButtons() {
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                });
+            });
+            
+            const btnHunt = document.querySelector('.btn-hunt');
+            if (btnHunt) {
+                btnHunt.addEventListener('click', () => {
+                    window.location.href = 'help-others.html';
+                });
+            }
+        }
+
+        function loadUserProfile() {
+            const localUserRaw = localStorage.getItem("loggedInUser");
+            if (!localUserRaw) return;
+            
+            try {
+                const localUser = JSON.parse(localUserRaw);
+                const email = localUser.email;
+                const name = localUser.first_name || "User";
+                const initials = name.charAt(0).toUpperCase();
+
+                // Apply Fallback Data Instantly
+                document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
+                document.querySelectorAll('.user-avatar').forEach(el => el.textContent = initials);
+                document.querySelectorAll('.user-role').forEach(el => el.textContent = email);
+                
+                const spotlightName = document.querySelector(".spotlight-info h3");
+                const spotlightRole = document.querySelector(".spotlight-info p");
+                const spotlightAvatar = document.querySelector(".spotlight-avatar");
+                
+                if (spotlightName) spotlightName.textContent = name;
+                if (spotlightRole) spotlightRole.textContent = email;
+                if (spotlightAvatar) spotlightAvatar.textContent = initials;
+
+                // Bring in True Data
+                fetch(`http://127.0.0.1:5000/user_stats?email=${encodeURIComponent(email)}`)
+                    .then(res => {
+                        if (!res.ok) throw new Error("HTTP " + res.status);
+                        return res.json();
+                    })
+                    .then(stats => {
+                        if (stats.first_name) {
+                            const statsInitials = stats.first_name.charAt(0).toUpperCase();
+                            document.querySelectorAll('.user-name').forEach(el => el.textContent = stats.first_name);
+                            document.querySelectorAll('.user-avatar').forEach(el => el.textContent = statsInitials);
+                            document.querySelectorAll('.user-role').forEach(el => el.textContent = stats.email);
+                            
+                            if (spotlightName) spotlightName.textContent = stats.first_name;
+                            if (spotlightRole) spotlightRole.textContent = stats.email;
+                            if (spotlightAvatar) spotlightAvatar.textContent = statsInitials;
+                        }
+                        
+                        // Setup Reputation and Bounties
+                        if (stats.reputation !== undefined) {
+                            const statVals = document.querySelectorAll(".spotlight-stats .val");
+                            if (statVals.length >= 2) {
+                                statVals[0].textContent = stats.reputation;
+                                statVals[1].textContent = stats.bounties_completed || 0;
+                            }
+                        }
+                    })
+                    .catch(err => console.error("Failed to load user stats", err));
+            } catch(e) {
+                console.error("Profile parsing error:", e);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            setupFiltersAndButtons();
+            loadUserProfile();
+            loadLeaderboard();
+        });
     </script>
 </body>
 
