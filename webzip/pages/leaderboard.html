@@ -478,7 +478,67 @@
     <div class="ambient-text">LEDGER</div>
 
     <div id="app">
-        <div id="sidebar-root"></div>
+        <aside class="sidebar-nav">
+            <a href="../index.html" class="brand-header">
+                <div class="brand-icon">
+                    <i data-lucide="terminal" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div class="brand-name">StudentsHelper</div>
+            </a>
+
+            <div class="nav-menu">
+                <div class="nav-section">
+                    <h4>Workspace</h4>
+                    <a href="dashboard.html" class="nav-item">
+                        <i data-lucide="cpu" style="width: 18px; height: 18px;"></i>
+                        <span>Overview</span>
+                    </a>
+                    <a href="community-chat.html" class="nav-item active">
+                        <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
+                        <span>Network</span>
+                        <span class="nav-badge">3</span>
+                    </a>
+                    <a href="leaderboard.html" class="nav-item">
+                        <i data-lucide="bar-chart-2" style="width: 18px; height: 18px;"></i>
+                        <span>Ledger</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Operations</h4>
+                    <a href="my-requests.html" class="nav-item">
+                        <i data-lucide="folder-open" style="width: 18px; height: 18px;"></i>
+                        <span>Active Bounties</span>
+                    </a>
+                    <a href="help-others.html" class="nav-item">
+                        <i data-lucide="crosshair" style="width: 18px; height: 18px;"></i>
+                        <span>Hunt Mode</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>System</h4>
+                    <a href="profile.html" class="nav-item">
+                        <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                        <span>Identity</span>
+                    </a>
+                    <a href="settings.html" class="nav-item">
+                        <i data-lucide="sliders" style="width: 18px; height: 18px;"></i>
+                        <span>Config</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-avatar">JD</div>
+                <div class="user-info">
+                    <div class="user-name">John Doe</div>
+                    <div class="user-role">NODE_LVL_4</div>
+                </div>
+                <i data-lucide="power"
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+            </div>
+        </aside>
 
         <main class="workspace">
             <!-- LEFT: Hero & Spotlight -->
@@ -660,21 +720,21 @@
             try {
                 const response = await fetch("http://127.0.0.1:5000/leaderboard");
                 const tbody = document.querySelector(".log-table tbody");
-                
+
                 if (!response.ok) {
                     if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
                     return;
                 }
-                
+
                 const users = await response.json();
-                
+
                 if (!tbody) return;
                 if (!users || users.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
                 } else {
                     tbody.innerHTML = users.map((user, index) => {
                         let rankStr = String(index + 1).padStart(2, '0');
-                        let initials = (user.first_name || "U").substring(0,2).toUpperCase();
+                        let initials = (user.first_name || "U").substring(0, 2).toUpperCase();
                         return `
                             <tr class="ranking-row">
                                 <td class="row-rank">${rankStr}</td>
@@ -699,7 +759,7 @@
                         rankBadge.textContent = rankIndex >= 0 ? "#" + (rankIndex + 1) : "Unranked";
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Leaderboard error:", e);
                 const tbody = document.querySelector(".log-table tbody");
                 if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
@@ -714,7 +774,7 @@
                     e.currentTarget.classList.add('active');
                 });
             });
-            
+
             const btnHunt = document.querySelector('.btn-hunt');
             if (btnHunt) {
                 btnHunt.addEventListener('click', () => {
@@ -726,7 +786,7 @@
         function loadUserProfile() {
             const localUserRaw = localStorage.getItem("loggedInUser");
             if (!localUserRaw) return;
-            
+
             try {
                 const localUser = JSON.parse(localUserRaw);
                 const email = localUser.email;
@@ -737,11 +797,11 @@
                 document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
                 document.querySelectorAll('.user-avatar').forEach(el => el.textContent = initials);
                 document.querySelectorAll('.user-role').forEach(el => el.textContent = email);
-                
+
                 const spotlightName = document.querySelector(".spotlight-info h3");
                 const spotlightRole = document.querySelector(".spotlight-info p");
                 const spotlightAvatar = document.querySelector(".spotlight-avatar");
-                
+
                 if (spotlightName) spotlightName.textContent = name;
                 if (spotlightRole) spotlightRole.textContent = email;
                 if (spotlightAvatar) spotlightAvatar.textContent = initials;
@@ -758,12 +818,12 @@
                             document.querySelectorAll('.user-name').forEach(el => el.textContent = stats.first_name);
                             document.querySelectorAll('.user-avatar').forEach(el => el.textContent = statsInitials);
                             document.querySelectorAll('.user-role').forEach(el => el.textContent = stats.email);
-                            
+
                             if (spotlightName) spotlightName.textContent = stats.first_name;
                             if (spotlightRole) spotlightRole.textContent = stats.email;
                             if (spotlightAvatar) spotlightAvatar.textContent = statsInitials;
                         }
-                        
+
                         // Setup Reputation and Bounties
                         if (stats.reputation !== undefined) {
                             const statVals = document.querySelectorAll(".spotlight-stats .val");
@@ -774,7 +834,7 @@
                         }
                     })
                     .catch(err => console.error("Failed to load user stats", err));
-            } catch(e) {
+            } catch (e) {
                 console.error("Profile parsing error:", e);
             }
         }
