@@ -163,7 +163,9 @@ def get_requests():
             "email": r[3],
             "created_at": r[4],
             "status": r[5],
-            "bounty": r[6]
+            "bounty": r[6],
+            "captured_by": r[7] if len(r) > 7 else None,
+            "solved": bool(r[8]) if len(r) > 8 else False
         })
     conn.close()
     return jsonify(requests)

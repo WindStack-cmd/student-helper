@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -650,74 +650,84 @@ function generatePulseHash() {
 
 
 async function loadRequests(){
-
 try{
+    const userStr = localStorage.getItem("loggedInUser");
+    if (!userStr) {
+        window.location.href = "login.html";
+        return;
+    }
+    const loggedInEmail = JSON.parse(userStr).email;
 
-const res = await fetch("http://127.0.0.1:5000/get_requests");
+    const res = await fetch("http://127.0.0.1:5000/get_requests");
+    const allData = await res.json();
+    
+    // Filter active bounds for this user
+    const data = allData.filter(req => req.email === loggedInEmail);
 
-const data = await res.json();
+    tbody.innerHTML = "";
 
-tbody.innerHTML = "";
+    if(!data || data.length === 0){
+        emptyContainer.style.display = "block";
+        emptyContainer.innerHTML = `
+        <div class="empty-state">
+            <i data-lucide="hard-drive"></i>
+            <h2>Ledger Empty</h2>
+            <p>No active bounties on the network.</p>
+        </div>
+        `;
+        lucide.createIcons();
+        return;
+    }
 
-if(!data || data.length === 0){
+    logContainer.style.display = "block";
 
-emptyContainer.style.display = "block";
+    data.forEach(req => {
+        const tr = document.createElement("tr");
+        const hash = generatePulseHash();
+        
+        const isSolved = req.solved;
+        const statusClass = isSolved ? 'completed' : (req.status === 'open' ? 'pending' : 'pending');
+        const statusText = isSolved ? 'SOLVED' : req.status.toUpperCase();
+        const statusIcon = isSolved ? 'check-circle' : (req.status === 'open' ? 'loader-2' : 'user-check');
+        const iconStyle = req.status === 'open' && !isSolved ? "width:12px;height:12px;animation:spin 2s linear infinite;" : "width:12px;height:12px;";
+        
+        let claimantHTML = `<span style="color: var(--text-tertiary); font-style: italic;">Awaiting Claim</span>`;
+        if (req.captured_by) {
+            claimantHTML = `<div class="claimant-box"><span class="claimant-id">${req.captured_by}</span></div>`;
+        }
 
-emptyContainer.innerHTML = `
-<div class="empty-state">
-<i data-lucide="hard-drive"></i>
-<h2>Ledger Empty</h2>
-<p>No active bounties on the network.</p>
-</div>
-`;
+        tr.innerHTML = `
+        <td class="col-id">${hash}</td>
 
-lucide.createIcons();
-return;
+        <td class="col-details">
+        <div class="bounty-title">${req.title}</div>
 
-}
+        <p class="bounty-desc">
+        ${req.description || "No description logged."}
+        </p>
 
-logContainer.style.display = "block";
+        <div style="font-family: var(--font-mono); font-size:0.75rem; color:var(--text-tertiary); margin-top:8px;">
+        TIMESTAMP: ${new Date().toLocaleDateString()}
+        </div>
+        </td>
 
-data.forEach(req => {
+        <td class="col-status">
+        <span class="status-badge ${statusClass}">
+        <i data-lucide="${statusIcon}" style="${iconStyle}"></i>
+        ${statusText}
+        </span>
+        </td>
 
-const tr = document.createElement("tr");
+        <td class="col-claimant">
+        ${claimantHTML}
+        </td>
+        `;
 
-const hash = generatePulseHash();
+        tbody.appendChild(tr);
+    });
 
-tr.innerHTML = `
-<td class="col-id">${hash}</td>
+    lucide.createIcons();
 
-<td class="col-details">
-<div class="bounty-title">${req.title}</div>
-
-<p class="bounty-desc">
-${req.description || "No description logged."}
-</p>
-
-<div style="font-family: var(--font-mono); font-size:0.75rem; color:var(--text-tertiary); margin-top:8px;">
-TIMESTAMP: ${new Date().toLocaleDateString()}
-</div>
-</td>
-
-<td class="col-status">
-<span class="status-badge pending">
-<i data-lucide="loader-2" style="width:12px;height:12px;animation:spin 2s linear infinite;"></i>
-OPEN
-</span>
-</td>
-
-<td class="col-claimant">
-<span style="color: var(--text-tertiary); font-style: italic;">
-Awaiting Claim
-</span>
-</td>
-`;
-
-tbody.appendChild(tr);
-
-});
-
-lucide.createIcons();
 
 }
 
