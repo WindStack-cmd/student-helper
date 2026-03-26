@@ -293,5 +293,32 @@ def accept_post():
     conn.close()
     return jsonify({"message": "accepted"})
 
+@app.route("/user_stats", methods=["GET"])
+def user_stats():
+    try:
+        email = request.args.get("email")
+        if not email:
+            return jsonify({"error": "Email required"}), 400
+            
+        conn = get_db_connection(True)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT first_name, email, 
+                   COALESCE(reputation, points, 0) as reputation,
+                   COALESCE(bounties_completed, 0) as bounties_completed
+            FROM users
+            WHERE email = ?
+        """, (email,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if user:
+            return jsonify(user)
+        else:
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     socketio.run(app, debug=True)
