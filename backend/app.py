@@ -4,7 +4,7 @@ from flask_socketio import SocketIO, send
 import sqlite3
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -115,14 +115,15 @@ def leaderboard():
     try:
         conn = get_db_connection(True)
         cursor = conn.cursor()
-        
-        try:
-            cursor.execute("SELECT first_name, email, reputation, bounties_completed FROM users ORDER BY reputation DESC")
-            users = cursor.fetchall()
-        except:
-            cursor.execute("SELECT first_name, email, points as reputation, 0 as bounties_completed FROM users ORDER BY points DESC")
-            users = cursor.fetchall()
-
+        cursor.execute("""
+            SELECT first_name, email, 
+                   COALESCE(reputation, points, 0) as reputation,
+                   COALESCE(bounties_completed, 0) as bounties_completed
+            FROM users
+            ORDER BY COALESCE(reputation, points, 0) DESC
+        """)
+        users = cursor.fetchall()
+        cursor.close()
         conn.close()
         return jsonify(users)
     except Exception as e:
@@ -237,12 +238,16 @@ def handle_message(msg):
 def update_reputation():
     data = request.json
     email = data.get("email")
-
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute("UPDATE users SET reputation = reputation + 50, bounties_completed = bounties_completed + 1 WHERE email = ?", (email,))
+    cursor.execute("""
+        UPDATE users
+        SET reputation = reputation + 50,
+            bounties_completed = bounties_completed + 1
+        WHERE email = ?
+    """, (email,))
     conn.commit()
+    cursor.close()
     conn.close()
     return jsonify({"message": "Updated"})
 
@@ -250,10 +255,17 @@ def update_reputation():
 def get_posts():
     conn = get_db_connection(True)
     cursor = conn.cursor()
-
-    cursor.execute("SELECT p.*, u.first_name FROM posts p JOIN users u ON p.user_email = u.email ORDER BY p.created_at DESC")
+    cursor.execute("""
+        SELECT p.*, u.first_name 
+        FROM posts p
+        JOIN users u ON p.user_email = u.email
+        ORDER BY p.created_at DESC
+    """)
     posts = cursor.fetchall()
-
+    for post in posts:
+        if 'created_at' in post and post['created_at']:
+            post['created_at'] = str(post['created_at'])
+    cursor.close()
     conn.close()
     return jsonify(posts)
 
