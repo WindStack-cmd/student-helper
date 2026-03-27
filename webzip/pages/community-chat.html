@@ -1063,13 +1063,16 @@ async function loadLeaderboard() {
         const top3 = users.slice(0, 3);
         const container = document.querySelector(".trending-nodes"); // use actual container id
         if (!container) return;
+        
+        const colors = ["var(--warning-amber)", "var(--accent-purple)", "var(--accent-blue)"];
+        
         container.innerHTML = top3.map((u, i) => `
-            <div class="top-node-item">
-                <span class="node-rank">#${i+1}</span>
-                <span class="node-avatar">${u.first_name.substring(0,2).toUpperCase()}</span>
+            <div class="trending-node">
+                <div class="node-rank">#${i+1}</div>
+                <div class="node-pfp" style="color: ${colors[i] || 'var(--text-primary)'};">${(u.first_name || "U").substring(0,2).toUpperCase()}</div>
                 <div class="node-info">
-                    <span class="node-name">${u.first_name}</span>
-                    <span class="node-pts">+${u.reputation} PTS / Hr</span>
+                    <div class="node-id">${u.first_name || "User"}</div>
+                    <div class="node-score">+${u.reputation !== undefined ? u.reputation : (u.points || 0)} PTS / Hr</div>
                 </div>
             </div>
         `).join('');

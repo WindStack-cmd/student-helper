@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -832,38 +832,37 @@
                             <span class="metric-title">Bounties Cleared</span>
                             <i data-lucide="check-circle-2" class="metric-icon" style="width: 24px; height: 24px;"></i>
                         </div>
-                        <<div class="metric-value" id="solvedCount">24
+                        <div class="metric-value" id="solvedCount">0</div>
+                        <div class="metric-trend trend-up">
+                            <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> +12% CYCLE_DELTA
+                        </div>
                     </div>
-                    <div class="metric-trend trend-up">
-                        <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> +12% CYCLE_DELTA
-                    </div>
-                </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Ledger Stake</span>
-                        <i data-lucide="award" class="metric-icon" style="width: 24px; height: 24px;"></i>
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Ledger Stake</span>
+                            <i data-lucide="award" class="metric-icon" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <div class="metric-value" id="pointsCount">0</div>
+                        <div class="metric-trend text-secondary">
+                            <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i> TOP_5_PCT
+                        </div>
                     </div>
-                    <div class="metric-value" id="pointsCount">840</div>
-                    <div class="metric-trend text-secondary">
-                        <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i> TOP_5_PCT
-                    </div>
-                </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Pending Jobs</span>
-                        <i data-lucide="activity" class="metric-icon" style="width: 24px; height: 24px;"></i>
-                    </div>
-                    <div class="metric-value" id="pendingCount">02</div>
-                    <div class="metric-trend text-tertiary">
-                        AWAITING_ALLOCATION
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Pending Jobs</span>
+                            <i data-lucide="activity" class="metric-icon" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <div class="metric-value" id="pendingCount">0</div>
+                        <div class="metric-trend text-tertiary">
+                            AWAITING_ALLOCATION
+                        </div>
                     </div>
                 </div>
-            </div>
 
             <!-- Workspace List View -->
-            <div class="workspace-panel">
+            <div class="workspace-panel" style="overflow-y: auto;">
                 <div class="panel-tabs">
                     <div class="tab active">Network Feed</div>
                     <div class="tab">My Data</div>
@@ -933,85 +932,68 @@
 
         lucide.createIcons();
 
-        async function loadRequests() {
+        function getLoggedInEmail() {
+            const userStr = localStorage.getItem("loggedInUser");
+            return userStr ? JSON.parse(userStr).email : null;
+        }
 
+        async function fetchAndRenderRequests(url, emptyText, renderBadge) {
             try {
-
-                const response = await fetch("http://127.0.0.1:5000/get_requests");
-
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Fetch failed");
                 const data = await response.json();
-
                 const container = document.getElementById("requestsContainer");
-
                 container.innerHTML = "";
 
-                if (data.length === 0) {
-
-                    container.innerHTML = `
-<div style="padding:30px;font-family:var(--font-mono);color:var(--text-secondary);">
-NO_ACTIVE_REQUESTS
-</div>
-`;
-
+                if (!data || data.length === 0) {
+                    container.innerHTML = `<div style="padding:30px;font-family:var(--font-mono);color:var(--text-secondary); text-align: center;">${emptyText}</div>`;
                     return;
                 }
 
                 data.forEach(req => {
-
+                    const badge = renderBadge(req);
                     container.innerHTML += `
-
 <div class="data-row" onclick="openRequest(${req.id})">
-
-<div class="row-main">
-
-<div class="row-icon">
-<i data-lucide="help-circle"></i>
-</div>
-
-<div>
-<div class="row-title">${req.title}</div>
-<div class="row-desc">Posted by ${req.email}</div>
-</div>
-
-</div>
-
-<div class="row-status-col">
-<span class="status-badge status-active">
-LIVE
-</span>
-</div>
-
-<div class="row-date">
-NEW_REQUEST
-</div>
-
-</div>
-
-`;
-
+    <div class="row-main">
+        <div class="row-icon"><i data-lucide="help-circle"></i></div>
+        <div>
+            <div class="row-title">${req.title}</div>
+            <div class="row-desc">Posted by ${req.email}</div>
+        </div>
+    </div>
+    <div class="row-status-col">${badge}</div>
+    <div class="row-date">NEW_REQUEST</div>
+</div>`;
                 });
-
-                lucide.createIcons();
-
+                if (typeof lucide !== "undefined" && lucide.createIcons) {
+                    lucide.createIcons();
+                }
             } catch (error) {
-
-                document.getElementById("requestsContainer").innerHTML = `
-<div style="padding:30px;font-family:var(--font-mono);color:red;">
-ERROR_LOADING_NETWORK_FEED
-</div>
-`;
-
+                document.getElementById("requestsContainer").innerHTML = `<div style="padding:30px;font-family:var(--font-mono);color:var(--danger-red); text-align: center;">ERROR_LOADING_NETWORK_FEED</div>`;
             }
+        }
 
+        async function loadRequests() {
+            await fetchAndRenderRequests("http://127.0.0.1:5000/get_requests", "NO_ACTIVE_REQUESTS", 
+                () => `<span class="status-badge status-active">LIVE</span>`);
+        }
+
+        async function loadMyRequests() {
+            const email = getLoggedInEmail();
+            await fetchAndRenderRequests("http://127.0.0.1:5000/get_my_requests?email=" + encodeURIComponent(email || ""), "NO DATA FOUND", 
+                () => `<span class="status-badge status-active">LIVE</span>`);
+        }
+
+        async function loadArchivedRequests() {
+            await fetchAndRenderRequests("http://127.0.0.1:5000/get_archived_requests", "NO ARCHIVED DATA", 
+                (req) => req.solved 
+                    ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>` 
+                    : `<span class="status-badge" style="background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); border: 1px solid var(--border-dim);">CLOSED</span>`);
         }
 
         function openRequest(id) {
-
             window.location.href = "request-details.html?id=" + id;
-
         }
-
-        loadRequests();
 
         async function loadNotifications() {
 
@@ -1091,29 +1073,47 @@ ERROR_LOADING_NOTIFICATIONS
         }
 
         async function loadDashboardMetrics() {
+            try {
+                const userStr = localStorage.getItem("loggedInUser");
+                const email = userStr ? JSON.parse(userStr).email : null;
 
-            const userStr = localStorage.getItem("loggedInUser");
-            const email = userStr ? JSON.parse(userStr).email : null;
+                const response = await fetch("http://127.0.0.1:5000/dashboard_metrics?email=" + encodeURIComponent(email || ""));
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const data = await response.json();
 
-            const response = await fetch(
-                "http://127.0.0.1:5000/dashboard_metrics?email=" + email
-            )
-
-            const data = await response.json()
-
-            document.getElementById("solvedCount").innerText = data.solved
-            document.getElementById("pointsCount").innerText = data.points
-            document.getElementById("pendingCount").innerText = data.pending
-
+                document.getElementById("solvedCount").innerText = data.bounties_cleared !== undefined ? data.bounties_cleared : (data.solved || 0);
+                document.getElementById("pointsCount").innerText = data.ledger_stake !== undefined ? data.ledger_stake : (data.points || 0);
+                document.getElementById("pendingCount").innerText = data.pending_jobs !== undefined ? data.pending_jobs : (data.pending || 0);
+            } catch (e) {
+                console.error("Dashboard metrics load error:", e);
+            }
         }
-
-        loadDashboardMetrics()
-
 
     </script>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
+            loadDashboardMetrics();
+            
+            const tabs = document.querySelectorAll(".panel-tabs .tab");
+            tabs.forEach(tab => {
+                tab.addEventListener("click", () => {
+                    if (tab.classList.contains("active")) return;
+                    
+                    tabs.forEach(t => t.classList.remove("active"));
+                    tab.classList.add("active");
+                    
+                    const tabText = tab.textContent.trim();
+                    if (tabText === "Network Feed") {
+                        loadRequests();
+                    } else if (tabText === "My Data") {
+                        loadMyRequests();
+                    } else if (tabText === "Archived") {
+                        loadArchivedRequests();
+                    }
+                });
+            });
+            loadRequests();
             const userStr = localStorage.getItem("loggedInUser");
             if (userStr) {
                 try {

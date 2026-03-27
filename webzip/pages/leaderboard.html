@@ -12,6 +12,7 @@
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/style.css">
     <style>
         /* ── Leaderboard-Specific Styles ── */
 
@@ -478,7 +479,68 @@
     <div class="ambient-text">LEDGER</div>
 
     <div id="app">
-        <div id="sidebar-root"></div>
+        <!-- LEFT PANEL: Navigation Tree -->
+        <aside class="sidebar-nav">
+            <a href="../index.html" class="brand-header">
+                <div class="brand-icon">
+                    <i data-lucide="terminal" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div class="brand-name">StudentsHelper</div>
+            </a>
+
+            <div class="nav-menu">
+                <div class="nav-section">
+                    <h4>Workspace</h4>
+                    <a href="dashboard.html" class="nav-item">
+                        <i data-lucide="cpu" style="width: 18px; height: 18px;"></i>
+                        <span>Overview</span>
+                    </a>
+                    <a href="community-chat.html" class="nav-item">
+                        <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
+                        <span>Network</span>
+                        <span class="nav-badge">3</span>
+                    </a>
+                    <a href="leaderboard.html" class="nav-item active">
+                        <i data-lucide="bar-chart-2" style="width: 18px; height: 18px;"></i>
+                        <span>Ledger</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Operations</h4>
+                    <a href="my-requests.html" class="nav-item">
+                        <i data-lucide="folder-open" style="width: 18px; height: 18px;"></i>
+                        <span>Active Bounties</span>
+                    </a>
+                    <a href="help-others.html" class="nav-item">
+                        <i data-lucide="crosshair" style="width: 18px; height: 18px;"></i>
+                        <span>Hunt Mode</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>System</h4>
+                    <a href="profile.html" class="nav-item">
+                        <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                        <span>Identity</span>
+                    </a>
+                    <a href="settings.html" class="nav-item">
+                        <i data-lucide="sliders" style="width: 18px; height: 18px;"></i>
+                        <span>Config</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div id="userAvatar" class="user-avatar">U</div>
+                <div class="user-info">
+                    <div id="userName" class="user-name">LOADING...</div>
+                    <div class="user-role">NODE_LVL_4</div>
+                </div>
+                <i data-lucide="power" onclick="logout()"
+                    style="color: var(--danger-red); width:16px; height:16px; margin-left:auto;"></i>
+            </div>
+        </aside>
 
         <main class="workspace">
             <!-- LEFT: Hero & Spotlight -->
@@ -507,7 +569,7 @@
                             <span class="label">Bounties Claimed</span>
                             <span class="val">128</span>
                         </div>
-                        <div class="stat-block" style="grid-column: span 2; margin-top: 12px;">
+                        <div class="stat-block" style="grid-column: span 2; margin-top: 12px; display: none;">
                             <span class="label">Core Directives</span>
                             <span
                                 style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700;">REACT</span>
