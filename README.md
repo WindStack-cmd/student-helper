@@ -22,7 +22,7 @@ An interactive platform connecting students who need help with those who can pro
 - **Python / Flask**: Serves the RESTful API endpoints.
 - **Flask-CORS**: Handles Cross-Origin Resource Sharing.
 - **Flask-SocketIO**: Enables real-time, bi-directional communication.
-- **SQLite**: Lightweight, file-based relational database (`student_helper.db`).
+- "MySQL: Robust, open-source relational database management system used to store all user data, requests, answers, posts, and notifications."
 
 ## Project Structure
 
