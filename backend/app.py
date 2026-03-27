@@ -408,7 +408,7 @@ def user_stats():
     try:
         email = request.args.get("email")
         if not email:
-            return jsonify({"error": "Email required"}), 400
+            return jsonify({"first_name": "", "email": "", "reputation": 0, "bounties_completed": 0}), 200
             
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -425,12 +425,12 @@ def user_stats():
             if user:
                 return jsonify(user)
             else:
-                return jsonify({"first_name": "USER", "email": email, "reputation": 0, "bounties_completed": 0}), 200
+                return jsonify({"first_name": "", "email": email, "reputation": 0, "bounties_completed": 0}), 200
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        return jsonify({"first_name": "USER", "email": request.args.get("email") or "", "reputation": 0, "bounties_completed": 0}), 200
+        return jsonify({"first_name": "", "email": request.args.get("email") or "", "reputation": 0, "bounties_completed": 0}), 200
 
 if __name__ == "__main__":
     socketio.run(app, debug=True)

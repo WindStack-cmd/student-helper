@@ -791,11 +791,16 @@
             
             try {
                 const localUser = JSON.parse(localUserRaw);
-                const email = localUser.email;
-                const name = localUser.first_name || "User";
+                const email = localUser.email || "";
+                
+                let name = localUser.first_name || localUser.name;
+                if (!name && email) {
+                    name = email.split('@')[0];
+                }
+                name = name ? name.toUpperCase() : "USER";
+                
                 const initials = name.charAt(0).toUpperCase();
 
-                // Apply Fallback Data Instantly
                 document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
                 document.querySelectorAll('.user-avatar').forEach(el => el.textContent = initials);
                 document.querySelectorAll('.user-role').forEach(el => el.textContent = email);
@@ -808,34 +813,26 @@
                 if (spotlightRole) spotlightRole.textContent = email;
                 if (spotlightAvatar) spotlightAvatar.textContent = initials;
 
-                // Bring in True Data
                 fetch(`http://127.0.0.1:5000/user_stats?email=${encodeURIComponent(email)}`)
                     .then(res => {
                         if (!res.ok) throw new Error("HTTP " + res.status);
                         return res.json();
                     })
                     .then(stats => {
-                        if (stats.first_name) {
-                            const statsInitials = stats.first_name.charAt(0).toUpperCase();
-                            document.querySelectorAll('.user-name').forEach(el => el.textContent = stats.first_name);
-                            document.querySelectorAll('.user-avatar').forEach(el => el.textContent = statsInitials);
-                            document.querySelectorAll('.user-role').forEach(el => el.textContent = stats.email);
-                            
-                            if (spotlightName) spotlightName.textContent = stats.first_name;
-                            if (spotlightRole) spotlightRole.textContent = stats.email;
-                            if (spotlightAvatar) spotlightAvatar.textContent = statsInitials;
-                        }
-                        
-                        // Setup Reputation and Bounties
-                        if (stats.reputation !== undefined) {
-                            const statVals = document.querySelectorAll(".spotlight-stats .val");
-                            if (statVals.length >= 2) {
-                                statVals[0].textContent = stats.reputation;
-                                statVals[1].textContent = stats.bounties_completed || 0;
-                            }
+                        const statVals = document.querySelectorAll(".spotlight-stats .val");
+                        if (statVals.length >= 2) {
+                            statVals[0].textContent = stats.reputation !== undefined ? stats.reputation : 0;
+                            statVals[1].textContent = stats.bounties_completed !== undefined ? stats.bounties_completed : 0;
                         }
                     })
-                    .catch(err => console.error("Failed to load user stats", err));
+                    .catch(err => {
+                        console.error("Failed to load user stats", err);
+                        const statVals = document.querySelectorAll(".spotlight-stats .val");
+                        if (statVals.length >= 2) {
+                            statVals[0].textContent = 0;
+                            statVals[1].textContent = 0;
+                        }
+                    });
             } catch(e) {
                 console.error("Profile parsing error:", e);
             }
