@@ -891,7 +891,7 @@
                 <!-- Composer Box -->
                 <div class="post-composer">
 
-                
+
                     <textarea id="chatInput" class="composer-input" rows="2"
                         placeholder="Initiate network broadcast... Describe your query or share data."></textarea>
                     <div class="composer-actions">
@@ -904,14 +904,15 @@
                                     style="width: 18px; height: 18px;"></i></button>
                         </div>
 
-                         <!-- DYNAMIC POSTS WILL COME HERE -->
-                         <div id="postsContainer"></div>
+                        <!-- DYNAMIC POSTS WILL COME HERE -->
+                        <div id="postsContainer"></div>
 
-                        <button onclick="sendMessage()" class="btn-primary" style="height: 36px; font-size: 0.75rem;">Transmit</button>
+                        <button onclick="sendMessage()" class="btn-primary"
+                            style="height: 36px; font-size: 0.75rem;">Transmit</button>
                     </div>
                 </div>
 
-                
+
 
                 <!-- Loading Marker -->
                 <div
@@ -1009,20 +1010,23 @@
         </aside>
     </div>
 
-  <script>
+    <script>
+        lucide.createIcons();
+    </script>
 
-async function loadPosts() {
-    try {
-        const response = await fetch("http://127.0.0.1:5000/get_posts");
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const posts = await response.json();
-        const feed = document.getElementById("postsContainer"); 
-        if (!feed) return;
-        if (posts.length === 0) {
-            feed.innerHTML = '<p style="text-align:center;opacity:0.5">SCANNING NETWORK FOR MORE PROTOCOLS...</p>';
-            return;
-        }
-        feed.innerHTML = posts.map(post => `
+    <script>
+        async function loadPosts() {
+            try {
+                const response = await fetch("http://127.0.0.1:5000/get_posts");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const posts = await response.json();
+                const feed = document.getElementById("postsContainer");
+                if (!feed) return;
+                if (posts.length === 0) {
+                    feed.innerHTML = '<p style="text-align:center;opacity:0.5">SCANNING NETWORK FOR MORE PROTOCOLS...</p>';
+                    return;
+                }
+                feed.innerHTML = posts.map(post => `
             <div class="post-card">
                 <div class="post-header">
                     <span class="post-author">${post.first_name || post.user_email}</span>
@@ -1031,78 +1035,75 @@ async function loadPosts() {
                 <div class="post-content">${post.content}</div>
             </div>
         `).join('');
-    } catch(e) {
-        console.error("Failed to load posts:", e);
-    }
-}
+            } catch (e) {
+                console.error("Failed to load posts:", e);
+            }
+        }
 
-async function sendMessage() {
-    const textarea = document.getElementById("chatInput");
-    if (!textarea || !textarea.value.trim()) return;
-    const user = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
-    const email = user.email || "guest@mail.com";
-    try {
-        const response = await fetch("http://127.0.0.1:5000/create_post", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: email, content: textarea.value.trim(), bounty: 0 })
-        });
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        textarea.value = "";
-        await loadPosts();
-    } catch(e) {
-        console.error("Transmit failed:", e);
-    }
-}
+        async function sendMessage() {
+            const textarea = document.getElementById("chatInput");
+            if (!textarea || !textarea.value.trim()) return;
+            const user = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
+            const email = user.email || "guest@mail.com";
+            try {
+                const response = await fetch("http://127.0.0.1:5000/create_post", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: email, content: textarea.value.trim(), bounty: 0 })
+                });
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                textarea.value = "";
+                await loadPosts();
+            } catch (e) {
+                console.error("Transmit failed:", e);
+            }
+        }
 
-async function loadLeaderboard() {
-    try {
-        const response = await fetch("http://127.0.0.1:5000/leaderboard");
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const users = await response.json();
-        const top3 = users.slice(0, 3);
-        const container = document.querySelector(".trending-nodes"); // use actual container id
-        if (!container) return;
-        
-        const colors = ["var(--warning-amber)", "var(--accent-purple)", "var(--accent-blue)"];
-        
-        container.innerHTML = top3.map((u, i) => `
-            <div class="trending-node">
-                <div class="node-rank">#${i+1}</div>
-                <div class="node-pfp" style="color: ${colors[i] || 'var(--text-primary)'};">${(u.first_name || "U").substring(0,2).toUpperCase()}</div>
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch("http://127.0.0.1:5000/leaderboard");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const users = await response.json();
+                const top3 = users.slice(0, 3);
+                const container = document.querySelector(".trending-nodes"); // use actual container id
+                if (!container) return;
+                container.innerHTML = top3.map((u, i) => `
+            <div class="top-node-item">
+                <span class="node-rank">#${i + 1}</span>
+                <span class="node-avatar">${u.first_name.substring(0, 2).toUpperCase()}</span>
                 <div class="node-info">
                     <div class="node-id">${u.first_name || "User"}</div>
                     <div class="node-score">+${u.reputation !== undefined ? u.reputation : (u.points || 0)} PTS / Hr</div>
                 </div>
             </div>
         `).join('');
-    } catch(e) {
-        console.error("Leaderboard fetch failed:", e);
-    }
-}
+            } catch (e) {
+                console.error("Leaderboard fetch failed:", e);
+            }
+        }
 
-document.addEventListener("DOMContentLoaded", () => {
-    loadPosts();
-    loadLeaderboard();
-});
+        document.addEventListener("DOMContentLoaded", () => {
+            loadPosts();
+            loadLeaderboard();
+        });
 
 
 
-</script>
-<script>
+    </script>
+    <script>
 
-const userStr = localStorage.getItem("loggedInUser");
-if(userStr){
-    try {
-        const user = JSON.parse(userStr);
-        const avatar = document.getElementById("sidebarAvatar");
-        const username = document.getElementById("sidebarName");
-        if(avatar) avatar.innerText = user.first_name.charAt(0).toUpperCase();
-        if(username) username.innerText = user.first_name;
-    } catch(e) {}
-}
+        const userStr = localStorage.getItem("loggedInUser");
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                const avatar = document.getElementById("sidebarAvatar");
+                const username = document.getElementById("sidebarName");
+                if (avatar) avatar.innerText = user.first_name.charAt(0).toUpperCase();
+                if (username) username.innerText = user.first_name;
+            } catch (e) { }
+        }
 
-</script>
+    </script>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
@@ -1112,11 +1113,11 @@ if(userStr){
                     const user = JSON.parse(userStr);
                     const name = user.first_name || user.name || "User";
                     const email = user.email || "user@system.node";
-                    
+
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
                     document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
                     document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
-                } catch(e) {}
+                } catch (e) { }
             }
         });
     </script>
