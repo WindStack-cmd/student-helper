@@ -16,6 +16,7 @@
             --border: rgba(255, 255, 255, 0.07);
             --accent: #c6f135;
             --accent-glow: rgba(198, 241, 53, 0.25);
+            --accent-dim: rgba(198, 241, 53, 0.08);
             --text: #e8edf2;
             --text-muted: #6b7a8d;
             --text-dim: #3d4f62;
@@ -60,12 +61,217 @@
             z-index: 0;
         }
 
-        .shell {
-            position: absolute;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .brand-icon {
+            width: 30px;
+            height: 30px;
+            padding: 10px;
+            background: white;
+            color: black;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .brand:hover .brand-icon {
+            transform: scale(1.1) rotate(5deg);
+            background: var(--accent) !important;
+            color: black;
+        }
+
+        .brand-name {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        /* ── page layout ── */
+        .page-layout {
+            position: relative;
             z-index: 1;
-            width: 1050px;
-            margin-left: 30%;
-            padding: 48px 24px 80px;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ══════════════════════════════
+           LEFT SIDEBAR
+        ══════════════════════════════ */
+        .sidebar {
+            width: 290px;
+            flex-shrink: 0;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 24px 18px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .sidebar-logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 14px;
+        }
+
+        .sidebar-search {
+            position: relative;
+            padding-top: 10px;
+        }
+
+        .sidebar-search input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            padding: 8px 12px 8px 34px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .sidebar-search input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .sidebar-search input:focus {
+            border-color: rgba(198, 241, 53, 0.3);
+        }
+
+        .sidebar-search svg {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dim);
+            pointer-events: none;
+        }
+
+        .sidebar-label {
+            font-family: 'Syne', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            padding: 14px 18px 8px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px 20px;
+        }
+
+        .sidebar-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .req-item {
+            padding: 11px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            border: 1px solid transparent;
+            margin-bottom: 3px;
+        }
+
+        .req-item:hover {
+            background: var(--surface2);
+            border-color: var(--border);
+        }
+
+        .req-item.active {
+            background: var(--accent-dim);
+            border-color: rgba(198, 241, 53, 0.2);
+        }
+
+        .req-item.active .req-item-title {
+            color: var(--accent);
+        }
+
+        .req-item-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.35;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .req-item-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .req-item-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--success);
+            flex-shrink: 0;
+        }
+
+        .req-item-email {
+            font-size: 11px;
+            color: var(--text-dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .sidebar-empty {
+            padding: 32px 16px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        /* ══════════════════════════════
+           MAIN CONTENT
+        ══════════════════════════════ */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 48px 40px 80px;
+            min-width: 0;
         }
 
         /* ── topbar ── */
@@ -80,22 +286,25 @@
         .breadcrumb {
             font-size: 12px;
             color: var(--text-dim);
-            font-family: 'Syne', sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             letter-spacing: 0.07em;
             text-transform: uppercase;
         }
 
         .breadcrumb span {
             color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
         }
 
         /* ── page heading ── */
         h1 {
-            font-family: 'Syne', sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             font-size: 28px;
             font-weight: 800;
             color: var(--text);
             margin-bottom: 6px;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
             animation: fadeUp 0.4s 0.05s ease both;
         }
 
@@ -320,46 +529,94 @@
                 transform: translateY(0);
             }
         }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .page-layout {
+                flex-direction: column;
+            }
+
+            .main-content {
+                padding: 28px 20px 60px;
+            }
+        }
     </style>
 </head>
 
 <body>
 
-    <div class="shell">
+    <div class="page-layout">
 
-        <div class="topbar">
-            <div class="logo">Student Helper</div>
-            <div class="breadcrumb">Dashboard &nbsp;/&nbsp; <span>Request Details</span></div>
+        <!-- ══ LEFT SIDEBAR ══ -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" class="brand">
+                    <div class="brand-icon">
+                        <i data-lucide="terminal" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div class="brand-name">StudentsHelper</div>
+                </a>
+                <div class="sidebar-search">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.4" />
+                        <path d="M10 10L13 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                    </svg>
+                    <input type="text" id="sidebarSearch" placeholder="Search requests…"
+                        oninput="filterSidebar(this.value)" />
+                </div>
+            </div>
+            <div class="sidebar-label">All Requests</div>
+            <div class="sidebar-list" id="sidebarList">
+                <div class="sidebar-empty">Loading requests…</div>
+            </div>
+        </aside>
+
+        <!-- ══ MAIN CONTENT ══ -->
+        <div class="main-content">
+
+            <div class="topbar">
+                <div class="breadcrumb">Dashboard &nbsp;/&nbsp; <span>Request Details</span></div>
+            </div>
+
+            <h1>Request Details</h1>
+            <p class="page-sub">View the full request and contribute your answer below.</p>
+
+            <div id="requestContainer"></div>
+
+            <br>
+
+            <h2>Answers</h2>
+
+            <div id="answersContainer"></div>
+
+            <br>
+
+            <div class="post-card">
+                <h3>Post Answer</h3>
+                <p class="post-card-sub">Share your knowledge and help a fellow student.</p>
+
+                <textarea id="answerText" rows="6" cols="60" placeholder="Write your answer here"></textarea>
+
+                <br><br>
+
+                <button onclick="postAnswer()">Submit Answer</button>
+            </div>
+
         </div>
-
-        <h1>Request Details</h1>
-        <p class="page-sub">View the full request and contribute your answer below.</p>
-
-        <div id="requestContainer"></div>
-
-        <br>
-
-        <h2>Answers</h2>
-
-        <div id="answersContainer"></div>
-
-        <br>
-
-        <div class="post-card">
-            <h3>Post Answer</h3>
-            <p class="post-card-sub">Share your knowledge and help a fellow student.</p>
-
-            <textarea id="answerText" rows="6" cols="60" placeholder="Write your answer here"></textarea>
-
-            <br><br>
-
-            <button onclick="postAnswer()">Submit Answer</button>
-        </div>
-
     </div>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <script>
+
+        lucide.createIcons();
 
         const urlParams = new URLSearchParams(window.location.search)
         const requestId = urlParams.get("id")
@@ -502,8 +759,11 @@ Accept Answer
         }
 
     </script>
-    <script>
 
+    <!-- ══════════════════════════════════════════════════
+     ORIGINAL SCRIPT 2 — NOT CHANGED, NOT TOUCHED
+══════════════════════════════════════════════════ -->
+    <script>
         const name = localStorage.getItem("firstName")
         const email = localStorage.getItem("userEmail")
 
@@ -521,8 +781,62 @@ Accept Answer
             }
 
         }
-
     </script>
+
+    <!-- ══════════════════════════════════════════════════
+     NEW SIDEBAR SCRIPT — BRAND NEW, SEPARATE
+══════════════════════════════════════════════════ -->
+    <script>
+        let allRequests = []
+
+        async function loadSidebar() {
+            try {
+                const res = await fetch("http://127.0.0.1:5000/get_requests")
+                allRequests = await res.json()
+                renderSidebar(allRequests)
+            } catch (e) {
+                document.getElementById("sidebarList").innerHTML =
+                    '<div class="sidebar-empty">Could not load requests.</div>'
+            }
+        }
+
+        function renderSidebar(requests) {
+            const list = document.getElementById("sidebarList")
+            if (!requests.length) {
+                list.innerHTML = '<div class="sidebar-empty">No requests found.</div>'
+                return
+            }
+            list.innerHTML = ""
+            requests.forEach(function (req) {
+                const isActive = String(req.id) === String(requestId)
+                const item = document.createElement("div")
+                item.className = "req-item" + (isActive ? " active" : "")
+                item.innerHTML =
+                    '<div class="req-item-title">' + req.title + '</div>' +
+                    '<div class="req-item-meta">' +
+                    '<div class="req-item-dot"></div>' +
+                    '<span class="req-item-email">' + req.email + '</span>' +
+                    '</div>'
+                item.addEventListener("click", function () {
+                    const url = new URL(window.location.href)
+                    url.searchParams.set("id", req.id)
+                    window.location.href = url.toString()
+                })
+                list.appendChild(item)
+            })
+        }
+
+        function filterSidebar(query) {
+            const q = query.toLowerCase()
+            const filtered = allRequests.filter(function (r) {
+                return r.title.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)
+            })
+            renderSidebar(filtered)
+        }
+
+        loadSidebar()
+    </script>
+
 </body>
 
 </html>
