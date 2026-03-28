@@ -1081,9 +1081,9 @@ ERROR_LOADING_NOTIFICATIONS
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const data = await response.json();
 
-                document.getElementById("solvedCount").innerText = data.bounties_cleared !== undefined ? data.bounties_cleared : (data.solved || 0);
-                document.getElementById("pointsCount").innerText = data.ledger_stake !== undefined ? data.ledger_stake : (data.points || 0);
-                document.getElementById("pendingCount").innerText = data.pending_jobs !== undefined ? data.pending_jobs : (data.pending || 0);
+                document.getElementById("solvedCount").innerText = data.bounties_cleared;
+                document.getElementById("pointsCount").innerText = data.ledger_stake;
+                document.getElementById("pendingCount").innerText = data.pending_jobs;
             } catch (e) {
                 console.error("Dashboard metrics load error:", e);
             }

@@ -29,11 +29,28 @@ def init_db():
     cursor.execute("CREATE DATABASE IF NOT EXISTS student_helper")
     cursor.execute("USE student_helper")
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), email VARCHAR(255) UNIQUE, password VARCHAR(255), points INT DEFAULT 0, first_name VARCHAR(255), reputation INT DEFAULT 0, bounties_completed INT DEFAULT 0)''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS requests (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), description TEXT, user_email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR(50), bounty INT, captured_by VARCHAR(255), solved BOOLEAN DEFAULT 0)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS requests (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), description TEXT, user_email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR(50), bounty INT DEFAULT 0, captured_by VARCHAR(255), solved BOOLEAN DEFAULT 0)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS answers (id INT AUTO_INCREMENT PRIMARY KEY, request_id INT, answer TEXT, email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, accepted BOOLEAN DEFAULT 0)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS posts (id INT AUTO_INCREMENT PRIMARY KEY, first_name VARCHAR(255), title VARCHAR(255), content TEXT, user_email VARCHAR(255), bounty INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(255), message TEXT, seen BOOLEAN DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    
+
+    # Ensure solved and captured_by columns exist on already-created tables
+    try:
+        cursor.execute("ALTER TABLE requests ADD COLUMN solved BOOLEAN DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
+    try:
+        cursor.execute("ALTER TABLE requests ADD COLUMN captured_by VARCHAR(255)")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
+    try:
+        cursor.execute("ALTER TABLE requests MODIFY COLUMN bounty INT DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -116,7 +133,7 @@ def dashboard_metrics():
                 if r2 and r2[0] is not None:
                     ledger_stake = int(r2[0])
 
-            cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'open' AND solved = 0")
+            cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'open' AND (solved = 0 OR solved IS NULL)")
             r3 = cursor.fetchone()
             if r3 and r3[0] is not None:
                 pending = int(r3[0])
@@ -156,25 +173,34 @@ def leaderboard():
 
 @app.route("/post_request", methods=["POST"])
 def post_request():
-    data = request.json
-    title = data.get("title")
-    description = data.get("description")
-    email = data.get("email")
-    bounty = data.get("bounty")
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute(
-            "INSERT INTO requests (title, description, user_email, bounty, status) VALUES (%s,%s,%s,%s,'open')",
-            (title, description, email, bounty)
-        )
+        data = request.json or {}
+        title = str(data.get("title") or "").strip()
+        description = str(data.get("description") or "").strip()
+        email = str(data.get("email") or "").strip()
+        try:
+            bounty = int(data.get("bounty") or 0)
+        except (ValueError, TypeError):
+            bounty = 0
 
-        conn.commit()
-        return jsonify({"message": "Request posted successfully"})
-    finally:
-        cursor.close()
-        conn.close()
+        print(f"[post_request] title={title!r} email={email!r} bounty={bounty}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO requests (title, description, user_email, bounty, status, solved) VALUES (%s, %s, %s, %s, 'open', 0)",
+                (title, description, email, bounty)
+            )
+            conn.commit()
+            print("[post_request] Insert successful, id:", cursor.lastrowid)
+            return jsonify({"message": "Request posted successfully"}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        print("[post_request] ERROR:", str(e))
+        return jsonify({"message": "Failed to post request", "error": str(e)}), 500
 
 @app.route("/get_requests", methods=["GET"])
 def get_requests():
@@ -182,7 +208,7 @@ def get_requests():
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT * FROM requests WHERE status = 'open' AND solved = 0 AND user_email IS NOT NULL AND user_email != '' ORDER BY created_at DESC")
+            cursor.execute("SELECT * FROM requests WHERE status = 'open' AND (solved = 0 OR solved IS NULL) AND user_email IS NOT NULL AND user_email != '' ORDER BY created_at DESC")
             rows = cursor.fetchall()
             requests_list = []
             for r in rows:
@@ -191,7 +217,7 @@ def get_requests():
                     "title": r[1],
                     "description": r[2],
                     "email": r[3],
-                    "created_at": r[4],
+                    "created_at": str(r[4]) if r[4] else None,
                     "status": r[5],
                     "bounty": r[6],
                     "captured_by": r[7] if len(r) > 7 else None,
@@ -203,6 +229,35 @@ def get_requests():
             conn.close()
     except Exception as e:
         print("Get Requests Error:", e)
+        return jsonify([])
+
+@app.route("/get_active_bounties", methods=["GET"])
+def get_active_bounties():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM requests WHERE status = 'open' AND (solved = 0 OR solved IS NULL) AND bounty > 0 ORDER BY bounty DESC")
+            rows = cursor.fetchall()
+            bounties_list = []
+            for r in rows:
+                bounties_list.append({
+                    "id": r[0],
+                    "title": r[1],
+                    "description": r[2],
+                    "email": r[3],
+                    "created_at": str(r[4]) if r[4] else None,
+                    "status": r[5],
+                    "bounty": r[6],
+                    "captured_by": r[7] if len(r) > 7 else None,
+                    "solved": bool(r[8]) if len(r) > 8 else False
+                })
+            return jsonify(bounties_list)
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        print("Get Active Bounties Error:", e)
         return jsonify([])
 
 @app.route("/get_my_requests", methods=["GET"])
@@ -313,23 +368,30 @@ def get_answers(request_id):
 
 @app.route("/accept_answer", methods=["POST"])
 def accept_answer():
-    data = request.json
-    answer_id = data["answer_id"]
-    request_id = data["request_id"]
-    email = data["email"]
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("UPDATE answers SET accepted = TRUE WHERE id = %s", (answer_id,))
-        cursor.execute("UPDATE requests SET solved = TRUE WHERE id = %s", (request_id,))
-        cursor.execute("UPDATE users SET points = points + 20 WHERE email = %s", (email,))
-        
-        conn.commit()
-        return jsonify({"message": "Answer accepted"})
-    finally:
-        cursor.close()
-        conn.close()
+        data = request.json
+        answer_id = data["answer_id"]
+        request_id = data["request_id"]
+        helper_email = data.get("email")  # email of the helper who answered
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("UPDATE answers SET accepted = 1 WHERE id = %s", (answer_id,))
+            cursor.execute("UPDATE requests SET solved = 1, status = 'closed' WHERE id = %s", (request_id,))
+            if helper_email:
+                cursor.execute(
+                    "UPDATE users SET points = points + 20, bounties_completed = bounties_completed + 1 WHERE email = %s",
+                    (helper_email,)
+                )
+            conn.commit()
+            return jsonify({"message": "Answer accepted"})
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        print("Accept Answer Error:", e)
+        return jsonify({"message": "Failed to accept answer"}), 500
 
 @socketio.on("message")
 def handle_message(msg):
@@ -391,17 +453,25 @@ def create_post():
 
 @app.route("/accept_post", methods=["POST"])
 def accept_post():
-    data = request.json
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("UPDATE requests SET status = 'captured', captured_by = %s WHERE id = %s", (data["email"], data["post_id"]))
-
-        conn.commit()
-        return jsonify({"message": "accepted"})
-    finally:
-        cursor.close()
-        conn.close()
+        data = request.json
+        helper_email = data.get("email")
+        request_id = data.get("post_id")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "UPDATE requests SET status = 'captured', captured_by = %s WHERE id = %s",
+                (helper_email, request_id)
+            )
+            conn.commit()
+            return jsonify({"message": "accepted"})
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        print("Accept Post Error:", e)
+        return jsonify({"message": "Failed to capture request"}), 500
 
 @app.route("/user_stats", methods=["GET"])
 def user_stats():

@@ -736,10 +736,8 @@
             try {
                 const res = await fetch("http://127.0.0.1:5000/get_requests");
                 if (!res.ok) throw new Error("Network response was not ok");
-                const allData = await res.json();
-                
-                // Only show open requests in Hunt Mode
-                const data = allData.filter(req => req.status === 'open');
+                const data = await res.json();
+                // Backend already returns only status='open' AND solved=0
                 window.currentRequests = data;
 
                 const container = document.getElementById("helpRequestsContainer");
@@ -758,12 +756,13 @@
 
                 data.forEach(req => {
                     container.innerHTML += `
-            <div class="bounty-card">
+            <div class="bounty-card" id="bounty-card-${req.id}">
                 <div class="bounty-header">
                     <div>
-                        <div class="bounty-type">Programming</div>
+                        <div class="bounty-type">Posted by: ${req.email}</div>
                         <div class="bounty-title">${req.title}</div>
                     </div>
+                    <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--warning-amber);font-weight:700;">${req.bounty || 0} PTS</div>
                 </div>
                 <p class="bounty-desc">${req.description}</p>
                 <div class="bounty-meta">
@@ -807,6 +806,7 @@
             }
             const email = JSON.parse(userStr).email;
             const btn = document.getElementById("cap-btn-" + id);
+            const card = document.getElementById("bounty-card-" + id);
             if (btn) btn.innerText = "Capturing...";
 
             try {
@@ -816,13 +816,13 @@
                     body: JSON.stringify({ post_id: id, email: email })
                 });
                 if (res.ok) {
-                    if (btn) {
-                        btn.innerText = "Captured";
-                        btn.disabled = true;
-                        btn.style.opacity = "0.5";
-                        btn.style.cursor = "not-allowed";
+                    // Remove the card from the grid immediately
+                    if (card) {
+                        card.style.transition = "opacity 0.3s";
+                        card.style.opacity = "0";
+                        setTimeout(() => card.remove(), 300);
                     }
-                    alert("Success! Request captured.");
+                    alert("Success! Request captured. Head to your requests to submit an answer.");
                 } else {
                     alert("Failed to capture: " + res.status);
                     if (btn) btn.innerText = "CAPTURE";
@@ -833,12 +833,9 @@
             }
         }
 
-        loadHuntMode()
-
-    </script>
-
-    <script>
         document.addEventListener("DOMContentLoaded", () => {
+            loadHuntMode();
+
             const userStr = localStorage.getItem("loggedInUser");
             if (userStr) {
                 try {

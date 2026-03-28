@@ -656,18 +656,16 @@ try{
         window.location.href = "login.html";
         return;
     }
-    const loggedInEmail = JSON.parse(userStr).email;
 
-    const res = await fetch("http://127.0.0.1:5000/get_requests");
-    const allData = await res.json();
-    
-    // Filter active bounds for this user
-    const data = allData.filter(req => req.email === loggedInEmail);
+    const res = await fetch("http://127.0.0.1:5000/get_active_bounties");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
 
     tbody.innerHTML = "";
 
     if(!data || data.length === 0){
         emptyContainer.style.display = "block";
+        logContainer.style.display = "none";
         emptyContainer.innerHTML = `
         <div class="empty-state">
             <i data-lucide="hard-drive"></i>
@@ -680,6 +678,7 @@ try{
     }
 
     logContainer.style.display = "block";
+    emptyContainer.style.display = "none";
 
     data.forEach(req => {
         const tr = document.createElement("tr");
@@ -701,12 +700,11 @@ try{
 
         <td class="col-details">
         <div class="bounty-title">${req.title}</div>
-
-        <p class="bounty-desc">
-        ${req.description || "No description logged."}
-        </p>
-
-        <div style="font-family: var(--font-mono); font-size:0.75rem; color:var(--text-tertiary); margin-top:8px;">
+        <p class="bounty-desc">${req.description || "No description logged."}</p>
+        <div style="font-family: var(--font-mono); font-size:0.75rem; color:var(--text-secondary); margin-top:8px;">
+        Posted by: ${req.email}
+        </div>
+        <div style="font-family: var(--font-mono); font-size:0.75rem; color:var(--text-tertiary); margin-top:4px;">
         TIMESTAMP: ${new Date().toLocaleDateString()}
         </div>
         </td>
@@ -727,7 +725,6 @@ try{
     });
 
     lucide.createIcons();
-
 
 }
 
@@ -751,7 +748,9 @@ lucide.createIcons();
 
 }
 
-loadRequests();
+document.addEventListener("DOMContentLoaded", function() {
+    loadRequests();
+});
 
 </script>
     <style>
