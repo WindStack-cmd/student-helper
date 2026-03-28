@@ -4,95 +4,367 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Request Details | Student Helper</title>
-
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet" />
     <style>
+        :root {
+            --bg: #080c10;
+            --surface: #0f1419;
+            --surface2: #161d26;
+            --border: rgba(255, 255, 255, 0.07);
+            --accent: #c6f135;
+            --accent-glow: rgba(198, 241, 53, 0.25);
+            --text: #e8edf2;
+            --text-muted: #6b7a8d;
+            --text-dim: #3d4f62;
+            --success: #00d9a3;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            background: #0a0a0a;
-            color: white;
-            font-family: Arial, Helvetica, sans-serif;
-            padding: 40px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        .container {
-            max-width: 900px;
-            margin: auto;
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.5;
         }
 
-        .card {
-            background: #111;
-            padding: 25px;
-            margin-bottom: 25px;
-            border-radius: 10px;
+        body::after {
+            content: '';
+            position: fixed;
+            top: -200px;
+            right: -200px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(198, 241, 53, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
         }
 
+        .shell {
+            position: absolute;
+            z-index: 1;
+            width: 1050px;
+            margin-left: 30%;
+            padding: 48px 24px 80px;
+        }
+
+        /* ── topbar ── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .breadcrumb {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-family: 'Syne', sans-serif;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+        }
+
+        .breadcrumb span {
+            color: var(--text-muted);
+        }
+
+        /* ── page heading ── */
         h1 {
-            margin-bottom: 10px;
+            font-family: 'Syne', sans-serif;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 6px;
+            animation: fadeUp 0.4s 0.05s ease both;
         }
 
-        textarea {
-            width: 100%;
-            height: 120px;
-            padding: 10px;
-            background: #000000;
-            border: 1px solid #333;
+        .page-sub {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-bottom: 28px;
+            animation: fadeUp 0.4s 0.1s ease both;
+        }
+
+        /* ── request card ── */
+        #requestContainer {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp 0.4s 0.15s ease both;
+        }
+
+        #requestContainer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent) 0%, transparent 60%);
+        }
+
+        #requestContainer h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+
+        #requestContainer p {
+            font-size: 14px;
+            line-height: 1.75;
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+
+        #requestContainer p+p {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ── section titles ── */
+        h2:not(#requestContainer h2) {
+            font-family: 'Syne', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            animation: fadeUp 0.4s 0.2s ease both;
+        }
+
+        h3 {
+            font-family: 'Syne', sans-serif;
             font-size: 16px;
-            color: rgb(255, 255, 255);
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+            animation: fadeUp 0.4s 0.3s ease both;
         }
 
-        button {
-            margin-top: 10px;
-            padding: 10px 20px;
-            background: #ccff00;
-            border: none;
+        /* ── answers ── */
+        #answersContainer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        #answersContainer>div {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 12px !important;
+            padding: 20px 22px !important;
+            margin-bottom: 0 !important;
+            transition: border-color 0.2s, transform 0.2s;
+            animation: fadeUp 0.35s ease both;
+        }
+
+        #answersContainer>div:hover {
+            border-color: rgba(255, 255, 255, 0.13) !important;
+            transform: translateY(-1px);
+        }
+
+        #answersContainer>div p {
+            font-size: 14px;
+            line-height: 1.75;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        #answersContainer>div p:last-of-type {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        #answersContainer>div button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent !important;
+            border: 1px solid var(--border) !important;
+            color: var(--text-muted) !important;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 7px 14px !important;
+            border-radius: 8px !important;
             cursor: pointer;
-            font-weight: bold;
+            transition: all 0.2s;
+            margin-top: 0 !important;
         }
 
-        .answer {
-            border-top: 1px solid #333;
-            padding: 10px 0;
+        #answersContainer>div button:hover {
+            background: rgba(0, 217, 163, 0.1) !important;
+            border-color: rgba(0, 217, 163, 0.4) !important;
+            color: var(--success) !important;
         }
 
-        small {
-            color: #aaa;
+        /* ── post answer box ── */
+        .post-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            animation: fadeUp 0.4s 0.35s ease both;
+        }
+
+        .post-card-sub {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-bottom: 16px;
+        }
+
+        textarea#answerText {
+            width: 100% !important;
+            height: 130px !important;
+            background: var(--bg) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 10px !important;
+            color: var(--text) !important;
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 14px !important;
+            line-height: 1.7 !important;
+            padding: 14px 16px !important;
+            resize: none !important;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none !important;
+            display: block;
+        }
+
+        textarea#answerText:focus {
+            border-color: rgba(198, 241, 53, 0.4) !important;
+            box-shadow: 0 0 0 3px rgba(198, 241, 53, 0.07) !important;
+        }
+
+        textarea#answerText::placeholder {
+            color: var(--text-dim);
+        }
+
+        button[onclick="postAnswer()"] {
+            margin-top: 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            background: var(--accent) !important;
+            color: #080c10 !important;
+            font-family: 'Syne', sans-serif !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            padding: 12px 26px !important;
+            border: none !important;
+            border-radius: 10px !important;
+            cursor: pointer !important;
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s !important;
+        }
+
+        button[onclick="postAnswer()"]:hover {
+            opacity: 0.9 !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 8px 24px var(--accent-glow) !important;
+        }
+
+        /* ── scrollbar ── */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Request Details</title>
-
-        <link rel="stylesheet" href="../css/style.css">
-
-    </head>
+</head>
 
 <body>
 
-    <h1>Request Details</h1>
+    <div class="shell">
 
-    <div id="requestContainer"></div>
+        <div class="topbar">
+            <div class="logo">Student Helper</div>
+            <div class="breadcrumb">Dashboard &nbsp;/&nbsp; <span>Request Details</span></div>
+        </div>
 
-    <br>
+        <h1>Request Details</h1>
+        <p class="page-sub">View the full request and contribute your answer below.</p>
 
-    <h2>Answers</h2>
+        <div id="requestContainer"></div>
 
-    <div id="answersContainer"></div>
+        <br>
 
-    <br>
+        <h2>Answers</h2>
 
-    <h3>Post Answer</h3>
+        <div id="answersContainer"></div>
 
-    <textarea id="answerText" rows="6" cols="60" placeholder="Write your answer here" style="color: black;"></textarea>
+        <br>
 
-    <br><br>
+        <div class="post-card">
+            <h3>Post Answer</h3>
+            <p class="post-card-sub">Share your knowledge and help a fellow student.</p>
 
-    <button onclick="postAnswer()">Submit Answer</button>
+            <textarea id="answerText" rows="6" cols="60" placeholder="Write your answer here"></textarea>
+
+            <br><br>
+
+            <button onclick="postAnswer()">Submit Answer</button>
+        </div>
+
+    </div>
+
 
     <script>
 
@@ -237,25 +509,27 @@ Accept Answer
         }
 
     </script>
-
-
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const userStr = localStorage.getItem("loggedInUser");
-            if (userStr) {
-                try {
-                    const user = JSON.parse(userStr);
-                    const name = user.first_name || user.name || "User";
-                    const email = user.email || "user@system.node";
 
-                    document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
-                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
-                    document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
-                } catch (e) { }
+        const name = localStorage.getItem("firstName")
+        const email = localStorage.getItem("userEmail")
+
+        if (name) {
+
+            const avatar = document.getElementById("sidebarAvatar")
+            const username = document.getElementById("sidebarName")
+
+            if (avatar) {
+                avatar.innerText = name.charAt(0).toUpperCase()
             }
-        });
+
+            if (username) {
+                username.innerText = name
+            }
+
+        }
+
     </script>
 </body>
-
 
 </html>
