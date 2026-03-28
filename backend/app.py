@@ -99,27 +99,27 @@ def dashboard_metrics():
     try:
         email = request.args.get("email")
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         try:
             bounties_cleared = 0
             ledger_stake = 0
             pending = 0
             
             if email:
-                cursor.execute("SELECT COUNT(*) as cnt FROM requests WHERE solved = 1 AND user_email = %s", (email,))
+                cursor.execute("SELECT COUNT(*) FROM requests WHERE solved = 1 AND user_email = %s", (email,))
                 r1 = cursor.fetchone()
-                if r1 and 'cnt' in r1 and r1['cnt'] is not None:
-                    bounties_cleared = int(r1['cnt'])
+                if r1 and r1[0] is not None:
+                    bounties_cleared = int(r1[0])
                     
-                cursor.execute("SELECT COALESCE(reputation, points, 0) as ledger FROM users WHERE email = %s", (email,))
+                cursor.execute("SELECT COALESCE(reputation, points, 0) FROM users WHERE email = %s", (email,))
                 r2 = cursor.fetchone()
-                if r2 and 'ledger' in r2 and r2['ledger'] is not None:
-                    ledger_stake = int(r2['ledger'])
+                if r2 and r2[0] is not None:
+                    ledger_stake = int(r2[0])
 
-            cursor.execute("SELECT COUNT(*) as pending_count FROM requests WHERE status = 'open'")
+            cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'open' AND solved = 0")
             r3 = cursor.fetchone()
-            if r3 and 'pending_count' in r3 and r3['pending_count'] is not None:
-                pending = int(r3['pending_count'])
+            if r3 and r3[0] is not None:
+                pending = int(r3[0])
 
             return jsonify({
                 "bounties_cleared": bounties_cleared,
@@ -182,7 +182,7 @@ def get_requests():
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT * FROM requests ORDER BY created_at DESC")
+            cursor.execute("SELECT * FROM requests WHERE status = 'open' AND solved = 0 AND user_email IS NOT NULL AND user_email != '' ORDER BY created_at DESC")
             rows = cursor.fetchall()
             requests_list = []
             for r in rows:
