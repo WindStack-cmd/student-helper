@@ -62,6 +62,7 @@
             margin-bottom: 24px;
             background: linear-gradient(to bottom right, #fff, var(--text-secondary));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -722,21 +723,21 @@
             try {
                 const response = await fetch("http://127.0.0.1:5000/leaderboard");
                 const tbody = document.querySelector(".log-table tbody");
-                
+
                 if (!response.ok) {
                     if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
                     return;
                 }
-                
+
                 const users = await response.json();
-                
+
                 if (!tbody) return;
                 if (!users || users.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
                 } else {
                     tbody.innerHTML = users.map((user, index) => {
                         let rankStr = String(index + 1).padStart(2, '0');
-                        let initials = (user.first_name || "U").substring(0,2).toUpperCase();
+                        let initials = (user.first_name || "U").substring(0, 2).toUpperCase();
                         return `
                             <tr class="ranking-row">
                                 <td class="row-rank">${rankStr}</td>
@@ -761,7 +762,7 @@
                         rankBadge.textContent = rankIndex >= 0 ? "#" + (rankIndex + 1) : "Unranked";
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Leaderboard error:", e);
                 const tbody = document.querySelector(".log-table tbody");
                 if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
@@ -776,7 +777,7 @@
                     e.currentTarget.classList.add('active');
                 });
             });
-            
+
             const btnHunt = document.querySelector('.btn-hunt');
             if (btnHunt) {
                 btnHunt.addEventListener('click', () => {
@@ -788,27 +789,27 @@
         function loadUserProfile() {
             const localUserRaw = localStorage.getItem("loggedInUser");
             if (!localUserRaw) return;
-            
+
             try {
                 const localUser = JSON.parse(localUserRaw);
                 const email = localUser.email || "";
-                
+
                 let name = localUser.first_name || localUser.name;
                 if (!name && email) {
                     name = email.split('@')[0];
                 }
                 name = name ? name.toUpperCase() : "USER";
-                
+
                 const initials = name.charAt(0).toUpperCase();
 
                 document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
                 document.querySelectorAll('.user-avatar').forEach(el => el.textContent = initials);
                 document.querySelectorAll('.user-role').forEach(el => el.textContent = email);
-                
+
                 const spotlightName = document.querySelector(".spotlight-info h3");
                 const spotlightRole = document.querySelector(".spotlight-info p");
                 const spotlightAvatar = document.querySelector(".spotlight-avatar");
-                
+
                 if (spotlightName) spotlightName.textContent = name;
                 if (spotlightRole) spotlightRole.textContent = email;
                 if (spotlightAvatar) spotlightAvatar.textContent = initials;
@@ -833,7 +834,7 @@
                             statVals[1].textContent = 0;
                         }
                     });
-            } catch(e) {
+            } catch (e) {
                 console.error("Profile parsing error:", e);
             }
         }
