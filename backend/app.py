@@ -393,6 +393,40 @@ def accept_answer():
         print("Accept Answer Error:", e)
         return jsonify({"message": "Failed to accept answer"}), 500
 
+@app.route("/purge_user", methods=["POST"])
+def purge_user():
+    try:
+        data = request.json
+        email = data.get("email")
+        if not email:
+            return jsonify({"message": "Email is required"}), 400
+
+        print(f"[purge_user] Purging node data for: {email}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # Delete from all related tables
+            cursor.execute("DELETE FROM notifications WHERE email = %s", (email,))
+            cursor.execute("DELETE FROM answers WHERE email = %s", (email,))
+            cursor.execute("DELETE FROM posts WHERE user_email = %s", (email,))
+            cursor.execute("DELETE FROM requests WHERE user_email = %s", (email,))
+            cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+            
+            conn.commit()
+            print(f"[purge_user] Node data purged successfully for: {email}")
+            return jsonify({"message": "Node data purged successfully"}), 200
+        except Exception as e:
+            conn.rollback()
+            print(f"[purge_user] ERROR: {str(e)}")
+            return jsonify({"message": "Failed to purge node data", "error": str(e)}), 500
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        print(f"[purge_user] CRITICAL ERROR: {str(e)}")
+        return jsonify({"message": "Server error", "error": str(e)}), 500
+
 @socketio.on("message")
 def handle_message(msg):
     print("Message:", msg)
@@ -436,6 +470,18 @@ def get_posts():
     finally:
         cursor.close()
         conn.close()
+
+
+
+
+
+
+
+
+
+
+
+
 
 @app.route("/create_post", methods=["POST"])
 def create_post():

@@ -790,7 +790,7 @@
                                         <p style="font-size: 0.85rem; color: var(--text-secondary);">Permanently erase
                                             all your data, posts, and network ledger reputation.</p>
                                     </div>
-                                    <button class="btn-danger"><i data-lucide="trash-2"
+                                    <button class="btn-danger" id="purgeButton"><i data-lucide="trash-2"
                                             style="width: 16px; height: 16px;"></i> Execute Purge</button>
                                 </div>
                             </div>
@@ -886,6 +886,44 @@
                     document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
                     document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
                 } catch(e) {}
+            }
+
+            // Purge Button Logic
+            const purgeBtn = document.getElementById('purgeButton');
+            if (purgeBtn) {
+                purgeBtn.addEventListener('click', async () => {
+                    const userStr = localStorage.getItem("loggedInUser");
+                    if (!userStr) return;
+                    const user = JSON.parse(userStr);
+                    const email = user.email;
+
+                    if (confirm("CRITICAL WARNING: This will PERMANENTLY erase all your node data, posts, and reputation. This action CANNOT be undone. Are you absolutely sure?")) {
+                        if (confirm("FINAL CONFIRMATION: Type 'PURGE' is not required, but please click OK one last time to confirm structural deletion of node " + email)) {
+                            try {
+                                const response = await fetch('http://localhost:5000/purge_user', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ email }),
+                                });
+
+                                const result = await response.json();
+
+                                if (response.ok) {
+                                    alert("Node data successfully purged. Connection terminated.");
+                                    localStorage.clear();
+                                    window.location.href = "../index.html";
+                                } else {
+                                    alert("Error during purge: " + (result.message || "Unknown error"));
+                                }
+                            } catch (error) {
+                                console.error("Purge failed:", error);
+                                alert("Failed to connect to core server. Purge aborted.");
+                            }
+                        }
+                    }
+                });
             }
         });
     </script>

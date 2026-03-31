@@ -861,18 +861,18 @@
                     </div>
                 </div>
 
-            <!-- Workspace List View -->
-            <div class="workspace-panel" style="overflow-y: auto;">
-                <div class="panel-tabs">
-                    <div class="tab active">Network Feed</div>
-                    <div class="tab">My Data</div>
-                    <div class="tab">Archived</div>
-                </div>
-                <div class="data-list" id="requestsContainer">
+                <!-- Workspace List View -->
+                <div class="workspace-panel" style="overflow-y: auto;">
+                    <div class="panel-tabs">
+                        <div class="tab active">Network Feed</div>
+                        <div class="tab">My Data</div>
+                        <div class="tab">Archived</div>
+                    </div>
+                    <div class="data-list" id="requestsContainer">
 
+                    </div>
                 </div>
             </div>
-    </div>
 
     </div>
     </main>
@@ -974,20 +974,20 @@
         }
 
         async function loadRequests() {
-            await fetchAndRenderRequests("http://127.0.0.1:5000/get_requests", "NO_ACTIVE_REQUESTS", 
+            await fetchAndRenderRequests("http://127.0.0.1:5000/get_requests", "NO_ACTIVE_REQUESTS",
                 () => `<span class="status-badge status-active">LIVE</span>`);
         }
 
         async function loadMyRequests() {
             const email = getLoggedInEmail();
-            await fetchAndRenderRequests("http://127.0.0.1:5000/get_my_requests?email=" + encodeURIComponent(email || ""), "NO DATA FOUND", 
+            await fetchAndRenderRequests("http://127.0.0.1:5000/get_my_requests?email=" + encodeURIComponent(email || ""), "NO DATA FOUND",
                 () => `<span class="status-badge status-active">LIVE</span>`);
         }
 
         async function loadArchivedRequests() {
-            await fetchAndRenderRequests("http://127.0.0.1:5000/get_archived_requests", "NO ARCHIVED DATA", 
-                (req) => req.solved 
-                    ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>` 
+            await fetchAndRenderRequests("http://127.0.0.1:5000/get_archived_requests", "NO ARCHIVED DATA",
+                (req) => req.solved
+                    ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
                     : `<span class="status-badge" style="background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); border: 1px solid var(--border-dim);">CLOSED</span>`);
         }
 
@@ -1094,15 +1094,15 @@ ERROR_LOADING_NOTIFICATIONS
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             loadDashboardMetrics();
-            
+
             const tabs = document.querySelectorAll(".panel-tabs .tab");
             tabs.forEach(tab => {
                 tab.addEventListener("click", () => {
                     if (tab.classList.contains("active")) return;
-                    
+
                     tabs.forEach(t => t.classList.remove("active"));
                     tab.classList.add("active");
-                    
+
                     const tabText = tab.textContent.trim();
                     if (tabText === "Network Feed") {
                         loadRequests();
