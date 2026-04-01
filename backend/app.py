@@ -471,18 +471,6 @@ def get_posts():
         cursor.close()
         conn.close()
 
-
-
-
-
-
-
-
-
-
-
-
-
 @app.route("/create_post", methods=["POST"])
 def create_post():
     data = request.json
