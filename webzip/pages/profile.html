@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -673,14 +673,14 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer" onclick="logout()">
+            <div class="sidebar-footer" onclick="window.location.href='profile.html'" title="View Profile">
                 <div class="user-avatar" id="sidebarAvatar">JD</div>
                 <div class="user-info">
                     <div class="user-name" id="sidebarName">John Doe</div>
-                    <div class="user-role">NODE_LVL_4</div>
+                    <div class="user-role" id="sidebarEmail">...</div>
                 </div>
-                <i data-lucide="power"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+                <i data-lucide="power" onclick="event.stopPropagation(); logout()"
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
             </div>
         </aside>
 
@@ -826,23 +826,25 @@
 
     console.log("User:", user)
     
-        // 🔥 Main pro
-        // file
-        document.getElementById("profileName").innerText = user.first_name
-        document.getElementById("profileEmail").innerText = user.email
+        const name = user.first_name || user.name || "User";
+        const email = user.email || "";
 
-        // 🔥 Inputs
-        document.getElementById("profileNameInput").value = user.first_name
-        document.getElementById("profileEmailInput").value = user.email
+        // Main profile
+        document.getElementById("profileName").innerText = name
+        document.getElementById("profileEmail").innerText = email
 
-        // 🔥 Avatar (big)
-        document.getElementById("mainAvatar").innerText =
-            user.first_name.charAt(0).toUpperCase()
+        // Inputs
+        document.getElementById("profileNameInput").value = name
+        document.getElementById("profileEmailInput").value = email
 
-        // 🔥 Sidebar (same page)
-        document.getElementById("sidebarName").innerText = user.first_name
-        document.getElementById("sidebarAvatar").innerText =
-            user.first_name.charAt(0).toUpperCase()
+        // Avatar (big)
+        document.getElementById("mainAvatar").innerText = name.charAt(0).toUpperCase()
+
+        // Sidebar (same page)
+        document.getElementById("sidebarName").innerText = name
+        document.getElementById("sidebarAvatar").innerText = name.charAt(0).toUpperCase()
+        const sidebarEmail = document.getElementById("sidebarEmail");
+        if (sidebarEmail) sidebarEmail.innerText = email;
     }
 
     document.addEventListener("DOMContentLoaded", loadProfile)

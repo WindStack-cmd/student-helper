@@ -783,17 +783,17 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer">
+            <div class="sidebar-footer" onclick="window.location.href='profile.html'" title="View Profile">
 
                 <div id="userAvatar" class="user-avatar">U</div>
 
                 <div class="user-info">
                     <div id="userName" class="user-name">LOADING...</div>
-                    <div class="user-role">NODE_LVL_4</div>
+                    <div id="userEmail" class="user-role">...</div>
                 </div>
 
-                <i data-lucide="power" onclick="logoutUser()"
-                    style="color: var(--danger-red); width:16px; height:16px; margin-left:auto;"></i>
+                <i data-lucide="power" onclick="event.stopPropagation(); logoutUser()"
+                    style="color: var(--danger-red); width:16px; height:16px; margin-left:auto; cursor:pointer;" title="Logout"></i>
 
             </div>
         </aside>
@@ -1057,10 +1057,11 @@ ERROR_LOADING_NOTIFICATIONS
         if (userStr) {
             try {
                 const user = JSON.parse(userStr);
-                document.getElementById("userName").innerText = user.first_name;
-                document.getElementById("userAvatar").innerText = user.first_name.charAt(0).toUpperCase();
-                const roleEl = document.querySelector(".user-role");
-                if (roleEl) roleEl.innerText = user.email;
+                const name = user.first_name || user.name || "User";
+                document.getElementById("userName").innerText = name;
+                document.getElementById("userAvatar").innerText = name.charAt(0).toUpperCase();
+                const emailEl = document.getElementById("userEmail");
+                if (emailEl) emailEl.innerText = user.email || "";
             } catch (e) { }
         }
 
@@ -1119,11 +1120,13 @@ ERROR_LOADING_NOTIFICATIONS
                 try {
                     const user = JSON.parse(userStr);
                     const name = user.first_name || user.name || "User";
-                    const email = user.email || "user@system.node";
+                    const email = user.email || "";
 
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
                     document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
                     document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
+                    const emailEl = document.getElementById("userEmail");
+                    if (emailEl) emailEl.innerText = email;
                 } catch (e) { }
             }
         });

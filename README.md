@@ -36,8 +36,8 @@ An interactive platform connecting students who need help with those who can pro
 ```
 .
 ├── backend/
-│   ├── app.py                  # Flask application — all API routes & DB init
-│   └── student_helper.db       # Legacy SQLite file (unused — MySQL is active)
+│   ├── app.py                 # Main Flask application and API routes
+│   └── requirements.txt       # Python backend dependencies
 ├── webzip/
 │   ├── index.html              # Landing page
 │   ├── package.json            # Node configuration
@@ -91,6 +91,23 @@ An interactive platform connecting students who need help with those who can pro
 | **notifications** | `id`, `email`, `message`, `seen`, `created_at` |
 
 ## 🚀 Setup & Installation
+
+1. **Prerequisites**: Ensure you have Python 3.x installed.
+2. **Start MySQL**: Ensure a MySQL server is running and accessible.
+3. **Configure database credentials** (optional): set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`.
+4. **Navigate to the backend directory**:
+   ```bash
+   cd backend
+   ```
+5. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+6. **Run the server**:
+   ```bash
+   python app.py
+   ```
+   The Flask server will start on `http://127.0.0.1:5000`. MySQL tables are initialized automatically on the first successful connection.
 
 ### Prerequisites
 

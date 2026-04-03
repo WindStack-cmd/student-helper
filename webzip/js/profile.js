@@ -2,7 +2,9 @@
 
 function toggleProfileMenu() {
     const dropdown = document.getElementById("profileDropdown");
-    dropdown.classList.toggle("show");
+    if (dropdown) {
+        dropdown.classList.toggle("show");
+    }
 }
 
 function editProfile() {
@@ -15,7 +17,7 @@ function closeEditProfile(event) {
 }
 
 function saveProfile(event) {
-    event.preventDefault();
+    if (event) event.preventDefault();
     showNotification("Profile updated successfully! ✅", "success");
     closeEditProfile();
 }
@@ -41,8 +43,11 @@ function switchProfileTab(tab, event) {
     };
     
     if (tabMap[tab]) {
-        document.getElementById(tabMap[tab]).style.display = "block";
-        event.target.classList.add("active");
+        const targetTab = document.getElementById(tabMap[tab]);
+        if (targetTab) targetTab.style.display = "block";
+        if (event && event.target) {
+            event.target.classList.add("active");
+        }
     }
 }
 
@@ -62,15 +67,21 @@ function showNotification(message, type = "info") {
 window.addEventListener("load", function() {
     const user = JSON.parse(localStorage.getItem("loggedInUser")) || {};
     const username = user.email ? user.email.split('@')[0] : "User";
-    
-    document.getElementById("profileUserName").textContent = username;
-    document.getElementById("profileUserEmail").textContent = user.email || "user@example.com";
-    document.getElementById("userAvatarNav").textContent = username.charAt(0).toUpperCase();
+
+    const profileUserName = document.getElementById("profileUserName");
+    const profileUserEmail = document.getElementById("profileUserEmail");
+    const userAvatarNav = document.getElementById("userAvatarNav");
+    if (profileUserName) profileUserName.textContent = username;
+    if (profileUserEmail) profileUserEmail.textContent = user.email || "user@example.com";
+    if (userAvatarNav) userAvatarNav.textContent = username.charAt(0).toUpperCase();
     
     // Set random banner color
     const colors = ["#667eea", "#764ba2", "#f093fb", "#4facfe"];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    document.getElementById("profileBanner").style.background = `linear-gradient(135deg, ${randomColor}, ${colors[1]})`;
+    const profileBanner = document.getElementById("profileBanner");
+    if (profileBanner) {
+        profileBanner.style.background = `linear-gradient(135deg, ${randomColor}, ${colors[1]})`;
+    }
 });
 
 document.addEventListener("click", function(e) {

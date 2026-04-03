@@ -1,17 +1,23 @@
 // Contact Form
-document.querySelector(".contact-form form").addEventListener("submit", function(e) {
-    e.preventDefault();
+const contactForm = document.querySelector(".contact-form form");
+if (contactForm) {
+    contactForm.addEventListener("submit", function(e) {
+        e.preventDefault();
 
-    alert("Message sent successfully! We will get back to you soon.");
+        alert("Message sent successfully! We will get back to you soon.");
 
-    this.reset();
-});
+        this.reset();
+    });
+}
 
 // Review Form
-document.querySelector(".review-section form").addEventListener("submit", function(e) {
-    e.preventDefault();
+const reviewForm = document.querySelector(".review-section form");
+if (reviewForm) {
+    reviewForm.addEventListener("submit", function(e) {
+        e.preventDefault();
 
-    alert("Thank you for your feedback!");
+        alert("Thank you for your feedback!");
 
-    this.reset();
-});
+        this.reset();
+    });
+}

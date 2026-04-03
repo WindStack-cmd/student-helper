@@ -6,7 +6,9 @@ function goToCommunity() {
 
 function toggleProfileMenu() {
     const dropdown = document.getElementById("profileDropdown");
-    dropdown.classList.toggle("show");
+    if (dropdown) {
+        dropdown.classList.toggle("show");
+    }
 }
 
 function logout() {

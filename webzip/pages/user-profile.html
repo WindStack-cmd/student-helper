@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -667,14 +667,14 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer" onclick="logout()">
+            <div class="sidebar-footer" onclick="window.location.href='profile.html'" title="View Profile">
                 <div class="user-avatar" id="sidebarAvatar">JD</div>
                 <div class="user-info">
                     <div class="user-name" id="sidebarName">John Doe</div>
-                    <div class="user-role">NODE_LVL_4</div>
+                    <div class="user-role">...</div>
                 </div>
-                <i data-lucide="power"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+                <i data-lucide="power" onclick="event.stopPropagation(); logout()"
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
             </div>
         </aside>
 

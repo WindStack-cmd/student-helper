@@ -15,6 +15,7 @@ const leaderboardData = [
 
 function loadLeaderboard() {
     const tbody = document.getElementById("leaderboardBody");
+    if (!tbody) return;
     tbody.innerHTML = leaderboardData.map(user => `
         <tr>
             <td class="rank-cell">
@@ -35,12 +36,14 @@ function loadLeaderboard() {
     `).join('');
 }
 
-function filterLeaderboard(filter) {
+function filterLeaderboard(filter, event) {
     // Update active filter button
     document.querySelectorAll(".filter-btn").forEach(btn => {
         btn.classList.remove("active");
     });
-    event.target.classList.add("active");
+    if (event && event.target) {
+        event.target.classList.add("active");
+    }
     
     // Simulate filtering (in real app, would fetch from backend)
     const notification = `Leaderboard filtered by: ${filter.replace('-', ' ').toUpperCase()}`;
@@ -58,7 +61,9 @@ function goToCommunity() {
 
 function toggleProfileMenu() {
     const dropdown = document.getElementById("profileDropdown");
-    dropdown.classList.toggle("show");
+    if (dropdown) {
+        dropdown.classList.toggle("show");
+    }
 }
 
 function showNotification(message, type = "info") {

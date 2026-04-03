@@ -2,13 +2,13 @@
   "name": "community-learning-platform",
   "version": "1.0.0",
   "description": "Full-stack community learning platform with real-time features",
-  "main": "backend/server.js",
+  "main": "index.html",
   "scripts": {
-    "start": "cd backend && npm start",
-    "dev": "cd backend && npm run dev",
-    "install-all": "npm install && cd backend && npm install && cd ..",
-    "backend": "cd backend && npm start",
-    "setup": "npm install && cd backend && npm install && cd ..",
+    "start": "npx serve .",
+    "dev": "npx serve .",
+    "install-all": "npm install",
+    "backend": "echo Run backend with: cd ../backend && ..\\.venv\\Scripts\\python.exe app.py",
+    "setup": "npm install",
     "test": "echo \"Tests not yet implemented\""
   },
   "keywords": [

@@ -23,8 +23,9 @@ function renderSidebar(options = {}) {
 
     // Get user data from localStorage
     const user = JSON.parse(localStorage.getItem('loggedInUser')) || {};
-    const userName = user.name || user.email?.split('@')[0] || 'Guest User';
-    const userInitials = getInitials(userName);
+    const userName = user.first_name || user.name || user.email?.split('@')[0] || 'Guest User';
+    const userEmail = user.email || '';
+    const userInitials = userName.charAt(0).toUpperCase();
     const isLoggedIn = !!user.email;
 
     // Determine base path (are we in /pages/ or root?)
@@ -104,13 +105,13 @@ function buildAppSidebar({ activePage, rootPrefix, pagesPrefix, userName, userIn
             </div>
         </div>
 
-        <div class="sidebar-footer" onclick="logout()">
+        <div class="sidebar-footer" onclick="window.location.href='${pagesPrefix}profile.html'" title="View Profile">
             <div class="user-avatar" id="sidebarAvatar">${userInitials}</div>
             <div class="user-info">
                 <div class="user-name" id="sidebarName">${userName}</div>
-                <div class="user-role">NODE_LVL_4</div>
+                <div class="user-role">${userEmail}</div>
             </div>
-            <i data-lucide="power" style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+            <i data-lucide="power" onclick="event.stopPropagation(); logout()" style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
         </div>
     </aside>`;
 }

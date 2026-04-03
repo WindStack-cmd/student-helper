@@ -320,29 +320,47 @@
             const lastName = document.getElementById("lastName").value;
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
-            const name = firstName + " " + lastName;
+            const registerBtn = document.getElementById("registerBtn");
+            const msg = document.getElementById("messageContainer");
+
+            // UI Feedback: Loading state
+            registerBtn.disabled = true;
+            registerBtn.innerHTML = '<i data-lucide="loader" class="animate-spin"></i> Processing...';
+            lucide.createIcons();
 
             try {
                 const response = await fetch("http://127.0.0.1:5000/register", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, email, password })
+                    body: JSON.stringify({ 
+                        first_name: firstName,
+                        last_name: lastName,
+                        name: firstName + " " + lastName, 
+                        email, 
+                        password 
+                    })
                 });
 
                 const data = await response.json();
-                const msg = document.getElementById("messageContainer");
                 msg.style.display = "flex";
-                msg.className = "message success";
-                msg.innerHTML = data.message;
-
-                if (data.message === "User registered successfully") {
-                    setTimeout(() => { window.location.href = "login.html"; }, 1000);
+                
+                if (response.ok) {
+                    msg.className = "message success";
+                    msg.innerHTML = `<i data-lucide="check-circle"></i> ${data.message || "Registration successful!"}`;
+                    setTimeout(() => { window.location.href = "login.html"; }, 1500);
+                } else {
+                    msg.className = "message error";
+                    msg.innerHTML = `<i data-lucide="alert-circle"></i> ${data.message || "Registration failed"}`;
                 }
             } catch (error) {
-                const msg = document.getElementById("messageContainer");
+                console.error("Registration Error:", error);
                 msg.style.display = "flex";
                 msg.className = "message error";
-                msg.innerHTML = "SERVER ERROR";
+                msg.innerHTML = '<i data-lucide="wifi-off"></i> Connection failed. Is the backend running?';
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = '<i data-lucide="key"></i> Broadcast New Node';
+                lucide.createIcons();
             }
         });
     </script>

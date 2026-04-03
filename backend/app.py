@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, send
 import mysql.connector
+import os
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
@@ -9,51 +10,62 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*")
 app.config['CORS_HEADERS'] = 'Content-Type'
 
+DB_CONFIG = {
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", "123456"),
+    "database": os.getenv("DB_NAME", "student_helper"),
+    "ssl_disabled": True,
+}
+
 def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Mohak@12",
-        database="student_helper",
-        ssl_disabled=True
-    )
+    return mysql.connector.connect(**DB_CONFIG)
 
 def init_db():
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Mohak@12",
-        ssl_disabled=True
-    )
-    cursor = conn.cursor()
-    cursor.execute("CREATE DATABASE IF NOT EXISTS student_helper")
-    cursor.execute("USE student_helper")
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), email VARCHAR(255) UNIQUE, password VARCHAR(255), points INT DEFAULT 0, first_name VARCHAR(255), reputation INT DEFAULT 0, bounties_completed INT DEFAULT 0)''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS requests (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), description TEXT, user_email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR(50), bounty INT DEFAULT 0, captured_by VARCHAR(255), solved BOOLEAN DEFAULT 0)''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS answers (id INT AUTO_INCREMENT PRIMARY KEY, request_id INT, answer TEXT, email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, accepted BOOLEAN DEFAULT 0)''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS posts (id INT AUTO_INCREMENT PRIMARY KEY, first_name VARCHAR(255), title VARCHAR(255), content TEXT, user_email VARCHAR(255), bounty INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(255), message TEXT, seen BOOLEAN DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    try:
+        db_name = DB_CONFIG["database"]
+        conn = mysql.connector.connect(
+            host=DB_CONFIG["host"],
+            user=DB_CONFIG["user"],
+            password=DB_CONFIG["password"],
+            ssl_disabled=DB_CONFIG["ssl_disabled"],
+        )
+        cursor = conn.cursor()
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
+        cursor.execute(f"USE `{db_name}`")
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), email VARCHAR(255) UNIQUE, password VARCHAR(255), points INT DEFAULT 0, first_name VARCHAR(255), reputation INT DEFAULT 0, bounties_completed INT DEFAULT 0)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS requests (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), description TEXT, user_email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR(50), bounty INT DEFAULT 0, captured_by VARCHAR(255), solved BOOLEAN DEFAULT 0)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS answers (id INT AUTO_INCREMENT PRIMARY KEY, request_id INT, answer TEXT, email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, accepted BOOLEAN DEFAULT 0)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS posts (id INT AUTO_INCREMENT PRIMARY KEY, first_name VARCHAR(255), title VARCHAR(255), content TEXT, user_email VARCHAR(255), bounty INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(255), message TEXT, seen BOOLEAN DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
 
-    # Ensure solved and captured_by columns exist on already-created tables
-    try:
-        cursor.execute("ALTER TABLE requests ADD COLUMN solved BOOLEAN DEFAULT 0")
-        conn.commit()
-    except Exception:
-        pass  # Column already exists
-    try:
-        cursor.execute("ALTER TABLE requests ADD COLUMN captured_by VARCHAR(255)")
-        conn.commit()
-    except Exception:
-        pass  # Column already exists
-    try:
-        cursor.execute("ALTER TABLE requests MODIFY COLUMN bounty INT DEFAULT 0")
-        conn.commit()
-    except Exception:
-        pass
+        # Ensure solved and captured_by columns exist on already-created tables
+        try:
+            cursor.execute("ALTER TABLE requests ADD COLUMN solved BOOLEAN DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+        try:
+            cursor.execute("ALTER TABLE requests ADD COLUMN captured_by VARCHAR(255)")
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+        try:
+            cursor.execute("ALTER TABLE requests MODIFY COLUMN bounty INT DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print(f"[DB] Using MySQL at {DB_CONFIG['host']} with database '{DB_CONFIG['database']}'")
+        return
+    except mysql.connector.Error as err:
+        raise RuntimeError(
+            f"MySQL connection failed: {err}. "
+            "Start MySQL and verify DB_HOST/DB_USER/DB_PASSWORD/DB_NAME settings."
+        ) from err
 
 init_db()
 
@@ -64,7 +76,7 @@ def home():
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
-    first_name = data.get("first_name")
+    first_name = data.get("first_name") or data.get("name")
     email = data.get("email")
     password = data.get("password")
 
@@ -75,14 +87,17 @@ def register():
         user = cursor.fetchone()
 
         if user:
-            return jsonify({"message": "User already exists"})
+            return jsonify({"message": "User already exists"}), 400
 
         cursor.execute(
             "INSERT INTO users (first_name, email, password, points) VALUES (%s,%s,%s,%s)",
             (first_name, email, password, 0)
         )
         conn.commit()
-        return jsonify({"message": "Registration successful"})
+        return jsonify({"message": "User registered successfully"}), 201
+    except Exception as e:
+        print(f"Registration error: {e}")
+        return jsonify({"message": "Registration failed"}), 500
     finally:
         cursor.close()
         conn.close()
@@ -96,14 +111,15 @@ def login():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT email, first_name, password FROM users WHERE email=%s", (email,))
+        cursor.execute("SELECT email, first_name, name, password FROM users WHERE email=%s", (email,))
         user = cursor.fetchone()
 
         if user and user["password"] == password:
+            display_name = user["first_name"] or (user.get("name") or "").split()[0] or user["email"].split("@")[0]
             return jsonify({
                 "message": "Login successful",
                 "email": user["email"],
-                "first_name": user["first_name"]
+                "first_name": display_name
             })
 
         return jsonify({"message": "Invalid email or password"})
@@ -537,4 +553,5 @@ def user_stats():
         return jsonify({"first_name": "", "email": request.args.get("email") or "", "reputation": 0, "bounties_completed": 0}), 200
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
+    socketio.run(app, debug=debug_mode, use_reloader=debug_mode)

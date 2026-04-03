@@ -530,7 +530,9 @@ function filterByCategory(category, event) {
     });
     
     // Add active class to clicked category
-    event.currentTarget.classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
     
     showNotification(`Filtered by: ${category}`, "info");
 }
@@ -551,7 +553,9 @@ function switchTab(tab, event) {
     });
     
     // Add active class to clicked tab
-    event.currentTarget.classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
     
     showNotification(`Switched to ${tab} tab`, "info");
 }

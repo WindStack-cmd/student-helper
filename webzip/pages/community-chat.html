@@ -863,14 +863,14 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer">
-                <div class="user-avatar">JD</div>
+            <div class="sidebar-footer" onclick="window.location.href='profile.html'" title="View Profile">
+                <div class="user-avatar" id="sidebarAvatar">U</div>
                 <div class="user-info">
-                    <div class="user-name">John Doe</div>
-                    <div class="user-role">NODE_LVL_4</div>
+                    <div class="user-name" id="sidebarName">Loading...</div>
+                    <div class="user-role" id="sidebarEmail">...</div>
                 </div>
-                <i data-lucide="power"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+                <i data-lucide="power" onclick="event.stopPropagation(); localStorage.removeItem('loggedInUser'); window.location.href='login.html';"
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
             </div>
         </aside>
 
@@ -1096,10 +1096,13 @@
         if (userStr) {
             try {
                 const user = JSON.parse(userStr);
+                const name = user.first_name || user.name || "User";
                 const avatar = document.getElementById("sidebarAvatar");
                 const username = document.getElementById("sidebarName");
-                if (avatar) avatar.innerText = user.first_name.charAt(0).toUpperCase();
-                if (username) username.innerText = user.first_name;
+                const emailEl = document.getElementById("sidebarEmail");
+                if (avatar) avatar.innerText = name.charAt(0).toUpperCase();
+                if (username) username.innerText = name;
+                if (emailEl) emailEl.innerText = user.email || "";
             } catch (e) { }
         }
 
