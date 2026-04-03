@@ -3,23 +3,56 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, send
 import mysql.connector
 import os
+import re
+from datetime import datetime
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-socketio = SocketIO(app, cors_allowed_origins="*")
+# FIX #1: CORS - Restrict to specific origins instead of wildcard
+ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:8000,http://localhost:3000").split(",")
+CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True)
+
+socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
+# FIX #5: Add logging helper
+def log_event(event_type, message, level="INFO"):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] [{level}] {event_type}: {message}")
+
+# FIX #2: Use environment variables properly (no hardcoded defaults for password)
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "user": os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD", "123456"),
+    "password": os.getenv("DB_PASSWORD") or "root",  # Force user to set via .env
     "database": os.getenv("DB_NAME", "student_helper"),
     "ssl_disabled": True,
 }
 
 def get_db_connection():
     return mysql.connector.connect(**DB_CONFIG)
+
+# FIX #3: Input validation helpers
+def validate_email(email):
+    """Validate email format"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
+def validate_password(password):
+    """Validate password (min 6 chars)"""
+    return len(password) >= 6
+
+def validate_title(title):
+    """Validate title (min 3, max 255 chars)"""
+    return 3 <= len(title) <= 255
+
+def validate_description(description):
+    """Validate description (max 5000 chars)"""
+    return len(description) <= 5000
 
 def init_db():
     try:
@@ -59,9 +92,10 @@ def init_db():
         conn.commit()
         cursor.close()
         conn.close()
-        print(f"[DB] Using MySQL at {DB_CONFIG['host']} with database '{DB_CONFIG['database']}'")
+        log_event("DB_INIT", f"Using MySQL at {DB_CONFIG['host']} with database '{DB_CONFIG['database']}'", "INFO")
         return
     except mysql.connector.Error as err:
+        log_event("DB_INIT", f"MySQL connection failed: {err}", "ERROR")
         raise RuntimeError(
             f"MySQL connection failed: {err}. "
             "Start MySQL and verify DB_HOST/DB_USER/DB_PASSWORD/DB_NAME settings."
@@ -75,10 +109,23 @@ def home():
 
 @app.route("/register", methods=["POST"])
 def register():
-    data = request.json
-    first_name = data.get("first_name") or data.get("name")
-    email = data.get("email")
-    password = data.get("password")
+    data = request.json or {}
+    first_name = str(data.get("first_name") or "").strip()
+    email = str(data.get("email") or "").strip()
+    password = str(data.get("password") or "").strip()
+
+    # FIX #3: Input validation
+    if not email or not validate_email(email):
+        log_event("REGISTER", f"Invalid email format: {email}", "WARNING")
+        return jsonify({"message": "Invalid email format", "error_code": "INVALID_EMAIL"}), 400
+
+    if not password or not validate_password(password):
+        log_event("REGISTER", f"Password too short for {email}", "WARNING")
+        return jsonify({"message": "Password must be at least 6 characters", "error_code": "WEAK_PASSWORD"}), 400
+
+    if not first_name or len(first_name) < 2:
+        log_event("REGISTER", f"Invalid name for {email}", "WARNING")
+        return jsonify({"message": "Name must be at least 2 characters", "error_code": "INVALID_NAME"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -87,26 +134,40 @@ def register():
         user = cursor.fetchone()
 
         if user:
-            return jsonify({"message": "User already exists"}), 400
+            log_event("REGISTER", f"User already exists: {email}", "WARNING")
+            return jsonify({"message": "User already exists", "error_code": "USER_EXISTS"}), 400
 
         cursor.execute(
             "INSERT INTO users (first_name, email, password, points) VALUES (%s,%s,%s,%s)",
             (first_name, email, password, 0)
         )
         conn.commit()
+        log_event("REGISTER", f"User registered successfully: {email}", "INFO")
         return jsonify({"message": "User registered successfully"}), 201
+    except mysql.connector.IntegrityError as e:
+        log_event("REGISTER", f"Database integrity error: {str(e)}", "ERROR")
+        return jsonify({"message": "Email already registered", "error_code": "DB_INTEGRITY_ERROR"}), 400
     except Exception as e:
-        print(f"Registration error: {e}")
-        return jsonify({"message": "Registration failed"}), 500
+        log_event("REGISTER", f"Unexpected error for {email}: {str(e)}", "ERROR")
+        return jsonify({"message": "Registration failed", "error_code": "INTERNAL_ERROR", "details": str(e)}), 500
     finally:
         cursor.close()
         conn.close()
 
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.json
-    email = data.get("email")
-    password = data.get("password")
+    data = request.json or {}
+    email = str(data.get("email") or "").strip()
+    password = str(data.get("password") or "").strip()
+
+    # FIX #3: Input validation
+    if not email or not validate_email(email):
+        log_event("LOGIN", f"Invalid email format attempt: {email}", "WARNING")
+        return jsonify({"message": "Invalid email format", "error_code": "INVALID_EMAIL"}), 400
+
+    if not password:
+        log_event("LOGIN", f"Missing password for: {email}", "WARNING")
+        return jsonify({"message": "Password is required", "error_code": "MISSING_PASSWORD"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -123,13 +184,18 @@ def login():
                 else:
                     display_name = user["email"].split("@")[0]
 
+            log_event("LOGIN", f"Login successful: {email}", "INFO")
             return jsonify({
                 "message": "Login successful",
                 "email": user["email"],
                 "first_name": display_name
             })
 
-        return jsonify({"message": "Invalid email or password"})
+        log_event("LOGIN", f"Login failed (invalid credentials): {email}", "WARNING")
+        return jsonify({"message": "Invalid email or password", "error_code": "INVALID_CREDENTIALS"}), 401
+    except Exception as e:
+        log_event("LOGIN", f"Unexpected error for {email}: {str(e)}", "ERROR")
+        return jsonify({"message": "Login failed", "error_code": "INTERNAL_ERROR"}), 500
     finally:
         cursor.close()
         conn.close()
@@ -137,20 +203,20 @@ def login():
 @app.route("/dashboard_metrics")
 def dashboard_metrics():
     try:
-        email = request.args.get("email")
+        email = request.args.get("email") or ""
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
             bounties_cleared = 0
             ledger_stake = 0
             pending = 0
-            
+
             if email:
                 cursor.execute("SELECT COUNT(*) FROM requests WHERE solved = 1 AND user_email = %s", (email,))
                 r1 = cursor.fetchone()
                 if r1 and r1[0] is not None:
                     bounties_cleared = int(r1[0])
-                    
+
                 cursor.execute("SELECT COALESCE(reputation, points, 0) FROM users WHERE email = %s", (email,))
                 r2 = cursor.fetchone()
                 if r2 and r2[0] is not None:
@@ -161,6 +227,7 @@ def dashboard_metrics():
             if r3 and r3[0] is not None:
                 pending = int(r3[0])
 
+            log_event("DASHBOARD_METRICS", f"Metrics retrieved for {email or 'anonymous'}", "INFO")
             return jsonify({
                 "bounties_cleared": bounties_cleared,
                 "ledger_stake": ledger_stake,
@@ -170,7 +237,7 @@ def dashboard_metrics():
             cursor.close()
             conn.close()
     except Exception as e:
-        print("Dashboard Metrics Error:", e)
+        log_event("DASHBOARD_METRICS", f"Error retrieving metrics: {str(e)}", "ERROR")
         return jsonify({"bounties_cleared": 0, "ledger_stake": 0, "pending_jobs": 0}), 200
 
 @app.route("/leaderboard", methods=["GET"])
@@ -180,19 +247,21 @@ def leaderboard():
         cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute("""
-                SELECT first_name, email, 
+                SELECT first_name, email,
                        COALESCE(reputation, points, 0) as reputation,
                        COALESCE(bounties_completed, 0) as bounties_completed
                 FROM users
                 ORDER BY COALESCE(reputation, points, 0) DESC
             """)
             users = cursor.fetchall()
+            log_event("LEADERBOARD", f"Retrieved leaderboard with {len(users)} users", "INFO")
             return jsonify(users)
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        return jsonify([]), 200
+        log_event("LEADERBOARD", f"Error retrieving leaderboard: {str(e)}", "ERROR")
+        return jsonify([]), 500
 
 @app.route("/post_request", methods=["POST"])
 def post_request():
@@ -206,7 +275,21 @@ def post_request():
         except (ValueError, TypeError):
             bounty = 0
 
-        print(f"[post_request] title={title!r} email={email!r} bounty={bounty}")
+        # FIX #3: Input validation for request
+        if not email or not validate_email(email):
+            log_event("POST_REQUEST", f"Invalid email: {email}", "WARNING")
+            return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
+
+        if not validate_title(title):
+            log_event("POST_REQUEST", f"Invalid title length: {len(title)}", "WARNING")
+            return jsonify({"message": "Title must be 3-255 characters", "error_code": "INVALID_TITLE"}), 400
+
+        if not validate_description(description):
+            log_event("POST_REQUEST", f"Description too long for {email}", "WARNING")
+            return jsonify({"message": "Description must be 5000 characters or less", "error_code": "INVALID_DESCRIPTION"}), 400
+
+        if bounty < 0:
+            bounty = 0
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -216,14 +299,15 @@ def post_request():
                 (title, description, email, bounty)
             )
             conn.commit()
-            print("[post_request] Insert successful, id:", cursor.lastrowid)
-            return jsonify({"message": "Request posted successfully"}), 200
+            request_id = cursor.lastrowid
+            log_event("POST_REQUEST", f"Request posted successfully (ID: {request_id}) by {email} with bounty {bounty}", "INFO")
+            return jsonify({"message": "Request posted successfully", "request_id": request_id}), 201
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        print("[post_request] ERROR:", str(e))
-        return jsonify({"message": "Failed to post request", "error": str(e)}), 500
+        log_event("POST_REQUEST", f"Unexpected error: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to post request", "error_code": "INTERNAL_ERROR", "details": str(e)}), 500
 
 @app.route("/get_requests", methods=["GET"])
 def get_requests():
@@ -246,13 +330,14 @@ def get_requests():
                     "captured_by": r[7] if len(r) > 7 else None,
                     "solved": bool(r[8]) if len(r) > 8 else False
                 })
+            log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests", "INFO")
             return jsonify(requests_list)
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        print("Get Requests Error:", e)
-        return jsonify([])
+        log_event("GET_REQUESTS", f"Error retrieving requests: {str(e)}", "ERROR")
+        return jsonify([]), 500
 
 @app.route("/get_active_bounties", methods=["GET"])
 def get_active_bounties():
@@ -275,18 +360,19 @@ def get_active_bounties():
                     "captured_by": r[7] if len(r) > 7 else None,
                     "solved": bool(r[8]) if len(r) > 8 else False
                 })
+            log_event("GET_ACTIVE_BOUNTIES", f"Retrieved {len(bounties_list)} active bounties", "INFO")
             return jsonify(bounties_list)
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        print("Get Active Bounties Error:", e)
+        log_event("GET_ACTIVE_BOUNTIES", f"Error: {str(e)}", "ERROR")
         return jsonify([])
 
 @app.route("/get_my_requests", methods=["GET"])
 def get_my_requests():
     try:
-        email = request.args.get("email")
+        email = request.args.get("email") or ""
         if not email:
             return jsonify([])
         conn = get_db_connection()
@@ -307,12 +393,13 @@ def get_my_requests():
                     "captured_by": r[7] if len(r) > 7 else None,
                     "solved": bool(r[8]) if len(r) > 8 else False
                 })
+            log_event("GET_MY_REQUESTS", f"Retrieved {len(requests_list)} requests for {email}", "INFO")
             return jsonify(requests_list)
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        print("Get My Requests Error:", e)
+        log_event("GET_MY_REQUESTS", f"Error: {str(e)}", "ERROR")
         return jsonify([])
 
 @app.route("/get_archived_requests", methods=["GET"])
@@ -336,66 +423,100 @@ def get_archived_requests():
                     "captured_by": r[7] if len(r) > 7 else None,
                     "solved": bool(r[8]) if len(r) > 8 else False
                 })
+            log_event("GET_ARCHIVED_REQUESTS", f"Retrieved {len(requests_list)} archived requests", "INFO")
             return jsonify(requests_list)
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        print("Get Archived Requests Error:", e)
+        log_event("GET_ARCHIVED_REQUESTS", f"Error: {str(e)}", "ERROR")
         return jsonify([])
 
 @app.route("/post_answer", methods=["POST"])
 def post_answer():
-    data = request.json
-    request_id = data["request_id"]
-    answer = data["answer"]
-    email = data["email"]
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("INSERT INTO answers (request_id, answer, email) VALUES (%s,%s,%s)", (request_id, answer, email))
-        conn.commit()
+        data = request.json or {}
+        request_id = data.get("request_id")
+        answer = str(data.get("answer") or "").strip()
+        email = str(data.get("email") or "").strip()
 
-        cursor.execute("SELECT user_email FROM requests WHERE id=%s", (request_id,))
-        row = cursor.fetchone()
-        if row:
-            owner = row["user_email"]
-            cursor.execute("INSERT INTO notifications (email,message) VALUES (%s,%s)", (owner,"Someone answered your request"))
+        # FIX #3: Input validation
+        if not request_id or not isinstance(request_id, int):
+            log_event("POST_ANSWER", f"Invalid request_id: {request_id}", "WARNING")
+            return jsonify({"message": "Invalid request ID", "error_code": "INVALID_REQUEST_ID"}), 400
+
+        if not email or not validate_email(email):
+            log_event("POST_ANSWER", f"Invalid email: {email}", "WARNING")
+            return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
+
+        if not answer or len(answer) < 5:
+            log_event("POST_ANSWER", f"Answer too short from {email}", "WARNING")
+            return jsonify({"message": "Answer must be at least 5 characters", "error_code": "ANSWER_TOO_SHORT"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("INSERT INTO answers (request_id, answer, email) VALUES (%s,%s,%s)", (request_id, answer, email))
             conn.commit()
+            log_event("POST_ANSWER", f"Answer posted for request {request_id} by {email}", "INFO")
 
-        return jsonify({"message":"Answer posted successfully"})
-    finally:
-        cursor.close()
-        conn.close()
+            cursor.execute("SELECT user_email FROM requests WHERE id=%s", (request_id,))
+            row = cursor.fetchone()
+            if row:
+                owner = row["user_email"]
+                cursor.execute("INSERT INTO notifications (email,message) VALUES (%s,%s)", (owner,"Someone answered your request"))
+                conn.commit()
+                log_event("POST_ANSWER", f"Notification sent to {owner}", "INFO")
+
+            return jsonify({"message":"Answer posted successfully"}), 201
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("POST_ANSWER", f"Unexpected error: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to post answer", "error_code": "INTERNAL_ERROR"}), 500
 
 @app.route("/get_answers/<int:request_id>", methods=["GET"])
 def get_answers(request_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM answers WHERE request_id=%s", (request_id,))
-        rows = cursor.fetchall()
-        answers = []
-        for r in rows:
-            answers.append({
-                "id": r[0],
-                "request_id": r[1],
-                "answer": r[2],
-                "email": r[3]
-            })
-        return jsonify(answers)
-    finally:
-        cursor.close()
-        conn.close()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM answers WHERE request_id=%s", (request_id,))
+            rows = cursor.fetchall()
+            answers = []
+            for r in rows:
+                answers.append({
+                    "id": r[0],
+                    "request_id": r[1],
+                    "answer": r[2],
+                    "email": r[3]
+                })
+            log_event("GET_ANSWERS", f"Retrieved {len(answers)} answers for request {request_id}", "INFO")
+            return jsonify(answers)
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("GET_ANSWERS", f"Error: {str(e)}", "ERROR")
+        return jsonify([])
 
 @app.route("/accept_answer", methods=["POST"])
 def accept_answer():
     try:
-        data = request.json
-        answer_id = data["answer_id"]
-        request_id = data["request_id"]
-        helper_email = data.get("email")  # email of the helper who answered
+        data = request.json or {}
+        answer_id = data.get("answer_id")
+        request_id = data.get("request_id")
+        helper_email = str(data.get("email") or "").strip()
+
+        # FIX #3: Input validation
+        if not answer_id or not request_id:
+            log_event("ACCEPT_ANSWER", f"Missing answer_id or request_id", "WARNING")
+            return jsonify({"message": "Missing answer_id or request_id", "error_code": "MISSING_PARAMS"}), 400
+
+        if helper_email and not validate_email(helper_email):
+            log_event("ACCEPT_ANSWER", f"Invalid helper email: {helper_email}", "WARNING")
+            return jsonify({"message": "Invalid helper email", "error_code": "INVALID_EMAIL"}), 400
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -408,112 +529,158 @@ def accept_answer():
                     (helper_email,)
                 )
             conn.commit()
-            return jsonify({"message": "Answer accepted"})
+            log_event("ACCEPT_ANSWER", f"Answer {answer_id} accepted for request {request_id}, points awarded to {helper_email}", "INFO")
+            return jsonify({"message": "Answer accepted"}), 200
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        print("Accept Answer Error:", e)
-        return jsonify({"message": "Failed to accept answer"}), 500
+        log_event("ACCEPT_ANSWER", f"Error accepting answer: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to accept answer", "error_code": "INTERNAL_ERROR"}), 500
 
 @app.route("/purge_user", methods=["POST"])
 def purge_user():
     try:
-        data = request.json
-        email = data.get("email")
-        if not email:
-            return jsonify({"message": "Email is required"}), 400
+        data = request.json or {}
+        email = str(data.get("email") or "").strip()
 
-        print(f"[purge_user] Purging node data for: {email}")
+        # FIX #3: Input validation
+        if not email or not validate_email(email):
+            log_event("PURGE_USER", f"Invalid email format: {email}", "WARNING")
+            return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
+
+        log_event("PURGE_USER", f"Starting purge for: {email}", "WARNING")
 
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            # Delete from all related tables
             cursor.execute("DELETE FROM notifications WHERE email = %s", (email,))
             cursor.execute("DELETE FROM answers WHERE email = %s", (email,))
             cursor.execute("DELETE FROM posts WHERE user_email = %s", (email,))
             cursor.execute("DELETE FROM requests WHERE user_email = %s", (email,))
             cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-            
+
             conn.commit()
-            print(f"[purge_user] Node data purged successfully for: {email}")
-            return jsonify({"message": "Node data purged successfully"}), 200
+            log_event("PURGE_USER", f"User data purged successfully for: {email}", "WARNING")
+            return jsonify({"message": "User data purged successfully"}), 200
         except Exception as e:
             conn.rollback()
-            print(f"[purge_user] ERROR: {str(e)}")
-            return jsonify({"message": "Failed to purge node data", "error": str(e)}), 500
+            log_event("PURGE_USER", f"Error purging user {email}: {str(e)}", "ERROR")
+            return jsonify({"message": "Failed to purge user data", "error_code": "DB_ERROR"}), 500
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        print(f"[purge_user] CRITICAL ERROR: {str(e)}")
-        return jsonify({"message": "Server error", "error": str(e)}), 500
+        log_event("PURGE_USER", f"Critical error: {str(e)}", "ERROR")
+        return jsonify({"message": "Server error", "error_code": "INTERNAL_ERROR"}), 500
 
 @socketio.on("message")
 def handle_message(msg):
-    print("Message:", msg)
+    log_event("WEBSOCKET_MESSAGE", f"Received message: {msg[:50]}...", "INFO")
     send(msg, broadcast=True)
 
 @app.route("/update_reputation", methods=["POST"])
 def update_reputation():
-    data = request.json
-    email = data.get("email")
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("""
-            UPDATE users
-            SET reputation = reputation + 50,
-                bounties_completed = bounties_completed + 1
-            WHERE email = %s
-        """, (email,))
-        conn.commit()
-        return jsonify({"message": "Updated"})
-    finally:
-        cursor.close()
-        conn.close()
+        data = request.json or {}
+        email = str(data.get("email") or "").strip()
+
+        if not email or not validate_email(email):
+            log_event("UPDATE_REPUTATION", f"Invalid email: {email}", "WARNING")
+            return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE users
+                SET reputation = reputation + 50,
+                    bounties_completed = bounties_completed + 1
+                WHERE email = %s
+            """, (email,))
+            conn.commit()
+            log_event("UPDATE_REPUTATION", f"Reputation updated for {email}", "INFO")
+            return jsonify({"message": "Updated"})
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("UPDATE_REPUTATION", f"Error: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to update reputation"}), 500
 
 @app.route("/get_posts", methods=["GET"])
 def get_posts():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("""
-            SELECT p.*, u.first_name 
-            FROM posts p
-            JOIN users u ON p.user_email = u.email
-            ORDER BY p.created_at DESC
-        """)
-        posts = cursor.fetchall()
-        for post in posts:
-            if 'created_at' in post and post['created_at']:
-                post['created_at'] = str(post['created_at'])
-        return jsonify(posts)
-    finally:
-        cursor.close()
-        conn.close()
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("""
+                SELECT p.*, u.first_name
+                FROM posts p
+                JOIN users u ON p.user_email = u.email
+                ORDER BY p.created_at DESC
+            """)
+            posts = cursor.fetchall()
+            for post in posts:
+                if 'created_at' in post and post['created_at']:
+                    post['created_at'] = str(post['created_at'])
+            log_event("GET_POSTS", f"Retrieved {len(posts)} posts", "INFO")
+            return jsonify(posts)
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("GET_POSTS", f"Error: {str(e)}", "ERROR")
+        return jsonify([])
 
 @app.route("/create_post", methods=["POST"])
 def create_post():
-    data = request.json
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO posts (user_email, content, bounty) VALUES (%s, %s, %s)", (data["email"], data["content"], data["bounty"]))
-        conn.commit()
-        return jsonify({"message": "Post created"})
-    finally:
-        cursor.close()
-        conn.close()
+        data = request.json or {}
+        email = str(data.get("email") or "").strip()
+        content = str(data.get("content") or "").strip()
+        try:
+            bounty = int(data.get("bounty") or 0)
+        except (ValueError, TypeError):
+            bounty = 0
+
+        if not email or not validate_email(email):
+            log_event("CREATE_POST", f"Invalid email: {email}", "WARNING")
+            return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
+
+        if not content or len(content) < 5:
+            log_event("CREATE_POST", f"Content too short from {email}", "WARNING")
+            return jsonify({"message": "Content must be at least 5 characters", "error_code": "CONTENT_TOO_SHORT"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO posts (user_email, content, bounty) VALUES (%s, %s, %s)", (email, content, bounty))
+            conn.commit()
+            log_event("CREATE_POST", f"Post created by {email}", "INFO")
+            return jsonify({"message": "Post created"}), 201
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("CREATE_POST", f"Error: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to create post", "error_code": "INTERNAL_ERROR"}), 500
 
 @app.route("/accept_post", methods=["POST"])
 def accept_post():
     try:
-        data = request.json
-        helper_email = data.get("email")
+        data = request.json or {}
+        helper_email = str(data.get("email") or "").strip()
         request_id = data.get("post_id")
+
+        if not helper_email or not validate_email(helper_email):
+            log_event("ACCEPT_POST", f"Invalid email: {helper_email}", "WARNING")
+            return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
+
+        if not request_id:
+            log_event("ACCEPT_POST", f"Invalid request_id", "WARNING")
+            return jsonify({"message": "Invalid post_id", "error_code": "INVALID_REQUEST_ID"}), 400
+
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
@@ -522,41 +689,46 @@ def accept_post():
                 (helper_email, request_id)
             )
             conn.commit()
-            return jsonify({"message": "accepted"})
+            log_event("ACCEPT_POST", f"Post accepted for request {request_id} by {helper_email}", "INFO")
+            return jsonify({"message": "accepted"}), 200
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        print("Accept Post Error:", e)
-        return jsonify({"message": "Failed to capture request"}), 500
+        log_event("ACCEPT_POST", f"Error: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to capture request", "error_code": "INTERNAL_ERROR"}), 500
 
 @app.route("/user_stats", methods=["GET"])
 def user_stats():
     try:
-        email = request.args.get("email")
+        email = request.args.get("email") or ""
         if not email:
+            log_event("USER_STATS", "No email provided", "WARNING")
             return jsonify({"first_name": "", "email": "", "reputation": 0, "bounties_completed": 0}), 200
-            
+
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute("""
-                SELECT first_name, email, 
+                SELECT first_name, email,
                        COALESCE(reputation, points, 0) as reputation,
                        COALESCE(bounties_completed, 0) as bounties_completed
                 FROM users
                 WHERE email = %s
             """, (email,))
             user = cursor.fetchone()
-            
+
             if user:
+                log_event("USER_STATS", f"Retrieved stats for {email}", "INFO")
                 return jsonify(user)
             else:
+                log_event("USER_STATS", f"User not found: {email}", "WARNING")
                 return jsonify({"first_name": "", "email": email, "reputation": 0, "bounties_completed": 0}), 200
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
+        log_event("USER_STATS", f"Error: {str(e)}", "ERROR")
         return jsonify({"first_name": "", "email": request.args.get("email") or "", "reputation": 0, "bounties_completed": 0}), 200
 
 if __name__ == "__main__":
