@@ -778,7 +778,7 @@ Provide full stack trace or query details here." required></textarea>
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
-                    const name = user.first_name || user.name || "User";
+                    const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "User");
                     const email = user.email || "user@system.node";
                     
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
