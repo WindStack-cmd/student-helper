@@ -4,13 +4,25 @@ from flask_socketio import SocketIO, send
 import mysql.connector
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
+import bcrypt
+import jwt
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+
+# FEATURE #3: Rate Limiter initialization
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 # FIX #1: CORS - Restrict to specific origins instead of wildcard
 ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:8000,http://localhost:3000").split(",")
@@ -19,10 +31,78 @@ CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
+# FEATURE #2: JWT Configuration
+JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRY_HOURS = 24
+
 # FIX #5: Add logging helper
 def log_event(event_type, message, level="INFO"):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] [{level}] {event_type}: {message}")
+
+# FEATURE #1: Password Hashing - bcrypt functions
+def hash_password(password):
+    """Hash password using bcrypt"""
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def verify_password(password, hashed_password):
+    """Verify password against bcrypt hash"""
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception as e:
+        log_event("AUTH", f"Password verification error: {str(e)}", "ERROR")
+        return False
+
+# FEATURE #2: JWT Authentication functions
+def generate_jwt_token(email, user_id=None):
+    """Generate JWT access token (expires in 24 hours)"""
+    payload = {
+        "email": email,
+        "user_id": user_id,
+        "iat": datetime.utcnow(),
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS)
+    }
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return token
+
+def verify_jwt_token(token):
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None  # Token expired
+    except jwt.InvalidTokenError:
+        return None  # Invalid token
+
+def get_token_from_request():
+    """Extract JWT token from Authorization header"""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[7:]  # Remove "Bearer " prefix
+    return None
+
+def require_auth(f):
+    """Decorator to require JWT authentication"""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = get_token_from_request()
+        if not token:
+            log_event("AUTH", "Missing authorization token", "WARNING")
+            return jsonify({"message": "Missing authorization token", "error_code": "NO_TOKEN"}), 401
+
+        payload = verify_jwt_token(token)
+        if not payload:
+            log_event("AUTH", "Invalid or expired token", "WARNING")
+            return jsonify({"message": "Invalid or expired token", "error_code": "INVALID_TOKEN"}), 401
+
+        # Add email to request context
+        request.user_email = payload.get("email")
+        return f(*args, **kwargs)
+    return decorated_function
 
 # FIX #2: Use environment variables properly (no hardcoded defaults for password)
 DB_CONFIG = {
@@ -108,6 +188,7 @@ def home():
     return "Student Helper Backend Running"
 
 @app.route("/register", methods=["POST"])
+@limiter.limit("5 per minute")  # FEATURE #3: Rate limiting
 def register():
     data = request.json or {}
     first_name = str(data.get("first_name") or "").strip()
@@ -137,9 +218,12 @@ def register():
             log_event("REGISTER", f"User already exists: {email}", "WARNING")
             return jsonify({"message": "User already exists", "error_code": "USER_EXISTS"}), 400
 
+        # FEATURE #1: Hash password before storing
+        hashed_password = hash_password(password)
+
         cursor.execute(
             "INSERT INTO users (first_name, email, password, points) VALUES (%s,%s,%s,%s)",
-            (first_name, email, password, 0)
+            (first_name, email, hashed_password, 0)
         )
         conn.commit()
         log_event("REGISTER", f"User registered successfully: {email}", "INFO")
@@ -155,6 +239,7 @@ def register():
         conn.close()
 
 @app.route("/login", methods=["POST"])
+@limiter.limit("5 per minute")  # FEATURE #3: Rate limiting (5 login attempts per minute)
 def login():
     data = request.json or {}
     email = str(data.get("email") or "").strip()
@@ -172,10 +257,11 @@ def login():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT email, first_name, name, password FROM users WHERE email=%s", (email,))
+        cursor.execute("SELECT id, email, first_name, name, password FROM users WHERE email=%s", (email,))
         user = cursor.fetchone()
 
-        if user and user["password"] == password:
+        if user and verify_password(password, user["password"]):
+            # FEATURE #1: Password verified with bcrypt
             display_name = user.get("first_name")
             if not display_name:
                 name_val = user.get("name") or ""
@@ -184,12 +270,18 @@ def login():
                 else:
                     display_name = user["email"].split("@")[0]
 
+            # FEATURE #2: Generate JWT token
+            access_token = generate_jwt_token(email, user["id"])
+
             log_event("LOGIN", f"Login successful: {email}", "INFO")
             return jsonify({
                 "message": "Login successful",
                 "email": user["email"],
-                "first_name": display_name
-            })
+                "first_name": display_name,
+                "access_token": access_token,
+                "token_type": "Bearer",
+                "expires_in": JWT_EXPIRY_HOURS * 3600
+            }), 200
 
         log_event("LOGIN", f"Login failed (invalid credentials): {email}", "WARNING")
         return jsonify({"message": "Invalid email or password", "error_code": "INVALID_CREDENTIALS"}), 401
@@ -264,6 +356,7 @@ def leaderboard():
         return jsonify([]), 500
 
 @app.route("/post_request", methods=["POST"])
+@limiter.limit("20 per minute")  # FEATURE #3: Rate limiting (20 requests per minute)
 def post_request():
     try:
         data = request.json or {}
@@ -433,6 +526,7 @@ def get_archived_requests():
         return jsonify([])
 
 @app.route("/post_answer", methods=["POST"])
+@limiter.limit("30 per minute")  # FEATURE #3: Rate limiting
 def post_answer():
     try:
         data = request.json or {}
@@ -502,6 +596,7 @@ def get_answers(request_id):
         return jsonify([])
 
 @app.route("/accept_answer", methods=["POST"])
+@limiter.limit("30 per minute")  # FEATURE #3: Rate limiting
 def accept_answer():
     try:
         data = request.json or {}
@@ -539,6 +634,7 @@ def accept_answer():
         return jsonify({"message": "Failed to accept answer", "error_code": "INTERNAL_ERROR"}), 500
 
 @app.route("/purge_user", methods=["POST"])
+@limiter.limit("2 per minute")  # FEATURE #3: Rate limiting (very restrictive for destructive operation)
 def purge_user():
     try:
         data = request.json or {}
@@ -634,6 +730,7 @@ def get_posts():
         return jsonify([])
 
 @app.route("/create_post", methods=["POST"])
+@limiter.limit("20 per minute")  # FEATURE #3: Rate limiting
 def create_post():
     try:
         data = request.json or {}
@@ -667,6 +764,7 @@ def create_post():
         return jsonify({"message": "Failed to create post", "error_code": "INTERNAL_ERROR"}), 500
 
 @app.route("/accept_post", methods=["POST"])
+@limiter.limit("30 per minute")  # FEATURE #3: Rate limiting
 def accept_post():
     try:
         data = request.json or {}

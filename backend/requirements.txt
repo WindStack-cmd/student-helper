@@ -3,3 +3,6 @@ flask-cors>=4.0
 flask-socketio>=5.3
 mysql-connector-python>=9.0
 python-dotenv>=1.0
+bcrypt>=4.0
+PyJWT>=2.8
+flask-limiter>=3.5
