@@ -1057,7 +1057,7 @@ ERROR_LOADING_NOTIFICATIONS
         if (userStr) {
             try {
                 const user = JSON.parse(userStr);
-                const name = user.first_name || user.name || "User";
+                const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "User");
                 document.getElementById("userName").innerText = name;
                 document.getElementById("userAvatar").innerText = name.charAt(0).toUpperCase();
                 const emailEl = document.getElementById("userEmail");
@@ -1119,7 +1119,7 @@ ERROR_LOADING_NOTIFICATIONS
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
-                    const name = user.first_name || user.name || "User";
+                    const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "User");
                     const email = user.email || "";
 
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = name);

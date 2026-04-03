@@ -115,7 +115,14 @@ def login():
         user = cursor.fetchone()
 
         if user and user["password"] == password:
-            display_name = user["first_name"] or (user.get("name") or "").split()[0] or user["email"].split("@")[0]
+            display_name = user.get("first_name")
+            if not display_name:
+                name_val = user.get("name") or ""
+                if name_val.strip():
+                    display_name = name_val.split()[0]
+                else:
+                    display_name = user["email"].split("@")[0]
+
             return jsonify({
                 "message": "Login successful",
                 "email": user["email"],
