@@ -1,5 +1,24 @@
 // ===== UTILITY FUNCTIONS FOR ALL PAGES =====
 
+function getAuthHeaders() {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+        window.location.href = "login.html";
+        return null;
+    }
+    return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+    };
+}
+
+function logout() {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("loggedInUser");
+    localStorage.removeItem("currentUser");
+    window.location.href = "login.html";
+}
+
 // Show notification toast
 function showNotification(message, type = "info") {
     const toast = document.createElement("div");
@@ -22,108 +41,14 @@ function showNotification(message, type = "info") {
 }
 
 // ===== AUTHENTICATION FUNCTIONS =====
-
-// Auth API object for handling authentication
-const authAPI = {
-    async login(email, password) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                if (!email || !password) {
-                    resolve({ error: 'Please fill all fields!' });
-                    return;
-                }
-
-                // Check if user exists
-                let users = JSON.parse(localStorage.getItem("users")) || [];
-                let user = users.find(u => u.email === email && u.password === password);
-
-                if (!user) {
-                    // Allow demo login for any email/password combination
-                    if (email && password) {
-                        user = {
-                            email: email,
-                            name: email.split('@')[0],
-                            id: Date.now()
-                        };
-                        // Save demo user
-                        users.push({...user, password: password});
-                        localStorage.setItem("users", JSON.stringify(users));
-                    } else {
-                        resolve({ error: 'Invalid email or password!' });
-                        return;
-                    }
-                }
-
-                // Store logged in user
-                localStorage.setItem("loggedInUser", JSON.stringify(user));
-                localStorage.setItem("currentUser", JSON.stringify(user));
-
-                resolve({ user: user });
-            }, 500); // Simulate API delay
-        });
-    },
-
-    async register(email, password, confirmPassword, name) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                if (!email || !password || !confirmPassword || !name) {
-                    resolve({ error: 'Please fill all fields!' });
-                    return;
-                }
-
-                if (password !== confirmPassword) {
-                    resolve({ error: 'Passwords do not match!' });
-                    return;
-                }
-
-                if (password.length < 6) {
-                    resolve({ error: 'Password must be at least 6 characters!' });
-                    return;
-                }
-
-                // Check if user already exists
-                let users = JSON.parse(localStorage.getItem("users")) || [];
-                if (users.find(u => u.email === email)) {
-                    resolve({ error: 'Email already registered!' });
-                    return;
-                }
-
-                // Create new user
-                const newUser = {
-                    email: email,
-                    password: password,
-                    name: name,
-                    id: Date.now(),
-                    created: new Date().toISOString()
-                };
-
-                users.push(newUser);
-                localStorage.setItem("users", JSON.stringify(users));
-
-                // Auto login after registration
-                localStorage.setItem("loggedInUser", JSON.stringify(newUser));
-                localStorage.setItem("currentUser", JSON.stringify(newUser));
-
-                resolve({ user: newUser });
-            }, 500); // Simulate API delay
-        });
-    },
-
-    async logout() {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                localStorage.removeItem("loggedInUser");
-                localStorage.removeItem("currentUser");
-                resolve();
-            }, 200);
-        });
-    }
-};
+// Note: Authentication is now handled by backend with JWT tokens
+// See login.html and register.html for API calls
 
 function validateForm() {
     var email = document.getElementById("registerEmail")?.value || "";
     var password = document.getElementById("password")?.value || "";
     var confirmPassword = document.getElementById("confirmPassword")?.value || "";
+    var firstName = email.split('@')[0];
     var error = document.getElementById("error");
 
     if (!email || !password || !confirmPassword) {
@@ -141,26 +66,56 @@ function validateForm() {
         return false;
     }
 
-    // Save user to localStorage
-    const newUser = {
-        email: email,
-        password: password,
-        name: email.split('@')[0],
-        created: new Date().toISOString()
-    };
-    
-    let users = JSON.parse(localStorage.getItem("users")) || [];
-    users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
-
-    if (error) error.textContent = "Registration successful! Redirecting to login...";
-    if (error) error.style.color = "green";
-    
-    setTimeout(function() {
-        window.location.href = "login.html";
-    }, 2000);
-    
+    // Call backend registration API
+    registerWithBackend(email, password, firstName);
     return false;
+}
+
+async function registerWithBackend(email, password, firstName) {
+    const error = document.getElementById("error");
+    const btn = document.querySelector("button[type='submit']");
+
+    if (btn) btn.disabled = true;
+    if (error) error.textContent = "Creating account...";
+
+    try {
+        const response = await fetch("http://127.0.0.1:5000/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password,
+                first_name: firstName
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.message === "User registered successfully") {
+            if (error) {
+                error.textContent = "Registration successful! Redirecting to login...";
+                error.style.color = "var(--accent-lime, green)";
+            }
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 1500);
+        } else {
+            if (error) {
+                error.textContent = data.message || "Registration failed!";
+                error.style.color = "var(--danger-red, red)";
+            }
+        }
+    } catch (err) {
+        if (error) {
+            error.textContent = "Error connecting to server!";
+            error.style.color = "var(--danger-red, red)";
+        }
+        console.error("Registration error:", err);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
 }
 
 function loginValidate() {
@@ -176,7 +131,7 @@ function loginValidate() {
     // Check if user exists (simplified - in real app would use backend)
     let users = JSON.parse(localStorage.getItem("users")) || [];
     let user = users.find(u => u.email === email && u.password === password);
-    
+
     if (!user) {
         // Allow demo login
         if (email && password) {
@@ -189,38 +144,12 @@ function loginValidate() {
 
     localStorage.setItem("loggedInUser", JSON.stringify(user));
     showNotification("Login successful! Welcome " + user.name, "success");
-    
+
     setTimeout(() => window.location.href = "dashboard.html", 500);
     return false;
 }
 
-function logout() {
-    // Call backend logout API
-    authAPI.logout().then(() => {
-        localStorage.removeItem("loggedInUser");
-        localStorage.removeItem("currentUser");
-        showNotification("You have been logged out", "info");
-        setTimeout(() => window.location.href = "index.html", 500);
-    }).catch(error => {
-        console.error('Logout error:', error);
-        // Still logout locally even if API fails
-        localStorage.removeItem("loggedInUser");
-        localStorage.removeItem("currentUser");
-        setTimeout(() => window.location.href = "index.html", 500);
-    });
-}
-
-function checkAuthentication() {
-    const loggedInUser = localStorage.getItem("loggedInUser");
-    if (!loggedInUser) {
-        showNotification("Please login first!", "error");
-        setTimeout(() => window.location.href = "login.html", 500);
-        return false;
-    }
-    return true;
-}
-
-// ===== NAVIGATION FUNCTIONS =====
+// ===== PROFILE FUNCTIONS =====
 
 function goToDashboard() {
     window.location.href = "dashboard.html";

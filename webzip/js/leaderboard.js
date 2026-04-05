@@ -1,39 +1,63 @@
 // Leaderboard functionality
 
-const leaderboardData = [
-    { rank: 1, name: "John Doe", reputation: 3250, answers: 128, upvotes: 234, badges: "🥇🎖️⭐" },
-    { rank: 2, name: "Sarah Johnson", reputation: 2450, answers: 89, upvotes: 156, badges: "🥈🎖️" },
-    { rank: 3, name: "Emma Wilson", reputation: 2120, answers: 76, upvotes: 145, badges: "🥉" },
-    { rank: 4, name: "Mike Chen", reputation: 1890, answers: 64, upvotes: 120, badges: "🎖️" },
-    { rank: 5, name: "Priya Singh", reputation: 1750, answers: 58, upvotes: 98, badges: "" },
-    { rank: 6, name: "Alex Kumar", reputation: 1620, answers: 52, upvotes: 87, badges: "" },
-    { rank: 7, name: "Lisa Anderson", reputation: 1480, answers: 47, upvotes: 75, badges: "" },
-    { rank: 8, name: "David Lee", reputation: 1350, answers: 43, upvotes: 68, badges: "" },
-    { rank: 9, name: "Rachel Brown", reputation: 1220, answers: 39, upvotes: 56, badges: "" },
-    { rank: 10, name: "Tom Wilson", reputation: 1090, answers: 35, upvotes: 48, badges: "" }
-];
+async function loadLeaderboard() {
+    const headers = getAuthHeaders();
+    if (!headers) return;
 
-function loadLeaderboard() {
-    const tbody = document.getElementById("leaderboardBody");
-    if (!tbody) return;
-    tbody.innerHTML = leaderboardData.map(user => `
-        <tr>
-            <td class="rank-cell">
-                <span class="rank-badge">#${user.rank}</span>
-            </td>
-            <td>
-                <div class="user-cell">
-                    <span class="user-avatar-small">${user.name.charAt(0)}</span>
-                    <span class="user-name">${user.name}</span>
-                </div>
-            </td>
-            <td><strong>${user.reputation}</strong></td>
-            <td>${user.answers}</td>
-            <td>${user.upvotes}</td>
-            <td>${user.badges}</td>
-            <td><button class="view-profile-btn" onclick="viewProfile('${user.name}')">View</button></td>
-        </tr>
-    `).join('');
+    try {
+        const response = await fetch("http://127.0.0.1:5000/leaderboard", { headers });
+        
+        if (response.status === 401) {
+            localStorage.removeItem("access_token");
+            window.location.href = "login.html";
+            return;
+        }
+
+        const tbody = document.querySelector(".log-table tbody") || document.getElementById("leaderboardBody");
+
+        if (!response.ok) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
+            return;
+        }
+
+        const users = await response.json();
+
+        if (!tbody) return;
+        if (!users || users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
+        } else {
+            tbody.innerHTML = users.map((user, index) => {
+                let rankStr = String(index + 1).padStart(2, '0');
+                let initials = (user.first_name || "U").substring(0, 2).toUpperCase();
+                return `
+                    <tr class="ranking-row">
+                        <td class="row-rank">${rankStr}</td>
+                        <td class="row-user">
+                            <div class="row-avatar">${initials}</div>
+                            <div class="row-name">${user.first_name || "User"}</div>
+                        </td>
+                        <td class="row-rep">${user.reputation} <span>REP</span></td>
+                        <td>${user.bounties_completed || 0}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update My Rank Badge
+        const localUserRaw = localStorage.getItem("loggedInUser");
+        if (localUserRaw) {
+            const localUser = JSON.parse(localUserRaw);
+            const rankIndex = users.findIndex(u => u.email === localUser.email);
+            const rankBadge = document.querySelector(".my-rank");
+            if (rankBadge) {
+                rankBadge.textContent = rankIndex >= 0 ? "#" + (rankIndex + 1) : "Unranked";
+            }
+        }
+    } catch (e) {
+        console.error("Leaderboard error:", e);
+        const tbody = document.querySelector(".log-table tbody") || document.getElementById("leaderboardBody");
+        if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">SCAN MORE NODES...</td></tr>';
+    }
 }
 
 function filterLeaderboard(filter, event) {
@@ -45,14 +69,9 @@ function filterLeaderboard(filter, event) {
         event.target.classList.add("active");
     }
     
-    // Simulate filtering (in real app, would fetch from backend)
-    const notification = `Leaderboard filtered by: ${filter.replace('-', ' ').toUpperCase()}`;
-    showNotification(notification, "info");
-}
-
-function viewProfile(userName) {
-    showNotification(`Opening profile for ${userName}...`, "info");
-    // In real app, would navigate to user profile
+    // In real app, would fetch from backend with filters
+    showNotification(`Filtering ledger by ${filter}...`, "info");
+    loadLeaderboard(); 
 }
 
 function goToCommunity() {
@@ -78,20 +97,21 @@ function showNotification(message, type = "info") {
     }, 3000);
 }
 
-function logout() {
-    localStorage.removeItem("loggedInUser");
-    window.location.href = "index.html";
-}
-
 // Initialize leaderboard
 window.addEventListener("load", function() {
     loadLeaderboard();
     
-    const user = JSON.parse(localStorage.getItem("loggedInUser")) || {};
-    const username = user.email ? user.email.split('@')[0] : "User";
-    
-    if (document.getElementById("userAvatarNav")) {
-        document.getElementById("userAvatarNav").textContent = username.charAt(0).toUpperCase();
+    const userStr = localStorage.getItem("loggedInUser");
+    if (userStr) {
+        const user = JSON.parse(userStr);
+        const username = user.first_name || user.name || (user.email ? user.email.split('@')[0] : "User");
+        
+        if (document.getElementById("userAvatarNav")) {
+            document.getElementById("userAvatarNav").textContent = username.charAt(0).toUpperCase();
+        }
+
+        // Shared sidebar profile loader logic can also go here or in sidebar.js
+        if (typeof loadUserProfile === 'function') loadUserProfile();
     }
 });
 

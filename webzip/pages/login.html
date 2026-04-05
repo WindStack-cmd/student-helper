@@ -716,13 +716,16 @@ msg.className="message success"
 msg.innerHTML="ACCESS GRANTED"
 
 
-// SAVE USER EMAIL
+// SAVE JWT TOKEN DATA
+localStorage.setItem("access_token", data.access_token);
+localStorage.removeItem("userEmail"); // clean up old insecure key
+
 localStorage.setItem("loggedInUser", JSON.stringify({
     email: data.email,
     first_name: data.first_name
 }))
 
-console.log("Saved user:", localStorage.getItem("loggedInUser"))
+console.log("Session initiated with JWT access token");
 
 setTimeout(()=>{
 window.location.href="dashboard.html"
