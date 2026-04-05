@@ -16,6 +16,25 @@ An interactive platform connecting students who need help with those who can pro
 - **Settings & Account Management** — Update profile details and purge account data.
 - **Dark/Light Theme** — Toggle between themes across all pages.
 
+## 🛡️ Security & Protection
+
+StudentsHelper implements multiple layers of security to protect user data and ensure platform integrity:
+
+### Backend Security
+- **Bcrypt Hashing** — All user passwords are salt-hashed using `bcrypt` (12 rounds) before being stored in the database.
+- **JWT Authorization** — Secure session management using JSON Web Tokens. Protected API endpoints require a valid `Authorization: Bearer <token>` header.
+- **Rate Limiting** — Global and route-specific rate limiting via `Flask-Limiter` to prevent brute-force attacks and service abuse (e.g., 5 login attempts/min).
+- **CORS Hardening** — Cross-Origin Resource Sharing is restricted to authorized frontend domains only.
+- **Input Validation** — Strict validation for emails, passwords, and help request content to prevent malformed data and injection.
+- **Environment Isolation** — Sensitive credentials (DB, JWT Secret) are managed through environment variables (`.env`).
+- **Standardized Logging** — Comprehensive event logging for all critical operations (auth, data mutation, errors).
+
+### Frontend Security
+- **Authentication Guard** — Every protected page includes an initialization guard that verifies the active session. Unauthenticated users are automatically redirected to the login terminal.
+- **Session Persistence** — Secure management of user identity in `localStorage` with systematic clearing upon logout or session expiry.
+- **Data Privacy** — Frontend requests are scoped to the authenticated user's identity, preventing unauthorized data access.
+- **Structural Purge** — A secure, multi-confirmation process for permanent account deletion, ensuring all associated data (posts, requests, notifications) is removed from the system.
+
 ## 🛠 Tech Stack
 
 ### Frontend
@@ -26,9 +45,11 @@ An interactive platform connecting students who need help with those who can pro
 
 ### Backend
 - **Python / Flask** — RESTful API server
-- **Flask-CORS** — Cross-Origin Resource Sharing
+- **Flask-CORS** — Cross-Origin Resource Sharing (Hardened)
 - **Flask-SocketIO** — Real-time, bi-directional WebSocket communication
-- **MySQL** — Production-grade relational database for all persistent data (users, requests, answers, posts, notifications)
+- **Flask-Limiter** — Request rate limiting for security
+- **Bcrypt & PyJWT** — Password hashing and session tokens
+- **MySQL** — Production-grade relational database
 - **mysql-connector-python** — MySQL driver for Python
 
 ## 📁 Project Structure
@@ -36,7 +57,8 @@ An interactive platform connecting students who need help with those who can pro
 ```
 .
 ├── backend/
-│   ├── app.py                 # Main Flask application and API routes
+│   ├── app.py                 # Main Flask application with Security Layers
+│   ├── .env.example           # Template for environment variables
 │   └── requirements.txt       # Python backend dependencies
 ├── webzip/
 │   ├── index.html              # Landing page
@@ -92,58 +114,20 @@ An interactive platform connecting students who need help with those who can pro
 
 ## 🚀 Setup & Installation
 
-1. **Prerequisites**: Ensure you have Python 3.x installed.
-2. **Start MySQL**: Ensure a MySQL server is running and accessible.
-3. **Configure database credentials** (optional): set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`.
-4. **Navigate to the backend directory**:
+1. **Prerequisites**: Ensure you have Python 3.x and MySQL installed.
+2. **Setup Environment**:
+   - Create a `.env` file in the `backend/` directory.
+   - Define: `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `JWT_SECRET`.
+3. **Start MySQL**: Ensure your local MySQL server is running.
+4. **Install Backend Dependencies**:
    ```bash
    cd backend
-   ```
-5. **Install dependencies**:
-   ```bash
    pip install -r requirements.txt
    ```
-6. **Run the server**:
+5. **Initialize & Run**:
    ```bash
    python app.py
    ```
-   The Flask server will start on `http://127.0.0.1:5000`. MySQL tables are initialized automatically on the first successful connection.
-
-### Prerequisites
-
-- Python 3.x
-- MySQL Server running locally
-- Node.js / npm (optional, for serving the frontend)
-
-### 1. Database Setup
-
-Make sure MySQL is running and create the database (the app will auto-create it on first run, but you can also do it manually):
-
-```sql
-CREATE DATABASE IF NOT EXISTS student_helper;
-```
-
-### 2. Backend Setup
-
-```bash
-cd backend
-pip install flask flask-cors flask-socketio mysql-connector-python
-python app.py
-```
-
-The Flask server starts on `http://127.0.0.1:5000`. The database tables are initialized automatically on first launch.
-
-> **Note:** Update the MySQL credentials in `app.py` → `get_db_connection()` to match your local setup.
-
-### 3. Frontend Setup
-
-Serve the `webzip` folder with any static file server:
-
-```bash
-cd webzip
-npx serve .
-# or
-python -m http.server 8000
 ```
 
 Open `http://localhost:8000` (or the port shown) in your browser.
