@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -736,8 +736,10 @@
             try {
                 const res = await fetch("http://127.0.0.1:5000/get_requests");
                 if (!res.ok) throw new Error("Network response was not ok");
-                const data = await res.json();
-                // Backend already returns only status='open' AND solved=0
+                const result = await res.json();
+                
+                // Backend now returns { data: [...], total: ... }
+                const data = result.data || [];
                 window.currentRequests = data;
 
                 const container = document.getElementById("helpRequestsContainer");

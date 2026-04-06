@@ -417,11 +417,48 @@ def post_request():
 @app.route("/get_requests", methods=["GET"])
 def get_requests():
     try:
+        # Get pagination and search parameters from query string
+        limit = request.args.get('limit', default=20, type=int)
+        offset = request.args.get('offset', default=0, type=int)
+        search = request.args.get('search', default="", type=str).strip()
+
+        # Validation
+        if limit > 100:
+            limit = 100
+        if limit < 1:
+            limit = 20
+        if offset < 0:
+            offset = 0
+
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT * FROM requests WHERE status = 'open' AND (solved = 0 OR solved IS NULL) AND user_email IS NOT NULL AND user_email != '' ORDER BY created_at DESC")
+            # Base conditions
+            conditions = "WHERE status = 'open' AND (solved = 0 OR solved IS NULL) AND user_email IS NOT NULL AND user_email != ''"
+            params = []
+            
+            # Add search filter if provided
+            if search:
+                conditions += " AND (title LIKE %s OR description LIKE %s OR user_email LIKE %s)"
+                search_param = f"%{search}%"
+                params.extend([search_param, search_param, search_param])
+
+            # First, fetch total count of eligible records with search filter
+            count_query = f"SELECT COUNT(*) FROM requests {conditions}"
+            cursor.execute(count_query, tuple(params))
+            total_count = cursor.fetchone()[0]
+
+            # Then, fetch paginated data using parameterized query
+            # Adding limit and offset to params
+            data_query = f"""
+                SELECT * FROM requests 
+                {conditions}
+                ORDER BY created_at DESC 
+                LIMIT %s OFFSET %s
+            """
+            cursor.execute(data_query, tuple(params + [limit, offset]))
             rows = cursor.fetchall()
+            
             requests_list = []
             for r in rows:
                 requests_list.append({
@@ -435,14 +472,28 @@ def get_requests():
                     "captured_by": r[7] if len(r) > 7 else None,
                     "solved": bool(r[8]) if len(r) > 8 else False
                 })
-            log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests", "INFO")
-            return jsonify(requests_list)
+            
+            log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Total: {total_count}, Limit: {limit}, Offset: {offset}, Search: '{search}')", "INFO")
+            
+            return jsonify({
+                "data": requests_list,
+                "total": total_count,
+                "limit": limit,
+                "offset": offset,
+                "search": search
+            })
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
         log_event("GET_REQUESTS", f"Error retrieving requests: {str(e)}", "ERROR")
-        return jsonify([]), 500
+        return jsonify({
+            "data": [],
+            "total": 0,
+            "limit": limit if 'limit' in locals() else 20,
+            "offset": offset if 'offset' in locals() else 0,
+            "error": str(e)
+        }), 500
 
 @app.route("/get_active_bounties", methods=["GET"])
 def get_active_bounties():

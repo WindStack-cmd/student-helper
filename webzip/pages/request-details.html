@@ -627,7 +627,8 @@
         async function loadRequest() {
 
             const response = await fetch("http://127.0.0.1:5000/get_requests")
-            const data = await response.json()
+            const result = await response.json()
+            const data = result.data || []
 
             const container = document.getElementById("requestContainer")
 
@@ -791,7 +792,8 @@ Accept Answer
         async function loadSidebar() {
             try {
                 const res = await fetch("http://127.0.0.1:5000/get_requests")
-                allRequests = await res.json()
+                const result = await res.json()
+                allRequests = result.data || []
                 renderSidebar(allRequests)
             } catch (e) {
                 document.getElementById("sidebarList").innerHTML =
