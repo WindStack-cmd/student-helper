@@ -84,6 +84,18 @@ def get_token_from_request():
         return auth_header[7:]  # Remove "Bearer " prefix
     return None
 
+def resolve_request_email():
+    """Resolve user email from JWT token first, then fallback to query string."""
+    token_email = ""
+    token = get_token_from_request()
+    if token:
+        payload = verify_jwt_token(token)
+        if payload:
+            token_email = str(payload.get("email") or "").strip()
+
+    query_email = str(request.args.get("email") or "").strip()
+    return token_email or query_email
+
 def require_auth(f):
     """Decorator to require JWT authentication"""
     from functools import wraps
@@ -295,7 +307,7 @@ def login():
 @app.route("/dashboard_metrics")
 def dashboard_metrics():
     try:
-        email = request.args.get("email") or ""
+        email = resolve_request_email()
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
@@ -465,7 +477,7 @@ def get_active_bounties():
 @app.route("/get_my_requests", methods=["GET"])
 def get_my_requests():
     try:
-        email = request.args.get("email") or ""
+        email = resolve_request_email()
         if not email:
             return jsonify([])
         conn = get_db_connection()
@@ -799,7 +811,7 @@ def accept_post():
 @app.route("/user_stats", methods=["GET"])
 def user_stats():
     try:
-        email = request.args.get("email") or ""
+        email = resolve_request_email()
         if not email:
             log_event("USER_STATS", "No email provided", "WARNING")
             return jsonify({"first_name": "", "email": "", "reputation": 0, "bounties_completed": 0}), 200
@@ -827,7 +839,7 @@ def user_stats():
             conn.close()
     except Exception as e:
         log_event("USER_STATS", f"Error: {str(e)}", "ERROR")
-        return jsonify({"first_name": "", "email": request.args.get("email") or "", "reputation": 0, "bounties_completed": 0}), 200
+        return jsonify({"first_name": "", "email": resolve_request_email(), "reputation": 0, "bounties_completed": 0}), 200
 
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
