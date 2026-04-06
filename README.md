@@ -9,8 +9,8 @@ An interactive platform connecting students who need help with those who can pro
 - **Answer & Accept** — Helpers submit answers; requesters accept the best one, automatically awarding bounty points and reputation.
 - **Leaderboard** — Live rankings based on reputation and bounties completed.
 - **Dashboard** — Personalized metrics (bounties cleared, ledger stake, pending jobs) with tabbed views for network, personal, and archived requests.
-- **Community Chat** — Real-time messaging powered by WebSockets (Socket.IO).
-- **Notifications** — In-app notifications when someone answers your request.
+- **Community Chat** — Real-time messaging powered by WebSockets (Socket.IO) *(Currently disabled on Windows)*
+- **Notifications** — In-app notifications when someone answers your request *(Now fully functional)*
 - **User Profiles** — View your own profile or browse other users' stats.
 - **Help Others Feed** — Browse and capture active bounty requests from other students.
 - **Settings & Account Management** — Update profile details and purge account data.
@@ -46,7 +46,7 @@ StudentsHelper implements multiple layers of security to protect user data and e
 ### Backend
 - **Python / Flask** — RESTful API server
 - **Flask-CORS** — Cross-Origin Resource Sharing (Hardened)
-- **Flask-SocketIO** — Real-time, bi-directional WebSocket communication
+- **Flask-SocketIO** — Real-time, bi-directional WebSocket communication *(Currently disabled on Windows)*
 - **Flask-Limiter** — Request rate limiting for security
 - **Bcrypt & PyJWT** — Password hashing and session tokens
 - **MySQL** — Production-grade relational database
@@ -98,6 +98,63 @@ StudentsHelper implements multiple layers of security to protect user data and e
 ├── fix_avatars.py              # Utility — repair avatar data
 ├── dump_schema.py              # Utility — dump current DB schema to file
 ├── schema.txt                  # Exported database schema snapshot
+└── FIXES_APPLIED.md           # Log of applied fixes and changes
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.8+
+- MySQL 8.0+
+- Node.js (for frontend development)
+
+### Backend Setup
+1. **Navigate to backend directory:**
+   ```bash
+   cd backend
+   ```
+
+2. **Create virtual environment:**
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate  # Windows
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables:**
+   - Copy `.env.example` to `.env`
+   - Set your MySQL credentials and JWT secret
+
+5. **Start the backend server:**
+   ```bash
+   python app.py
+   ```
+   Server runs on `http://127.0.0.1:5001`
+
+### Frontend Setup
+1. **Navigate to webzip directory:**
+   ```bash
+   cd webzip
+   ```
+
+2. **Start a local HTTP server:**
+   ```bash
+   # Using Python
+   python -m http.server 5501
+
+   # Or using Node.js
+   npx http-server -p 5501
+   ```
+
+3. **Open in browser:**
+   Visit `http://127.0.0.1:5501`
+
+### Database Setup
+- Run `patch_db.py` to initialize/update the database schema
+- Use `dump_schema.py` to export current schema
 ├── flask_routes.txt            # Exported route listing
 └── README.md
 ```
@@ -176,10 +233,46 @@ Open `http://localhost:8000` (or the port shown) in your browser.
 | `POST` | `/update_reputation` | Manually boost a user's reputation |
 | `POST` | `/purge_user` | Delete all data associated with a user account |
 
+### Notifications
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/notifications` | Get user notifications (requires JWT auth) |
+
 ### Real-time
 | Protocol | Event | Description |
 |----------|-------|-------------|
-| WebSocket | `message` | Bi-directional chat via Socket.IO |
+| WebSocket | `message` | Bi-directional chat via Socket.IO *(Currently disabled on Windows)* |
+
+## 🔄 Recent Updates & Fixes
+
+### v1.1.0 - April 2026
+- **🔔 New Notifications System**
+  - Added `/notifications` API endpoint for fetching user notifications
+  - Fixed CORS error on notification button in dashboard
+  - Notifications are user-specific and JWT-authenticated
+  - Displays "Someone answered your request" notifications
+
+- **🔧 Backend Stability Improvements**
+  - Changed backend port from 5000 to 5001 to avoid Windows socket binding conflicts
+  - Temporarily disabled Flask-SocketIO for Windows compatibility (WebSocket chat disabled)
+  - Removed duplicate route definitions (`/get_answers`, `/accept_answer`)
+  - Improved error handling and logging
+
+- **🎨 Frontend API Updates**
+  - Updated all API endpoints to use port 5001
+  - Enhanced notification loading with better error handling
+  - Added null-safety checks for API responses
+
+- **🛡️ Security Enhancements**
+  - Improved input validation for notification requests
+  - Enhanced JWT token verification for notification access
+  - Better CORS configuration for cross-origin requests
+
+### Technical Notes
+- **Backend Port**: Now runs on `http://127.0.0.1:5001` (changed from 5000)
+- **WebSocket Status**: Disabled on Windows due to socket binding issues
+- **Database**: No schema changes required for notifications (uses existing `notifications` table)
+- **CORS**: Properly configured for `http://127.0.0.1:5501` frontend origin
 
 ## 🤝 Contributing
 

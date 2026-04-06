@@ -196,20 +196,20 @@ function renderSearchUI() {
 
 async function loadRequests() {
     currentTab = "Network Feed";
-    await fetchAndRenderRequests("http://127.0.0.1:5000/get_requests", "NO_ACTIVE_REQUESTS",
+    await fetchAndRenderRequests("http://127.0.0.1:5001/get_requests", "NO_ACTIVE_REQUESTS",
         () => `<span class="status-badge status-active">LIVE</span>`, true);
 }
 
 async function loadMyRequests() {
     currentTab = "My Data";
     // For now, only Network Feed is paginated on backend, but we prepare the logic
-    await fetchAndRenderRequests("http://127.0.0.1:5000/get_my_requests", "NO DATA FOUND",
+    await fetchAndRenderRequests("http://127.0.0.1:5001/get_my_requests", "NO DATA FOUND",
         () => `<span class="status-badge status-active">LIVE</span>`, false);
 }
 
 async function loadArchivedRequests() {
     currentTab = "Archived";
-    await fetchAndRenderRequests("http://127.0.0.1:5000/get_archived_requests", "NO ARCHIVED DATA",
+    await fetchAndRenderRequests("http://127.0.0.1:5001/get_archived_requests", "NO ARCHIVED DATA",
         (req) => req.solved
             ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
             : `<span class="status-badge" style="background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); border: 1px solid var(--border-dim);">CLOSED</span>`, false);
@@ -220,7 +220,7 @@ async function loadDashboardMetrics() {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/dashboard_metrics", { headers });
+        const response = await fetch("http://127.0.0.1:5001/dashboard_metrics", { headers });
         
         if (response.status === 401) {
             localStorage.removeItem("access_token");
@@ -248,7 +248,7 @@ async function loadNotifications() {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/notifications", { headers });
+        const response = await fetch("http://127.0.0.1:5001/notifications", { headers });
 
         if (response.status === 401) {
             localStorage.removeItem("access_token");
@@ -297,7 +297,7 @@ async function openRequest(id) {
 
     const headers = getAuthHeaders();
     try {
-        const response = await fetch(`http://127.0.0.1:5000/get_request_details/${id}`, { headers });
+        const response = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, { headers });
         if (!response.ok) throw new Error("Load failed");
         
         const data = await response.json();
@@ -374,7 +374,7 @@ async function submitModalAnswer() {
     const email = user.email;
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/post_answer", {
+        const response = await fetch("http://127.0.0.1:5001/post_answer", {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json",
@@ -390,7 +390,7 @@ async function submitModalAnswer() {
         if (!response.ok) throw new Error("Post failed");
         
         // Refresh answers
-        const dataResponse = await fetch(`http://127.0.0.1:5000/get_request_details/${id}`, { headers: getAuthHeaders() });
+        const dataResponse = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, { headers: getAuthHeaders() });
         const refreshedData = await dataResponse.json();
         
         renderModalAnswers(refreshedData.answers);

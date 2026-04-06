@@ -5,7 +5,7 @@ async function loadLeaderboard() {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/leaderboard", { headers });
+        const response = await fetch("http://127.0.0.1:5001/leaderboard", { headers });
         
         if (response.status === 401) {
             localStorage.removeItem("access_token");

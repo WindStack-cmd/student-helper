@@ -47,7 +47,7 @@ async function loadUserStats() {
 
     try {
         // Backend now handles identity via JWT
-        const response = await fetch("http://127.0.0.1:5000/user_stats", { headers });
+        const response = await fetch("http://127.0.0.1:5001/user_stats", { headers });
         
         if (response.status === 401) {
             localStorage.removeItem("access_token");

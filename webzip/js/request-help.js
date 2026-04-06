@@ -18,7 +18,7 @@ async function submitHelpRequest(event){
     const type = document.getElementById("helpType").value;
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/post_request", {
+        const response = await fetch("http://127.0.0.1:5001/post_request", {
             method: "POST",
             headers: headers,
             body: JSON.stringify({ 

@@ -79,7 +79,7 @@ async function registerWithBackend(email, password, firstName) {
     if (error) error.textContent = "Creating account...";
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/register", {
+        const response = await fetch("http://127.0.0.1:5001/register", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
