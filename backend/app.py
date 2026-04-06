@@ -181,6 +181,28 @@ def init_db():
         except Exception:
             pass
 
+        # FEATURE #4: Database Performance Optimization (Indexes)
+        # 1. Index for status-based filtering and date-based sorting
+        try:
+            cursor.execute("CREATE INDEX idx_requests_status_created ON requests(status, created_at)")
+            conn.commit()
+        except Exception:
+            pass # Index likely already exists
+
+        # 2. Index for user-specific queries (get_my_requests)
+        try:
+            cursor.execute("CREATE INDEX idx_requests_user_email ON requests(user_email)")
+            conn.commit()
+        except Exception:
+            pass
+
+        # 3. FULLTEXT Index for high-performance keyword search (title + description)
+        try:
+            cursor.execute("CREATE FULLTEXT INDEX idx_requests_fulltext_search ON requests(title, description)")
+            conn.commit()
+        except Exception:
+            pass
+
         conn.commit()
         cursor.close()
         conn.close()
