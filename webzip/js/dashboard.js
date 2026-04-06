@@ -276,8 +276,132 @@ async function loadNotifications() {
     }
 }
 
-function openRequest(id) {
-    window.location.href = "request-details.html?id=" + id;
+let currentActiveRequestId = null;
+
+async function openRequest(id) {
+    const modal = document.getElementById("requestModal");
+    const loading = document.getElementById("modalLoading");
+    const content = document.getElementById("modalContent");
+    
+    if (!modal) return;
+    
+    currentActiveRequestId = id;
+    modal.style.display = "flex";
+    loading.style.display = "flex";
+    content.style.display = "none";
+
+    const headers = getAuthHeaders();
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/get_request_details/${id}`, { headers });
+        if (!response.ok) throw new Error("Load failed");
+        
+        const data = await response.json();
+        const req = data.request;
+        const answers = data.answers;
+
+        // Fill Request details
+        document.getElementById("modalTitle").innerText = `REQUEST_ID_${String(req.id).padStart(3, '0')}`;
+        document.getElementById("modalDesc").innerText = req.description;
+        document.getElementById("modalAuthor").innerText = req.user_email || "ANONYMOUS_USER";
+        document.getElementById("modalDate").innerText = new Date(req.created_at).toLocaleString();
+        document.getElementById("modalBounty").innerText = `${req.bounty || 0} PTS`;
+        document.getElementById("answerCount").innerText = `(${answers.length})`;
+        
+        // Setup Full Page link
+        document.getElementById("modalExternalLink").onclick = () => {
+            window.location.href = "request-details.html?id=" + id;
+        };
+
+        // Render Answers
+        renderModalAnswers(answers);
+
+        loading.style.display = "none";
+        content.style.display = "block";
+        
+        if (window.lucide) lucide.createIcons();
+    } catch (error) {
+        console.error("Modal load error:", error);
+        document.getElementById("modalBody").innerHTML = `<div style="padding:40px; color:var(--danger-red); text-align:center; font-family:var(--font-mono);">ERROR_FETCHING_NODE_DATA</div>`;
+    }
+}
+
+function closeRequestModal() {
+    const modal = document.getElementById("requestModal");
+    if (modal) modal.style.display = "none";
+    currentActiveRequestId = null;
+    document.getElementById("modalSubmitBtn").disabled = false;
+    document.getElementById("modalSubmitBtn").innerHTML = '<i data-lucide="send" style="width: 14px; height: 14px;"></i> PUSH_ANSWER';
+}
+
+function renderModalAnswers(answers) {
+    const container = document.getElementById("modalAnswers");
+    if (!container) return;
+    
+    if (answers.length === 0) {
+        container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--text-tertiary); font-family:var(--font-mono); font-size:0.8rem;">NO_RESPONSES_LOGGED_YET</div>`;
+        return;
+    }
+    
+    container.innerHTML = answers.map(ans => `
+        <div class="answer-card">
+            <div class="answer-header">
+                <span class="answer-author">${ans.email}</span>
+                <span class="answer-date">${new Date(ans.created_at).toLocaleDateString()}</span>
+            </div>
+            <div class="answer-content">${ans.answer}</div>
+        </div>
+    `).join('');
+}
+
+async function submitModalAnswer() {
+    const input = document.getElementById("modalAnswerInput");
+    const btn = document.getElementById("modalSubmitBtn");
+    const id = currentActiveRequestId;
+    
+    if (!input || !input.value.trim() || !id) return;
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerText = "UPLOADING...";
+
+    const userStr = localStorage.getItem("loggedInUser");
+    const user = JSON.parse(userStr);
+    const email = user.email;
+
+    try {
+        const response = await fetch("http://127.0.0.1:5000/post_answer", {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({
+                request_id: id,
+                answer: input.value.trim(),
+                email: email
+            })
+        });
+
+        if (!response.ok) throw new Error("Post failed");
+        
+        // Refresh answers
+        const dataResponse = await fetch(`http://127.0.0.1:5000/get_request_details/${id}`, { headers: getAuthHeaders() });
+        const refreshedData = await dataResponse.json();
+        
+        renderModalAnswers(refreshedData.answers);
+        document.getElementById("answerCount").innerText = `(${refreshedData.answers.length})`;
+        
+        input.value = "";
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        console.error("Submit error:", e);
+        alert("FAILED_TO_PUSH_DATA");
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
 
 function goToCommunity() {
@@ -387,5 +511,10 @@ document.addEventListener("click", function(e) {
     if (!e.target.closest(".user-profile-nav")) {
         const dropdown = document.getElementById("profileDropdown");
         if (dropdown) dropdown.classList.remove("show");
+    }
+    
+    // Close modal if clicking overlay
+    if (e.target.classList.contains("modal-overlay")) {
+        closeRequestModal();
     }
 });
