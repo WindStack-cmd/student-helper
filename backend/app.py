@@ -599,36 +599,6 @@ def get_answers(request_id):
     except Exception as e:
         return jsonify([]), 500
 
-@app.route("/accept_answer", methods=["POST"])
-def accept_answer():
-    try:
-        data = request.json or {}
-        answer_id = data.get("answer_id")
-        request_id = data.get("request_id")
-        email = data.get("email") # Email of the answer poster
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            # 1. Update answer status
-            cursor.execute("UPDATE answers SET accepted = 1 WHERE id = %s", (answer_id,))
-            
-            # 2. Update request status
-            cursor.execute("UPDATE requests SET status = 'closed', solved = 1 WHERE id = %s", (request_id,))
-            
-            # 3. Reward points to the helper
-            cursor.execute("UPDATE users SET points = points + 50, bounties_completed = bounties_completed + 1 WHERE email = %s", (email,))
-            
-            conn.commit()
-            log_event("ACCEPT_ANSWER", f"Answer {answer_id} accepted for request {request_id}. Reward given to {email}", "INFO")
-            return jsonify({"message": "Answer accepted and reward successfully processed!"})
-        finally:
-            cursor.close()
-            conn.close()
-    except Exception as e:
-        log_event("ACCEPT_ANSWER", f"Error: {str(e)}", "ERROR")
-        return jsonify({"message": "Failed to accept answer"}), 500
-
 @app.route("/get_active_bounties", methods=["GET"])
 def get_active_bounties():
     try:
@@ -766,31 +736,6 @@ def post_answer():
     except Exception as e:
         log_event("POST_ANSWER", f"Unexpected error: {str(e)}", "ERROR")
         return jsonify({"message": "Failed to post answer", "error_code": "INTERNAL_ERROR"}), 500
-
-@app.route("/get_answers/<int:request_id>", methods=["GET"])
-def get_answers(request_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT * FROM answers WHERE request_id=%s", (request_id,))
-            rows = cursor.fetchall()
-            answers = []
-            for r in rows:
-                answers.append({
-                    "id": r[0],
-                    "request_id": r[1],
-                    "answer": r[2],
-                    "email": r[3]
-                })
-            log_event("GET_ANSWERS", f"Retrieved {len(answers)} answers for request {request_id}", "INFO")
-            return jsonify(answers)
-        finally:
-            cursor.close()
-            conn.close()
-    except Exception as e:
-        log_event("GET_ANSWERS", f"Error: {str(e)}", "ERROR")
-        return jsonify([])
 
 @app.route("/accept_answer", methods=["POST"])
 @limiter.limit("30 per minute")  # FEATURE #3: Rate limiting
@@ -1026,6 +971,39 @@ def user_stats():
         log_event("USER_STATS", f"Error: {str(e)}", "ERROR")
         return jsonify({"first_name": "", "email": resolve_request_email(), "reputation": 0, "bounties_completed": 0}), 200
 
+@app.route("/notifications", methods=["GET"])
+def get_notifications():
+    """FIX: Added notifications endpoint to fetch user notifications"""
+    try:
+        email = resolve_request_email()
+        if not email:
+            log_event("NOTIFICATIONS", "No email provided", "WARNING")
+            return jsonify([]), 200
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                "SELECT id, message, seen, created_at FROM notifications WHERE email = %s ORDER BY created_at DESC",
+                (email,)
+            )
+            notifications = cursor.fetchall()
+            
+            # Convert datetime to string for JSON serialization
+            for notif in notifications:
+                if 'created_at' in notif and notif['created_at']:
+                    notif['created_at'] = str(notif['created_at'])
+            
+            log_event("NOTIFICATIONS", f"Retrieved {len(notifications)} notifications for {email}", "INFO")
+            return jsonify(notifications), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("NOTIFICATIONS", f"Error retrieving notifications: {str(e)}", "ERROR")
+        return jsonify([]), 500
+
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
-    socketio.run(app, debug=debug_mode, use_reloader=debug_mode)
+    # FIX: Use Flask's built-in server instead of socketio.run() to avoid Windows socket permission issues
+    app.run(host="127.0.0.1", port=5000, debug=debug_mode, use_reloader=debug_mode)

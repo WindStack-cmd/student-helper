@@ -256,13 +256,17 @@ async function loadNotifications() {
             return;
         }
 
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
         const container = document.getElementById("notificationContainer");
         if (!container) return;
 
         container.innerHTML = "";
 
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
             container.innerHTML = `<div style="font-family:var(--font-mono);color:var(--text-secondary);padding:10px;">NO_NEW_NOTIFICATIONS</div>`;
             return;
         }
@@ -271,6 +275,7 @@ async function loadNotifications() {
             container.innerHTML += `<div style="padding:10px; border-bottom:1px solid #333; font-family:var(--font-mono);">🔔 ${n.message}</div>`;
         });
     } catch (error) {
+        console.error("Notification load error:", error);
         const container = document.getElementById("notificationContainer");
         if (container) container.innerHTML = `<div style="color:red;padding:10px;">ERROR_LOADING_NOTIFICATIONS</div>`;
     }
