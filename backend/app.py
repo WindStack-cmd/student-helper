@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_socketio import SocketIO, send
+# from flask_socketio import SocketIO, send  # Disabled on Windows due to socket binding issues
 import mysql.connector
 import os
 import re
@@ -31,7 +31,7 @@ ALLOWED_ORIGINS = os.getenv(
 ).split(",")
 CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True)
 
-socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)
+# socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)  # Disabled on Windows due to socket binding issues
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 # FEATURE #2: JWT Configuration
@@ -812,10 +812,10 @@ def purge_user():
         log_event("PURGE_USER", f"Critical error: {str(e)}", "ERROR")
         return jsonify({"message": "Server error", "error_code": "INTERNAL_ERROR"}), 500
 
-@socketio.on("message")
-def handle_message(msg):
-    log_event("WEBSOCKET_MESSAGE", f"Received message: {msg[:50]}...", "INFO")
-    send(msg, broadcast=True)
+# @socketio.on("message")  # Disabled on Windows due to socket binding issues
+# def handle_message(msg):
+#     log_event("WEBSOCKET_MESSAGE", f"Received message: {msg[:50]}...", "INFO")
+#     send(msg, broadcast=True)
 
 @app.route("/update_reputation", methods=["POST"])
 def update_reputation():
@@ -1005,5 +1005,5 @@ def get_notifications():
 
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
-    # FIX: Use Flask's built-in server instead of socketio.run() to avoid Windows socket permission issues
-    app.run(host="127.0.0.1", port=5000, debug=debug_mode, use_reloader=debug_mode)
+    # FIX: Run on port 5001 to avoid socket binding conflicts on Windows
+    app.run(host="127.0.0.1", port=5001, debug=debug_mode, use_reloader=debug_mode)
