@@ -317,12 +317,36 @@
 
         document.getElementById("registerForm").addEventListener("submit", async function (e) {
             e.preventDefault();
-            const firstName = document.getElementById("firstName").value;
-            const lastName = document.getElementById("lastName").value;
-            const email = document.getElementById("email").value;
+            const firstName = document.getElementById("firstName").value.trim();
+            const lastName = document.getElementById("lastName").value.trim();
+            const email = document.getElementById("email").value.trim().toLowerCase();
             const password = document.getElementById("password").value;
             const registerBtn = document.getElementById("registerBtn");
             const msg = document.getElementById("messageContainer");
+
+            // Client-side validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!firstName || firstName.length < 2) {
+                msg.style.display = "flex";
+                msg.className = "message error";
+                msg.innerHTML = '<i data-lucide="alert-circle"></i> Name must be at least 2 characters';
+                lucide.createIcons();
+                return;
+            }
+            if (!email || !emailRegex.test(email)) {
+                msg.style.display = "flex";
+                msg.className = "message error";
+                msg.innerHTML = '<i data-lucide="alert-circle"></i> Please enter a valid email address';
+                lucide.createIcons();
+                return;
+            }
+            if (!password || password.length < 6) {
+                msg.style.display = "flex";
+                msg.className = "message error";
+                msg.innerHTML = '<i data-lucide="alert-circle"></i> Password must be at least 6 characters';
+                lucide.createIcons();
+                return;
+            }
 
             // UI Feedback: Loading state
             registerBtn.disabled = true;
@@ -335,8 +359,6 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ 
                         first_name: firstName,
-                        last_name: lastName,
-                        name: firstName + " " + lastName, 
                         email, 
                         password 
                     })

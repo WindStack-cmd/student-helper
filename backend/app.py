@@ -25,7 +25,10 @@ limiter = Limiter(
 )
 
 # FIX #1: CORS - Restrict to specific origins instead of wildcard
-ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:8000,http://localhost:3000").split(",")
+ALLOWED_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:8000,http://localhost:3000,http://127.0.0.1:5501"
+).split(",")
 CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True)
 
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)
@@ -116,14 +119,32 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def parse_bool_env(name, default=False):
+    value = os.getenv(name, str(default)).strip().lower()
+    return value in ("1", "true", "yes", "on")
+
 # FIX #2: Use environment variables properly (no hardcoded defaults for password)
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+if DB_PASSWORD is None:
+    raise RuntimeError(
+        "DB_PASSWORD must be set in backend/.env. "
+        "Do not rely on a hardcoded default password."
+    )
+
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "user": os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD") or "root",  # Force user to set via .env
+    "password": DB_PASSWORD,
     "database": os.getenv("DB_NAME", "student_helper"),
-    "ssl_disabled": True,
+    "ssl_disabled": parse_bool_env("DB_SSL_DISABLED", False),
 }
+
+if os.getenv("DB_AUTH_PLUGIN"):
+    DB_CONFIG["auth_plugin"] = os.getenv("DB_AUTH_PLUGIN")
+
+if os.getenv("DB_SSL_CA"):
+    DB_CONFIG["ssl_ca"] = os.getenv("DB_SSL_CA")
+
 
 def get_db_connection():
     return mysql.connector.connect(**DB_CONFIG)
@@ -149,12 +170,18 @@ def validate_description(description):
 def init_db():
     try:
         db_name = DB_CONFIG["database"]
-        conn = mysql.connector.connect(
-            host=DB_CONFIG["host"],
-            user=DB_CONFIG["user"],
-            password=DB_CONFIG["password"],
-            ssl_disabled=DB_CONFIG["ssl_disabled"],
-        )
+        init_config = {
+            "host": DB_CONFIG["host"],
+            "user": DB_CONFIG["user"],
+            "password": DB_CONFIG["password"],
+            "ssl_disabled": DB_CONFIG["ssl_disabled"],
+        }
+        if DB_CONFIG.get("auth_plugin"):
+            init_config["auth_plugin"] = DB_CONFIG["auth_plugin"]
+        if DB_CONFIG.get("ssl_ca"):
+            init_config["ssl_ca"] = DB_CONFIG["ssl_ca"]
+
+        conn = mysql.connector.connect(**init_config)
         cursor = conn.cursor()
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
         cursor.execute(f"USE `{db_name}`")
@@ -204,7 +231,7 @@ def home():
 def register():
     data = request.json or {}
     first_name = str(data.get("first_name") or "").strip()
-    email = str(data.get("email") or "").strip()
+    email = str(data.get("email") or "").strip().lower()  # Lowercase for consistency
     password = str(data.get("password") or "").strip()
 
     # FIX #3: Input validation
@@ -254,7 +281,7 @@ def register():
 @limiter.limit("5 per minute")  # FEATURE #3: Rate limiting (5 login attempts per minute)
 def login():
     data = request.json or {}
-    email = str(data.get("email") or "").strip()
+    email = str(data.get("email") or "").strip().lower()  # Lowercase for consistency
     password = str(data.get("password") or "").strip()
 
     # FIX #3: Input validation
