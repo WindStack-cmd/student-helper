@@ -208,6 +208,28 @@ def init_db():
         except Exception:
             pass
 
+        # FEATURE #4: Database Performance Optimization (Indexes)
+        # 1. Index for status-based filtering and date-based sorting
+        try:
+            cursor.execute("CREATE INDEX idx_requests_status_created ON requests(status, created_at)")
+            conn.commit()
+        except Exception:
+            pass # Index likely already exists
+
+        # 2. Index for user-specific queries (get_my_requests)
+        try:
+            cursor.execute("CREATE INDEX idx_requests_user_email ON requests(user_email)")
+            conn.commit()
+        except Exception:
+            pass
+
+        # 3. FULLTEXT Index for high-performance keyword search (title + description)
+        try:
+            cursor.execute("CREATE FULLTEXT INDEX idx_requests_fulltext_search ON requests(title, description)")
+            conn.commit()
+        except Exception:
+            pass
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -521,6 +543,91 @@ def get_requests():
             "offset": offset if 'offset' in locals() else 0,
             "error": str(e)
         }), 500
+
+@app.route("/get_request_details/<int:request_id>", methods=["GET"])
+def get_request_details(request_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True) # Use dictionary for easier mapping
+        try:
+            # 1. Fetch Request Data
+            cursor.execute("SELECT * FROM requests WHERE id = %s", (request_id,))
+            request_data = cursor.fetchone()
+            
+            if not request_data:
+                log_event("GET_DETAILS", f"Request ID {request_id} not found", "WARNING")
+                return jsonify({"message": "Request not found", "error_code": "NOT_FOUND"}), 404
+            
+            # 2. Fetch Related Answers
+            cursor.execute("SELECT * FROM answers WHERE request_id = %s ORDER BY created_at ASC", (request_id,))
+            answers_list = cursor.fetchall()
+            
+            # Formatting for JSON
+            if request_data:
+                request_data['created_at'] = str(request_data['created_at']) if request_data['created_at'] else None
+            
+            for ans in answers_list:
+                ans['created_at'] = str(ans['created_at']) if ans['created_at'] else None
+            
+            log_event("GET_DETAILS", f"Retrieved details for request ID {request_id} with {len(answers_list)} answers", "INFO")
+            
+            return jsonify({
+                "request": request_data,
+                "answers": answers_list
+            })
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("GET_DETAILS", f"Unexpected error: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to load request details", "error_code": "INTERNAL_ERROR", "details": str(e)}), 500
+        
+@app.route("/get_answers/<int:request_id>", methods=["GET"])
+def get_answers(request_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT * FROM answers WHERE request_id = %s ORDER BY created_at ASC", (request_id,))
+            answers = cursor.fetchall()
+            for ans in answers:
+                ans['created_at'] = str(ans['created_at']) if ans['created_at'] else None
+            return jsonify(answers)
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        return jsonify([]), 500
+
+@app.route("/accept_answer", methods=["POST"])
+def accept_answer():
+    try:
+        data = request.json or {}
+        answer_id = data.get("answer_id")
+        request_id = data.get("request_id")
+        email = data.get("email") # Email of the answer poster
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # 1. Update answer status
+            cursor.execute("UPDATE answers SET accepted = 1 WHERE id = %s", (answer_id,))
+            
+            # 2. Update request status
+            cursor.execute("UPDATE requests SET status = 'closed', solved = 1 WHERE id = %s", (request_id,))
+            
+            # 3. Reward points to the helper
+            cursor.execute("UPDATE users SET points = points + 50, bounties_completed = bounties_completed + 1 WHERE email = %s", (email,))
+            
+            conn.commit()
+            log_event("ACCEPT_ANSWER", f"Answer {answer_id} accepted for request {request_id}. Reward given to {email}", "INFO")
+            return jsonify({"message": "Answer accepted and reward successfully processed!"})
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("ACCEPT_ANSWER", f"Error: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to accept answer"}), 500
 
 @app.route("/get_active_bounties", methods=["GET"])
 def get_active_bounties():
