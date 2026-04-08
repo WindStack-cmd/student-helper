@@ -20,7 +20,7 @@ app = Flask(__name__)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["2000 per day", "500 per hour"],  # Increased for development
     storage_uri="memory://"
 )
 
@@ -464,6 +464,7 @@ def post_request():
         return jsonify({"message": "Failed to post request", "error_code": "INTERNAL_ERROR", "details": str(e)}), 500
 
 @app.route("/get_requests", methods=["GET"])
+@limiter.limit("1000 per hour")  # Higher limit for read-only endpoint
 def get_requests():
     try:
         # Get pagination and search parameters from query string
