@@ -1,287 +1,174 @@
-# StudentsHelper — Community Learning Platform
+# StudentsHelper - Community Learning Platform
 
-An interactive platform connecting students who need help with those who can provide it. Users can post help requests, offer point bounties, and build reputation by solving other students' problems — all powered by a real-time backend and a modern, responsive UI.
+StudentsHelper connects students who need help with students who can solve problems. Users can post requests with bounties, answer others, and build reputation.
 
-## ✨ Features
+## Current Status
 
-- **User Authentication** — Register, log in, change password, and manage your profile.
-- **Bounty System** — Post help requests with a point bounty to incentivize quick, quality answers.
-- **Answer & Accept** — Helpers submit answers; requesters accept the best one, automatically awarding bounty points and reputation.
-- **Leaderboard** — Live rankings based on reputation and bounties completed.
-- **Dashboard** — Personalized metrics (bounties cleared, ledger stake, pending jobs) with tabbed views for network, personal, and archived requests.
-- **Community Chat** — Real-time messaging powered by WebSockets (Socket.IO) *(Currently disabled on Windows)*
-- **Notifications** — In-app notifications when someone answers your request *(Now fully functional)*
-- **User Profiles** — View your own profile or browse other users' stats.
-- **Help Others Feed** — Browse and capture active bounty requests from other students.
-- **Settings & Account Management** — Update profile details and purge account data.
-- **Dark/Light Theme** — Toggle between themes across all pages.
+- Backend framework: Flask (Python)
+- Database: MySQL
+- Auth stack: bcrypt password hashing + JWT token issuance
+- Frontend: HTML/CSS/Vanilla JavaScript (multi-page app)
+- Realtime chat: Socket.IO code is present, but disabled on Windows runtime
 
-## 🛡️ Security & Protection
+## Key Features
 
-StudentsHelper implements multiple layers of security to protect user data and ensure platform integrity:
+- User registration and login
+- Bounty-based request posting
+- Answer submission and answer acceptance flow
+- Reputation and leaderboard stats
+- Dashboard metrics
+- Notifications when a request receives an answer
+- Profile and account purge flows
+- Shared frontend styling and sidebar navigation across pages
 
-### Backend Security
-- **Bcrypt Hashing** — All user passwords are salt-hashed using `bcrypt` (12 rounds) before being stored in the database.
-- **JWT Authorization** — Secure session management using JSON Web Tokens. Protected API endpoints require a valid `Authorization: Bearer <token>` header.
-- **Rate Limiting** — Global and route-specific rate limiting via `Flask-Limiter` to prevent brute-force attacks and service abuse (e.g., 5 login attempts/min).
-- **CORS Hardening** — Cross-Origin Resource Sharing is restricted to authorized frontend domains only.
-- **Input Validation** — Strict validation for emails, passwords, and help request content to prevent malformed data and injection.
-- **Environment Isolation** — Sensitive credentials (DB, JWT Secret) are managed through environment variables (`.env`).
-- **Standardized Logging** — Comprehensive event logging for all critical operations (auth, data mutation, errors).
+## Changes Implemented
 
-### Frontend Security
-- **Authentication Guard** — Every protected page includes an initialization guard that verifies the active session. Unauthenticated users are automatically redirected to the login terminal.
-- **Session Persistence** — Secure management of user identity in `localStorage` with systematic clearing upon logout or session expiry.
-- **Data Privacy** — Frontend requests are scoped to the authenticated user's identity, preventing unauthorized data access.
-- **Structural Purge** — A secure, multi-confirmation process for permanent account deletion, ensuring all associated data (posts, requests, notifications) is removed from the system.
+This section summarizes the major changes already applied in the project.
 
-## 🛠 Tech Stack
+### 1) Security hardening
 
-### Frontend
-- **HTML5 / CSS3 / Vanilla JavaScript**
-- 18 distinct pages with a shared sidebar navigation
-- Centralized design system via `global.css` and `style.css`
-- Modular JS (`dashboard.js`, `leaderboard.js`, `profile.js`, `sidebar.js`, `theme.js`, etc.)
+- Restricted CORS from wildcard to an allowlist using CORS_ORIGINS.
+- Removed hardcoded DB password fallback and now require DB_PASSWORD in environment.
+- Added bcrypt password hashing and secure password verification.
+- Added JWT token generation on login.
+- Added helper auth utilities:
+  - get_token_from_request
+  - verify_jwt_token
+  - require_auth decorator (available for protected routes)
+- Added input validation helpers for email, password, title, and description.
+- Added route-level rate limiting with Flask-Limiter.
 
-### Backend
-- **Python / Flask** — RESTful API server
-- **Flask-CORS** — Cross-Origin Resource Sharing (Hardened)
-- **Flask-SocketIO** — Real-time, bi-directional WebSocket communication *(Currently disabled on Windows)*
-- **Flask-Limiter** — Request rate limiting for security
-- **Bcrypt & PyJWT** — Password hashing and session tokens
-- **MySQL** — Production-grade relational database
-- **mysql-connector-python** — MySQL driver for Python
+### 2) Backend reliability and API behavior
 
-## 📁 Project Structure
+- Added structured logging helper (log_event) and applied across endpoints.
+- Added /notifications endpoint and wired notification creation when answers are posted.
+- Added /get_request_details/<request_id> endpoint for request + answers details.
+- Improved /get_requests with pagination and search support.
+- Removed duplicate route issues noted in prior revisions.
+- Standardized many API error responses with message + error_code patterns.
 
-```
-.
-├── backend/
-│   ├── app.py                 # Main Flask application with Security Layers
-│   ├── .env.example           # Template for environment variables
-│   └── requirements.txt       # Python backend dependencies
-├── webzip/
-│   ├── index.html              # Landing page
-│   ├── package.json            # Node configuration
-│   ├── css/
-│   │   ├── global.css          # Shared design tokens & utilities
-│   │   └── style.css           # Page-specific styles
-│   ├── js/
-│   │   ├── script.js           # Core app logic (auth, requests, answers)
-│   │   ├── dashboard.js        # Dashboard metrics & tab switching
-│   │   ├── leaderboard.js      # Leaderboard rendering & rank calculation
-│   │   ├── profile.js          # Profile page logic
-│   │   ├── sidebar.js          # Sidebar navigation & active-page highlight
-│   │   ├── theme.js            # Dark/Light theme toggle
-│   │   ├── contact.js          # Contact form handling
-│   │   └── request-help.js     # Help request form logic
-│   └── pages/
-│       ├── login.html          # Login page
-│       ├── register.html       # Registration page
-│       ├── dashboard.html      # Main dashboard with metrics & feed tabs
-│       ├── leaderboard.html    # Rankings & user stats sidebar
-│       ├── help-request.html   # Submit a new help request
-│       ├── request-help.html   # Request help form
-│       ├── help-others.html    # Browse & capture active bounties
-│       ├── my-requests.html    # View your own requests
-│       ├── view-requests.html  # Browse all open requests
-│       ├── request-details.html# View a single request & its answers
-│       ├── community-chat.html # Real-time chat room
-│       ├── notifications.html  # Notification center
-│       ├── profile.html        # Your profile page
-│       ├── user-profile.html   # View another user's profile
-│       ├── settings.html       # Account settings & purge
-│       ├── change-password.html# Change password page
-│       ├── contact.html        # Contact / feedback form
-│       └── about.html          # About the platform
-├── patch_db.py                 # Utility — patch/migrate the MySQL schema
-├── fix_avatars.py              # Utility — repair avatar data
-├── dump_schema.py              # Utility — dump current DB schema to file
-├── schema.txt                  # Exported database schema snapshot
-└── FIXES_APPLIED.md           # Log of applied fixes and changes
+### 3) Database and schema improvements
 
-## 🚀 Quick Start
+- Added startup database bootstrap with CREATE DATABASE IF NOT EXISTS.
+- Ensured core tables exist: users, requests, answers, posts, notifications.
+- Added safe ALTER operations for legacy requests columns.
+- Added performance indexes for:
+  - status/created_at queries
+  - user_email lookups
+  - full-text search on title + description
 
-### Prerequisites
-- Python 3.8+
-- MySQL 8.0+
-- Node.js (for frontend development)
+### 4) Runtime/platform updates
 
-### Backend Setup
-1. **Navigate to backend directory:**
-   ```bash
-   cd backend
-   ```
+- Backend runs on port 5001 to avoid Windows socket conflicts.
+- Socket.IO runtime call is disabled on Windows path (HTTP API remains active).
+- Environment variable loading added via python-dotenv.
 
-2. **Create virtual environment:**
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate  # Windows
-   ```
+### 5) Frontend refactors and integration updates
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+- Refactored pages to shared global.css and reusable sidebar.js patterns.
+- Request help page styling improvements applied.
+- Frontend API integration updated to align with backend port and notifications flow.
+- Added safer response handling in key frontend pages (as documented in project notes).
 
-4. **Configure environment variables:**
-   - Copy `.env.example` to `.env`
-   - Set your MySQL credentials and JWT secret
+## Backend API Endpoints
 
-5. **Start the backend server:**
-   ```bash
-   python app.py
-   ```
-   Server runs on `http://127.0.0.1:5001`
+### Auth
 
-### Frontend Setup
-1. **Navigate to webzip directory:**
-   ```bash
-   cd webzip
-   ```
+- POST /register
+- POST /login
 
-2. **Start a local HTTP server:**
-   ```bash
-   # Using Python
-   python -m http.server 5501
+### Requests and Answers
 
-   # Or using Node.js
-   npx http-server -p 5501
-   ```
+- POST /post_request
+- GET /get_requests
+- GET /get_request_details/<int:request_id>
+- GET /get_answers/<int:request_id>
+- GET /get_active_bounties
+- GET /get_my_requests
+- GET /get_archived_requests
+- POST /post_answer
+- POST /accept_answer
 
-3. **Open in browser:**
-   Visit `http://127.0.0.1:5501`
+### Stats and Community
 
-### Database Setup
-- Run `patch_db.py` to initialize/update the database schema
-- Use `dump_schema.py` to export current schema
-├── flask_routes.txt            # Exported route listing
-└── README.md
+- GET /dashboard_metrics
+- GET /leaderboard
+- GET /user_stats
+- GET /get_posts
+- POST /create_post
+- POST /accept_post
+
+### Account and Notifications
+
+- POST /purge_user
+- POST /update_reputation
+- GET /notifications
+
+## Project Structure
+
+- backend/
+  - app.py
+  - requirements.txt
+  - FIXES_APPLIED.md
+- webzip/
+  - index.html
+  - css/
+  - js/
+  - pages/
+- patch_db.py
+- fix_avatars.py
+- dump_schema.py
+- schema.txt
+- flask_routes.txt
+- commits.txt
+
+## Quick Start
+
+### 1) Backend setup
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-## 🗄 Database Schema (MySQL)
+Create backend/.env with at least:
 
-| Table           | Key Columns |
-|-----------------|-------------|
-| **users**       | `id`, `first_name`, `email`, `password`, `points`, `reputation`, `bounties_completed` |
-| **requests**    | `id`, `title`, `description`, `user_email`, `bounty`, `status`, `captured_by`, `solved`, `created_at` |
-| **answers**     | `id`, `request_id`, `answer`, `email`, `accepted`, `created_at` |
-| **posts**       | `id`, `first_name`, `title`, `content`, `user_email`, `bounty`, `created_at` |
-| **notifications** | `id`, `email`, `message`, `seen`, `created_at` |
-
-## 🚀 Setup & Installation
-
-1. **Prerequisites**: Ensure you have Python 3.x and MySQL installed.
-2. **Setup Environment**:
-   - Create a `.env` file in the `backend/` directory.
-   - Define: `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `JWT_SECRET`.
-3. **Start MySQL**: Ensure your local MySQL server is running.
-4. **Install Backend Dependencies**:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
-5. **Initialize & Run**:
-   ```bash
-   python app.py
-   ```
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=student_helper
+JWT_SECRET=change_this_secret
+CORS_ORIGINS=http://127.0.0.1:5501,http://localhost:3000,http://localhost:8000
+FLASK_DEBUG=1
 ```
 
-Open `http://localhost:8000` (or the port shown) in your browser.
+Run backend:
 
-## 📡 API Endpoints
+```bash
+python app.py
+```
 
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/register` | Register a new user |
-| `POST` | `/login` | Authenticate and return user details |
+Backend URL: http://127.0.0.1:5001
 
-### Dashboard & Stats
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/dashboard_metrics?email=` | Personalized dashboard stats |
-| `GET` | `/leaderboard` | Top users ranked by reputation |
-| `GET` | `/user_stats?email=` | Individual user stats |
+### 2) Frontend setup
 
-### Requests
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/post_request` | Create a new help request with bounty |
-| `GET` | `/get_requests` | All open, unsolved requests |
-| `GET` | `/get_active_bounties` | Open requests with bounty > 0 |
-| `GET` | `/get_my_requests?email=` | Requests posted by a specific user |
-| `GET` | `/get_archived_requests` | Solved / closed requests |
+```bash
+cd webzip
+python -m http.server 5501
+```
 
-### Answers
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/post_answer` | Submit an answer to a request |
-| `GET` | `/get_answers/<request_id>` | Get all answers for a request |
-| `POST` | `/accept_answer` | Accept an answer — awards bounty & reputation |
+Frontend URL: http://127.0.0.1:5501
 
-### Community & Posts
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/get_posts` | List all community posts |
-| `POST` | `/create_post` | Create a new community post |
-| `POST` | `/accept_post` | Capture / assign a request to a helper |
+## Tech Stack
 
-### Account Management
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/update_reputation` | Manually boost a user's reputation |
-| `POST` | `/purge_user` | Delete all data associated with a user account |
+- Backend: Flask, Flask-CORS, Flask-Limiter, bcrypt, PyJWT, python-dotenv
+- Database: MySQL (mysql-connector-python)
+- Frontend: HTML, CSS, Vanilla JavaScript
 
-### Notifications
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/notifications` | Get user notifications (requires JWT auth) |
+## Notes
 
-### Real-time
-| Protocol | Event | Description |
-|----------|-------|-------------|
-| WebSocket | `message` | Bi-directional chat via Socket.IO *(Currently disabled on Windows)* |
-
-## 🔄 Recent Updates & Fixes
-
-### v1.1.0 - April 2026
-- **🔔 New Notifications System**
-  - Added `/notifications` API endpoint for fetching user notifications
-  - Fixed CORS error on notification button in dashboard
-  - Notifications are user-specific and JWT-authenticated
-  - Displays "Someone answered your request" notifications
-
-- **🔧 Backend Stability Improvements**
-  - Changed backend port from 5000 to 5001 to avoid Windows socket binding conflicts
-  - Temporarily disabled Flask-SocketIO for Windows compatibility (WebSocket chat disabled)
-  - Removed duplicate route definitions (`/get_answers`, `/accept_answer`)
-  - Improved error handling and logging
-
-- **🎨 Frontend API Updates**
-  - Updated all API endpoints to use port 5001
-  - Enhanced notification loading with better error handling
-  - Added null-safety checks for API responses
-
-- **🛡️ Security Enhancements**
-  - Improved input validation for notification requests
-  - Enhanced JWT token verification for notification access
-  - Better CORS configuration for cross-origin requests
-
-### Technical Notes
-- **Backend Port**: Now runs on `http://127.0.0.1:5001` (changed from 5000)
-- **WebSocket Status**: Disabled on Windows due to socket binding issues
-- **Database**: No schema changes required for notifications (uses existing `notifications` table)
-- **CORS**: Properly configured for `http://127.0.0.1:5501` frontend origin
-
-## 🤝 Contributing
-
-1. Fork the project.
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
-
-## 📄 License
-
-Distributed under the MIT License.
+- Chat websocket handler is currently disabled in backend runtime for Windows compatibility.
+- The repository includes helper scripts and logs used during migration and fix phases.
