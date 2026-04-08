@@ -620,22 +620,52 @@
     <script>
   async function loadNotifications(){
 
-const email = localStorage.getItem("email")
+    // Get email from correct localStorage key
+    const userStr = localStorage.getItem("loggedInUser")
+    if (!userStr) {
+        alert("You must be logged in!")
+        return
+    }
 
-const response = await fetch(
-"http://127.0.0.1:5001/notifications/"+email
-)
+    const user = JSON.parse(userStr)
+    const email = user.email
 
-const data = await response.json()
+    // Get JWT token
+    const token = localStorage.getItem("access_token")
+    if (!token) {
+        alert("Authentication token missing. Please login again!")
+        return
+    }
 
-const container =
-document.getElementById("notificationContainer")
+    try {
+        const response = await fetch(
+            "http://127.0.0.1:5001/notifications",
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        )
 
-container.innerHTML=""
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`)
+        }
 
-data.forEach(n => {
+        const data = await response.json()
 
-container.innerHTML += `
+        const container =
+        document.getElementById("notificationContainer")
+
+        container.innerHTML=""
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `<div class="notification" style="text-align: center; color: var(--text-secondary);">No notifications</div>`
+            return
+        }
+
+        data.forEach(n => {
+
+            container.innerHTML += `
 
 <div class="notification">
 ${n.message}
@@ -645,6 +675,11 @@ ${n.message}
 
 })
 
+    } catch (error) {
+        console.error("Load notifications error:", error)
+        const container = document.getElementById("notificationContainer")
+        container.innerHTML = `<div class="notification" style="color: var(--danger-red);">Error loading notifications</div>`
+    }
 }
     </script>
 
