@@ -362,23 +362,36 @@ async function submitModalAnswer() {
     const input = document.getElementById("modalAnswerInput");
     const btn = document.getElementById("modalSubmitBtn");
     const id = currentActiveRequestId;
-    
-    if (!input || !input.value.trim() || !id) return;
-    
+
+    if (!input || !input.value.trim() || !id) {
+        alert("MISSING_FIELDS");
+        return;
+    }
+
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerText = "UPLOADING...";
 
     const userStr = localStorage.getItem("loggedInUser");
+    if (!userStr) {
+        alert("NOT_LOGGED_IN");
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        return;
+    }
+
     const user = JSON.parse(userStr);
     const email = user.email;
+
+    // Debug: Check values
+    console.log("Submitting answer:", { request_id: id, answer: input.value.trim(), email: email });
 
     try {
         const response = await fetch("http://127.0.0.1:5001/post_answer", {
             method: "POST",
-            headers: { 
+            headers: {
                 "Content-Type": "application/json",
-                ...getAuthHeaders()
+                "Authorization": `Bearer ${localStorage.getItem("access_token")}`
             },
             body: JSON.stringify({
                 request_id: id,
@@ -387,23 +400,35 @@ async function submitModalAnswer() {
             })
         });
 
-        if (!response.ok) throw new Error("Post failed");
-        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMsg = errorData.message || errorData.error || (`HTTP ${response.status}`);
+            console.error("Backend error:", errorData);
+            alert(`ERROR: ${errorMsg}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
         // Refresh answers
-        const dataResponse = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, { headers: getAuthHeaders() });
+        const dataResponse = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, {
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("access_token")}`
+            }
+        });
         const refreshedData = await dataResponse.json();
-        
+
         renderModalAnswers(refreshedData.answers);
         document.getElementById("answerCount").innerText = `(${refreshedData.answers.length})`;
-        
+
         input.value = "";
         btn.disabled = false;
         btn.innerHTML = originalText;
-        
+
         if (window.lucide) lucide.createIcons();
     } catch (e) {
         console.error("Submit error:", e);
-        alert("FAILED_TO_PUSH_DATA");
+        alert(`NETWORK_ERROR: ${e.message}`);
         btn.disabled = false;
         btn.innerHTML = originalText;
     }
