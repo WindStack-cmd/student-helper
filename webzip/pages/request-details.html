@@ -701,6 +701,12 @@ Accept Answer
 
             const answer = document.getElementById("answerText").value.trim()
 
+            // Validate request ID
+            if (!requestId) {
+                alert("ERROR: Request ID not found! Please reload the page.")
+                return
+            }
+
             // Validate answer length (backend requires min 5 chars)
             if (!answer || answer.length < 5) {
                 alert("Answer must be at least 5 characters long!")
@@ -717,12 +723,20 @@ Accept Answer
             const user = JSON.parse(userStr)
             const email = user.email
 
+            if (!email) {
+                alert("ERROR: Email not found in profile!")
+                return
+            }
+
             // Get JWT token
             const token = localStorage.getItem("access_token")
             if (!token) {
                 alert("Authentication token missing. Please login again!")
                 return
             }
+
+            // Debug log
+            console.log("Posting answer:", { request_id: parseInt(requestId), answer, email })
 
             try {
                 const response = await fetch("http://127.0.0.1:5001/post_answer", {
@@ -735,7 +749,7 @@ Accept Answer
                     },
 
                     body: JSON.stringify({
-                        request_id: requestId,
+                        request_id: parseInt(requestId),
                         answer: answer,
                         email: email
                     })
@@ -745,8 +759,9 @@ Accept Answer
                 // Check for errors
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}))
-                    const errorMsg = errorData.message || `HTTP ${response.status}`
-                    alert(`Error: ${errorMsg}`)
+                    const errorMsg = errorData.message || errorData.error_code || `HTTP ${response.status}`
+                    console.error("Server error:", errorData)
+                    alert(`ERROR: ${errorMsg}`)
                     return
                 }
 
@@ -769,7 +784,12 @@ Accept Answer
         // Accept Answer
         // ---------------------
 
-        async function acceptAnswer(answerId, requestId, email) {
+        async function acceptAnswer(answerId, requestIdParam, email) {
+
+            if (!answerId || !requestIdParam) {
+                alert("ERROR: Answer ID or Request ID missing!")
+                return
+            }
 
             const token = localStorage.getItem("access_token")
             if (!token) {
@@ -788,8 +808,8 @@ Accept Answer
                     },
 
                     body: JSON.stringify({
-                        answer_id: answerId,
-                        request_id: requestId,
+                        answer_id: parseInt(answerId),
+                        request_id: parseInt(requestIdParam),
                         email: email
                     })
 
@@ -797,8 +817,9 @@ Accept Answer
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}))
-                    const errorMsg = errorData.message || `HTTP ${response.status}`
-                    alert(`Error: ${errorMsg}`)
+                    const errorMsg = errorData.message || errorData.error_code || `HTTP ${response.status}`
+                    console.error("Server error:", errorData)
+                    alert(`ERROR: ${errorMsg}`)
                     return
                 }
 
