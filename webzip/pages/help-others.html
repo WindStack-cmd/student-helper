@@ -737,7 +737,12 @@
         async function loadHuntMode() {
             try {
                 const res = await fetch("http://127.0.0.1:5001/get_requests");
-                if (!res.ok) throw new Error("Network response was not ok");
+
+                if (res.status === 429) {
+                    throw new Error("Rate limit exceeded. Please try again later.");
+                }
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}: Network response was not ok`);
                 const result = await res.json();
                 
                 // Backend now returns { data: [...], total: ... }

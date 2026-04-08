@@ -15,7 +15,7 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
         // Build URL with pagination and search if needed
         let fetchUrl = url;
         const separator = url.includes('?') ? '&' : '?';
-        
+
         if (isPaginated) {
             const offset = (currentPage - 1) * limit;
             fetchUrl = `${url}${separator}limit=${limit}&offset=${offset}`;
@@ -28,15 +28,21 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
         }
 
         const response = await fetch(fetchUrl, { headers });
-        
+
         if (response.status === 401) {
             localStorage.removeItem("access_token");
             window.location.href = "login.html";
             return;
         }
 
-        if (!response.ok) throw new Error("Fetch failed");
-        
+        if (response.status === 429) {
+            showNotification("Rate limit exceeded. Please try again later.", "error");
+            console.error("Rate limited (429)");
+            return;
+        }
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
         const result = await response.json();
         const container = document.getElementById("requestsContainer");
         if (!container) return;

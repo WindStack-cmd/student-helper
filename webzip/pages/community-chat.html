@@ -1067,16 +1067,20 @@
                 const top3 = users.slice(0, 3);
                 const container = document.querySelector(".trending-nodes"); // use actual container id
                 if (!container) return;
-                container.innerHTML = top3.map((u, i) => `
+                container.innerHTML = top3.map((u, i) => {
+                    const name = u.first_name || u.name || u.email?.split('@')[0] || "User";
+                    const avatar = name.substring(0, 2).toUpperCase();
+                    return `
             <div class="top-node-item">
                 <span class="node-rank">#${i + 1}</span>
-                <span class="node-avatar">${u.first_name.substring(0, 2).toUpperCase()}</span>
+                <span class="node-avatar">${avatar}</span>
                 <div class="node-info">
-                    <div class="node-id">${u.first_name || "User"}</div>
+                    <div class="node-id">${name}</div>
                     <div class="node-score">+${u.reputation !== undefined ? u.reputation : (u.points || 0)} PTS / Hr</div>
                 </div>
             </div>
-        `).join('');
+        `;
+                }).join('');
             } catch (e) {
                 console.error("Leaderboard fetch failed:", e);
             }

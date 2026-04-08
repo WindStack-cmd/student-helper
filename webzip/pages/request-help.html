@@ -555,7 +555,7 @@
                 <p class="sys-desc">Transmit an issue request to the active network. Detailed payloads yield faster
                     compilation closures.</p>
 
-                <form class="terminal-form" id="requestForm" onsubmit="submitHelpRequest(event)">
+                <form class="terminal-form" id="requestForm">
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label" for="requestTitle">Bounty Directive *</label>
@@ -595,68 +595,8 @@
         </main>
     </div>
 
+    <script src="../js/script.js"></script>
     <script src="../js/request-help.js"></script>
-   <script>
-
-async function submitHelpRequest(event){
-
-event.preventDefault()
-
-const btn = document.getElementById("submitBtn")
-const originalText = btn.innerHTML
-btn.innerHTML = "Publishing..."
-btn.disabled = true
-
-const title = document.getElementById("requestTitle").value.trim()
-const description = document.getElementById("requestDesc").value.trim()
-
-let email = ""
-const userStr = localStorage.getItem("loggedInUser")
-if (userStr) {
-    try {
-        const user = JSON.parse(userStr)
-        email = user.email || user.first_name || ""
-    } catch(e) { console.error("Failed to parse loggedInUser:", e) }
-}
-
-if (!email) {
-    alert("You must be logged in to post a request.")
-    btn.innerHTML = originalText
-    btn.disabled = false
-    return
-}
-
-try {
-    const response = await fetch("http://127.0.0.1:5001/post_request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title, description: description, email: email, bounty: 50 })
-    })
-
-    if (!response.ok) {
-        const errData = await response.json().catch(() => ({}))
-        const errMsg = errData.error || errData.message || ("HTTP " + response.status)
-        alert("Failed to post request: " + errMsg)
-        btn.innerHTML = originalText
-        btn.disabled = false
-        return
-    }
-
-    const data = await response.json()
-    alert(data.message || "Request posted successfully!")
-    window.location.href = "dashboard.html"
-
-} catch (error) {
-    console.error("post_request fetch error:", error)
-    alert("Network error — could not reach backend. Is the Flask server running?")
-    btn.innerHTML = originalText
-    btn.disabled = false
-}
-
-}
-
-</script>
-
 
     <script>
         function logout() {

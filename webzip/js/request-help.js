@@ -3,9 +3,6 @@
 async function submitHelpRequest(event){
     if (event) event.preventDefault();
 
-    const headers = getAuthHeaders();
-    if (!headers) return;
-
     const btn = document.getElementById("submitBtn");
     if (!btn) return;
 
@@ -17,15 +14,34 @@ async function submitHelpRequest(event){
     const description = document.getElementById("requestDesc").value.trim();
     const type = document.getElementById("helpType").value;
 
+    // Get email from localStorage (user data stored on login)
+    let email = "";
+    const userStr = localStorage.getItem("loggedInUser");
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            email = user.email || user.first_name || "";
+        } catch(e) {
+            console.error("Failed to parse loggedInUser:", e);
+        }
+    }
+
+    if (!email) {
+        alert("You must be logged in to post a request.");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        return;
+    }
+
     try {
         const response = await fetch("http://127.0.0.1:5001/post_request", {
             method: "POST",
-            headers: headers,
-            body: JSON.stringify({ 
-                title: title, 
-                description: description, 
-                type: type,
-                bounty: 50 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                title: title,
+                description: description,
+                email: email,
+                bounty: 50
             })
         });
 

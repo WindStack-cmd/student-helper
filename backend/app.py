@@ -16,12 +16,21 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# FEATURE #3: Rate Limiter initialization
+# FEATURE #3: Rate Limiter initialization with custom key function
+def custom_key_func():
+    # Exempt OPTIONS requests (CORS preflight) and GET requests to read-only endpoints
+    if request.method == "OPTIONS":
+        return "exempt"
+    if request.method == "GET" and request.path in ["/get_requests", "/get_leaderboard", "/get_user_stats"]:
+        return "exempt_read_only"
+    return get_remote_address()
+
 limiter = Limiter(
     app=app,
-    key_func=get_remote_address,
+    key_func=custom_key_func,
     default_limits=["2000 per day", "500 per hour"],  # Increased for development
-    storage_uri="memory://"
+    storage_uri="memory://",
+    in_memory_fallback_enabled=True
 )
 
 # FIX #1: CORS - Restrict to specific origins instead of wildcard
@@ -29,7 +38,13 @@ ALLOWED_ORIGINS = os.getenv(
     "CORS_ORIGINS",
     "http://localhost:8000,http://localhost:3000,http://127.0.0.1:5501"
 ).split(",")
-CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True, methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"])
+
+# Explicitly handle OPTIONS requests
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        return "", 200
 
 # socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)  # Disabled on Windows due to socket binding issues
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -248,6 +263,10 @@ init_db()
 def home():
     return "Student Helper Backend Running"
 
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204  # Return empty response with No Content status
+
 @app.route("/register", methods=["POST"])
 @limiter.limit("5 per minute")  # FEATURE #3: Rate limiting
 def register():
@@ -464,7 +483,6 @@ def post_request():
         return jsonify({"message": "Failed to post request", "error_code": "INTERNAL_ERROR", "details": str(e)}), 500
 
 @app.route("/get_requests", methods=["GET"])
-@limiter.limit("1000 per hour")  # Higher limit for read-only endpoint
 def get_requests():
     try:
         # Get pagination and search parameters from query string
