@@ -900,7 +900,7 @@
                     if (confirm("CRITICAL WARNING: This will PERMANENTLY erase all your node data, posts, and reputation. This action CANNOT be undone. Are you absolutely sure?")) {
                         if (confirm("FINAL CONFIRMATION: Type 'PURGE' is not required, but please click OK one last time to confirm structural deletion of node " + email)) {
                             try {
-                                const response = await fetch('http://localhost:5000/purge_user', {
+                                const response = await fetch('http://localhost:5001/purge_user', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',

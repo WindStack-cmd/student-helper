@@ -722,7 +722,7 @@
 
         async function loadLeaderboard() {
             try {
-                const response = await fetch("http://127.0.0.1:5000/leaderboard");
+                const response = await fetch("http://127.0.0.1:5001/leaderboard");
                 const tbody = document.querySelector(".log-table tbody");
 
                 if (!response.ok) {
@@ -815,7 +815,7 @@
                 if (spotlightRole) spotlightRole.textContent = email;
                 if (spotlightAvatar) spotlightAvatar.textContent = initials;
 
-                fetch(`http://127.0.0.1:5000/user_stats?email=${encodeURIComponent(email)}`)
+                fetch(`http://127.0.0.1:5001/user_stats?email=${encodeURIComponent(email)}`)
                     .then(res => {
                         if (!res.ok) throw new Error("HTTP " + res.status);
                         return res.json();

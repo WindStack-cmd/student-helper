@@ -659,7 +659,7 @@ try{
         return;
     }
 
-    const res = await fetch("http://127.0.0.1:5000/get_active_bounties");
+    const res = await fetch("http://127.0.0.1:5001/get_active_bounties");
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
 

@@ -1017,7 +1017,7 @@
     <script>
         async function loadPosts() {
             try {
-                const response = await fetch("http://127.0.0.1:5000/get_posts");
+                const response = await fetch("http://127.0.0.1:5001/get_posts");
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const posts = await response.json();
                 const feed = document.getElementById("postsContainer");
@@ -1046,7 +1046,7 @@
             const user = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
             const email = user.email || "guest@mail.com";
             try {
-                const response = await fetch("http://127.0.0.1:5000/create_post", {
+                const response = await fetch("http://127.0.0.1:5001/create_post", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ email: email, content: textarea.value.trim(), bounty: 0 })
@@ -1061,7 +1061,7 @@
 
         async function loadLeaderboard() {
             try {
-                const response = await fetch("http://127.0.0.1:5000/leaderboard");
+                const response = await fetch("http://127.0.0.1:5001/leaderboard");
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const users = await response.json();
                 const top3 = users.slice(0, 3);

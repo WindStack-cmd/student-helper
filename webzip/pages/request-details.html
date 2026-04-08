@@ -627,7 +627,7 @@
 
         async function loadRequest() {
 
-            const response = await fetch("http://127.0.0.1:5000/get_requests")
+            const response = await fetch("http://127.0.0.1:5001/get_requests")
             const result = await response.json()
             const data = result.data || []
 
@@ -661,7 +661,7 @@
 
         async function loadAnswers() {
 
-            const response = await fetch("http://127.0.0.1:5000/get_answers/" + requestId)
+            const response = await fetch("http://127.0.0.1:5001/get_answers/" + requestId)
 
             const data = await response.json()
 
@@ -703,7 +703,7 @@ Accept Answer
 
             const email = localStorage.getItem("email")
 
-            const response = await fetch("http://127.0.0.1:5000/post_answer", {
+            const response = await fetch("http://127.0.0.1:5001/post_answer", {
 
                 method: "POST",
 
@@ -735,7 +735,7 @@ Accept Answer
 
         async function acceptAnswer(answerId, requestId, email) {
 
-            const response = await fetch("http://127.0.0.1:5000/accept_answer", {
+            const response = await fetch("http://127.0.0.1:5001/accept_answer", {
 
                 method: "POST",
 
@@ -792,7 +792,7 @@ Accept Answer
 
         async function loadSidebar() {
             try {
-                const res = await fetch("http://127.0.0.1:5000/get_requests")
+                const res = await fetch("http://127.0.0.1:5001/get_requests")
                 const result = await res.json()
                 allRequests = result.data || []
                 renderSidebar(allRequests)
