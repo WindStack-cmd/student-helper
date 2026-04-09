@@ -591,6 +591,65 @@
             margin-right: 8px;
         }
 
+        /* Filter Panel Styles */
+        .filter-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px 24px;
+            background-color: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-dim);
+        }
+
+        .search-box {
+            padding: 10px 12px;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-bright);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+        }
+
+        .search-box::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-bright);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .filter-select option {
+            background-color: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
         /* Animations */
         @keyframes slideUp {
             to {
@@ -693,6 +752,30 @@
                 </div>
             </header>
 
+            <div class="filter-panel">
+                <input type="text" id="searchInput" class="search-box" placeholder="Search by title or description...">
+                <div class="filter-controls">
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="open">Open</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                    <select id="bountyFilter" class="filter-select">
+                        <option value="">All Bounties</option>
+                        <option value="0-99">0-99 PTS</option>
+                        <option value="100-499">100-499 PTS</option>
+                        <option value="500-999">500-999 PTS</option>
+                        <option value="1000+">1000+ PTS</option>
+                    </select>
+                    <select id="dateFilter" class="filter-select">
+                        <option value="">All Dates</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="workspace-content">
                 <div class="hunt-grid" id="helpRequestsContainer">
                     <!-- Cards will be populated here via JS -->
@@ -734,37 +817,69 @@
 
         window.currentRequests = [];
 
-        async function loadHuntMode() {
-            try {
-                const res = await fetch("http://127.0.0.1:5001/get_requests");
+        // Filter and render requests based on current filter values
+        function filterAndRenderRequests() {
+            const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+            const statusFilter = document.getElementById("statusFilter").value;
+            const bountyFilter = document.getElementById("bountyFilter").value;
+            const dateFilter = document.getElementById("dateFilter").value;
 
-                if (res.status === 429) {
-                    throw new Error("Rate limit exceeded. Please try again later.");
+            const filtered = window.currentRequests.filter(req => {
+                // Search filter
+                if (searchTerm && !req.title.toLowerCase().includes(searchTerm) &&
+                    !req.description.toLowerCase().includes(searchTerm)) {
+                    return false;
                 }
 
-                if (!res.ok) throw new Error(`HTTP ${res.status}: Network response was not ok`);
-                const result = await res.json();
-                
-                // Backend now returns { data: [...], total: ... }
-                const data = result.data || [];
-                window.currentRequests = data;
+                // Status filter
+                if (statusFilter && req.status !== statusFilter) {
+                    return false;
+                }
 
-                const container = document.getElementById("helpRequestsContainer");
-                container.innerHTML = "";
+                // Bounty filter
+                if (bountyFilter) {
+                    const bounty = req.bounty || 0;
+                    if (bountyFilter === "0-99" && (bounty < 0 || bounty > 99)) return false;
+                    if (bountyFilter === "100-499" && (bounty < 100 || bounty > 499)) return false;
+                    if (bountyFilter === "500-999" && (bounty < 500 || bounty > 999)) return false;
+                    if (bountyFilter === "1000+" && bounty < 1000) return false;
+                }
 
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
+                // Date filter
+                if (dateFilter && req.created_at) {
+                    const reqDate = new Date(req.created_at);
+                    const today = new Date();
+                    const daysDiff = Math.floor((today - reqDate) / (1000 * 60 * 60 * 24));
+
+                    if (dateFilter === "today" && daysDiff > 0) return false;
+                    if (dateFilter === "week" && daysDiff > 7) return false;
+                    if (dateFilter === "month" && daysDiff > 30) return false;
+                }
+
+                return true;
+            });
+
+            renderRequests(filtered);
+        }
+
+        // Render requests to the container
+        function renderRequests(data) {
+            const container = document.getElementById("helpRequestsContainer");
+            container.innerHTML = "";
+
+            if (!data || data.length === 0) {
+                container.innerHTML = `
                 <div class="empty-state">
                     <i data-lucide="radar"></i>
                     <h2>No Signals Found</h2>
-                    <p>Network scan clear. Check back later for active bounties.</p>
+                    <p>Network scan clear. Adjust filters or check back later for active bounties.</p>
                 </div>
             `;
-                    return;
-                }
+                return;
+            }
 
-                data.forEach(req => {
-                    container.innerHTML += `
+            data.forEach(req => {
+                container.innerHTML += `
             <div class="bounty-card" id="bounty-card-${req.id}">
                 <div class="bounty-header">
                     <div>
@@ -786,10 +901,31 @@
                 </div>
             </div>
             `;
-                });
-                lucide.createIcons();
+            });
+            lucide.createIcons();
+        }
+
+        async function loadHuntMode() {
+            try {
+                const res = await fetch("http://127.0.0.1:5001/get_requests");
+
+                if (res.status === 429) {
+                    throw new Error("Rate limit exceeded. Please try again later.");
+                }
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}: Network response was not ok`);
+                const result = await res.json();
+
+                // Backend now returns { data: [...], total: ... }
+                const data = result.data || [];
+                window.currentRequests = data;
+
+                // Initial render with all requests
+                renderRequests(data);
             } catch (e) {
                 console.error("Failed to load requests", e);
+                const container = document.getElementById("helpRequestsContainer");
+                container.innerHTML = `<div class="empty-state"><p>Error loading requests: ${e.message}</p></div>`;
             }
         }
 
@@ -844,6 +980,12 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             loadHuntMode();
+
+            // Add filter event listeners
+            document.getElementById("searchInput").addEventListener("input", filterAndRenderRequests);
+            document.getElementById("statusFilter").addEventListener("change", filterAndRenderRequests);
+            document.getElementById("bountyFilter").addEventListener("change", filterAndRenderRequests);
+            document.getElementById("dateFilter").addEventListener("change", filterAndRenderRequests);
 
             const userStr = localStorage.getItem("loggedInUser");
             if (userStr) {
