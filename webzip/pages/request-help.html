@@ -575,6 +575,18 @@
                         </div>
 
                         <div class="form-group">
+                            <label class="form-label" for="requestCategory">Academic Category *</label>
+                            <select id="requestCategory" class="form-select" required>
+                                <option value="" disabled selected>> Select category...</option>
+                                <option value="Math">Math</option>
+                                <option value="Code">Code</option>
+                                <option value="Essay">Essay</option>
+                                <option value="Science">Science</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
                             <label class="form-label" for="requestDesc">Payload / Stack Trace *</label>
                             <textarea id="requestDesc" class="form-textarea"
                                 placeholder="> Provide full context. What have you tried so far? What is the expected output?"

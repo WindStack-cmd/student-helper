@@ -1021,34 +1021,34 @@
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-header">
-                            <span class="metric-title">Bounties Cleared</span>
+                            <span class="metric-title">Bounties Posted</span>
+                            <i data-lucide="folder-open" class="metric-icon" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <div class="metric-value" id="postedCount">0</div>
+                        <div class="metric-trend trend-up">
+                            <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> TOTAL_POSTED
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Completed</span>
                             <i data-lucide="check-circle-2" class="metric-icon" style="width: 24px; height: 24px;"></i>
                         </div>
                         <div class="metric-value" id="solvedCount">0</div>
-                        <div class="metric-trend trend-up">
-                            <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> +12% CYCLE_DELTA
+                        <div class="metric-trend text-secondary">
+                            <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i> CLEARED
                         </div>
                     </div>
 
                     <div class="metric-card">
                         <div class="metric-header">
-                            <span class="metric-title">Ledger Stake</span>
+                            <span class="metric-title">Rank</span>
                             <i data-lucide="award" class="metric-icon" style="width: 24px; height: 24px;"></i>
                         </div>
-                        <div class="metric-value" id="pointsCount">0</div>
-                        <div class="metric-trend text-secondary">
-                            <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i> TOP_5_PCT
-                        </div>
-                    </div>
-
-                    <div class="metric-card">
-                        <div class="metric-header">
-                            <span class="metric-title">Pending Jobs</span>
-                            <i data-lucide="activity" class="metric-icon" style="width: 24px; height: 24px;"></i>
-                        </div>
-                        <div class="metric-value" id="pendingCount">0</div>
+                        <div class="metric-value" id="rankCount">0</div>
                         <div class="metric-trend text-tertiary">
-                            AWAITING_ALLOCATION
+                            GLOBAL_LEADERBOARD
                         </div>
                     </div>
                 </div>

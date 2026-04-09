@@ -13,6 +13,7 @@ async function submitHelpRequest(event){
     const title = document.getElementById("requestTitle").value.trim();
     const description = document.getElementById("requestDesc").value.trim();
     const type = document.getElementById("helpType").value;
+    const category = document.getElementById("requestCategory").value;
 
     // Get email from localStorage (user data stored on login)
     let email = "";
@@ -41,7 +42,8 @@ async function submitHelpRequest(event){
                 title: title,
                 description: description,
                 email: email,
-                bounty: 50
+                bounty: 50,
+                category: category
             })
         });
 

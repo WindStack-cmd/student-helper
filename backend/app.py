@@ -223,6 +223,24 @@ def init_db():
         except Exception:
             pass
 
+        try:
+            cursor.execute("ALTER TABLE requests ADD COLUMN category VARCHAR(100)")
+            conn.commit()
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE answers ADD COLUMN upvotes INT DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("UPDATE users SET reputation = points WHERE reputation = 0 AND points > 0")
+            conn.commit()
+        except Exception:
+            pass
+
         # FEATURE #4: Database Performance Optimization (Indexes)
         # 1. Index for status-based filtering and date-based sorting
         try:
@@ -443,6 +461,7 @@ def post_request():
         title = str(data.get("title") or "").strip()
         description = str(data.get("description") or "").strip()
         email = str(data.get("email") or "").strip()
+        category = str(data.get("category") or "").strip()
         try:
             bounty = int(data.get("bounty") or 0)
         except (ValueError, TypeError):
@@ -468,8 +487,8 @@ def post_request():
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "INSERT INTO requests (title, description, user_email, bounty, status, solved) VALUES (%s, %s, %s, %s, 'open', 0)",
-                (title, description, email, bounty)
+                "INSERT INTO requests (title, description, user_email, bounty, status, solved, category) VALUES (%s, %s, %s, %s, 'open', 0, %s)",
+                (title, description, email, bounty, category)
             )
             conn.commit()
             request_id = cursor.lastrowid
@@ -489,6 +508,7 @@ def get_requests():
         limit = request.args.get('limit', default=20, type=int)
         offset = request.args.get('offset', default=0, type=int)
         search = request.args.get('search', default="", type=str).strip()
+        category = request.args.get('category', default="", type=str).strip()
 
         # Validation
         if limit > 100:
@@ -510,6 +530,10 @@ def get_requests():
                 conditions += " AND (title LIKE %s OR description LIKE %s OR user_email LIKE %s)"
                 search_param = f"%{search}%"
                 params.extend([search_param, search_param, search_param])
+                
+            if category:
+                conditions += " AND category = %s"
+                params.append(category)
 
             # First, fetch total count of eligible records with search filter
             count_query = f"SELECT COUNT(*) FROM requests {conditions}"
@@ -538,10 +562,11 @@ def get_requests():
                     "status": r[5],
                     "bounty": r[6],
                     "captured_by": r[7] if len(r) > 7 else None,
-                    "solved": bool(r[8]) if len(r) > 8 else False
+                    "solved": bool(r[8]) if len(r) > 8 else False,
+                    "category": r[9] if len(r) > 9 else ""
                 })
             
-            log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Total: {total_count}, Limit: {limit}, Offset: {offset}, Search: '{search}')", "INFO")
+            log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Total: {total_count}, Limit: {limit}, Offset: {offset}, Search: '{search}', Category: '{category}')", "INFO")
             
             return jsonify({
                 "data": requests_list,
@@ -600,6 +625,35 @@ def get_request_details(request_id):
     except Exception as e:
         log_event("GET_DETAILS", f"Unexpected error: {str(e)}", "ERROR")
         return jsonify({"message": "Failed to load request details", "error_code": "INTERNAL_ERROR", "details": str(e)}), 500
+
+@app.route("/upvote_answer", methods=["POST"])
+@limiter.limit("30 per minute")
+def upvote_answer():
+    try:
+        data = request.json or {}
+        answer_id = data.get("answer_id")
+        
+        if not answer_id:
+            return jsonify({"message": "Missing answer_id"}), 400
+            
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("UPDATE answers SET upvotes = upvotes + 1 WHERE id = %s", (answer_id,))
+            
+            cursor.execute("SELECT email FROM answers WHERE id = %s", (answer_id,))
+            ans = cursor.fetchone()
+            if ans and ans["email"]:
+                cursor.execute("UPDATE users SET reputation = reputation + 10, points = points + 10 WHERE email = %s", (ans["email"],))
+                
+            conn.commit()
+            return jsonify({"message": "Upvoted successfully"}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("UPVOTE_ANSWER", str(e), "ERROR")
+        return jsonify({"message": "Failed to upvote"}), 500
         
 @app.route("/get_answers/<int:request_id>", methods=["GET"])
 def get_answers(request_id):
@@ -781,7 +835,7 @@ def accept_answer():
             cursor.execute("UPDATE requests SET solved = 1, status = 'closed' WHERE id = %s", (request_id,))
             if helper_email:
                 cursor.execute(
-                    "UPDATE users SET points = points + 20, bounties_completed = bounties_completed + 1 WHERE email = %s",
+                    "UPDATE users SET points = points + 20, reputation = reputation + 20, bounties_completed = bounties_completed + 1 WHERE email = %s",
                     (helper_email,)
                 )
             conn.commit()
@@ -978,17 +1032,29 @@ def user_stats():
             user = cursor.fetchone()
 
             if user:
+                cursor.execute("SELECT COUNT(*) as count FROM requests WHERE user_email = %s", (email,))
+                res = cursor.fetchone()
+                user["bounties_posted"] = res["count"] if res else 0
+                
+                cursor.execute("""
+                    SELECT COUNT(*) + 1 as rank 
+                    FROM users 
+                    WHERE COALESCE(reputation, points, 0) > %s
+                """, (user["reputation"],))
+                res = cursor.fetchone()
+                user["rank"] = res["rank"] if res else 0
+
                 log_event("USER_STATS", f"Retrieved stats for {email}", "INFO")
                 return jsonify(user)
             else:
                 log_event("USER_STATS", f"User not found: {email}", "WARNING")
-                return jsonify({"first_name": "", "email": email, "reputation": 0, "bounties_completed": 0}), 200
+                return jsonify({"first_name": "", "email": email, "reputation": 0, "bounties_completed": 0, "bounties_posted": 0, "rank": 0}), 200
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
         log_event("USER_STATS", f"Error: {str(e)}", "ERROR")
-        return jsonify({"first_name": "", "email": resolve_request_email(), "reputation": 0, "bounties_completed": 0}), 200
+        return jsonify({"first_name": "", "email": resolve_request_email(), "reputation": 0, "bounties_completed": 0, "bounties_posted": 0, "rank": 0}), 200
 
 @app.route("/notifications", methods=["GET"])
 def get_notifications():

@@ -22,9 +22,18 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
             if (searchQuery) {
                 fetchUrl += `&search=${encodeURIComponent(searchQuery)}`;
             }
-        } else if (searchQuery && url.includes("get_requests")) {
-            // Apply search even to non-paginated if it's the right endpoint
-            fetchUrl = `${url}${separator}search=${encodeURIComponent(searchQuery)}`;
+            
+            const categorySelect = document.getElementById("categoryFilter");
+            if (categorySelect && categorySelect.value) {
+                fetchUrl += `&category=${encodeURIComponent(categorySelect.value)}`;
+            }
+        } else if (url.includes("get_requests")) {
+            let params = new URLSearchParams();
+            if (searchQuery) params.append("search", searchQuery);
+            const categorySelect = document.getElementById("categoryFilter");
+            if (categorySelect && categorySelect.value) params.append("category", categorySelect.value);
+            const qs = params.toString();
+            if (qs) fetchUrl = `${url}${separator}${qs}`;
         }
 
         const response = await fetch(fetchUrl, { headers });
@@ -60,12 +69,13 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
 
         data.forEach(req => {
             const badge = renderBadge(req);
+            const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3); margin-left:8px;">${req.category}</span>` : '';
             container.innerHTML += `
 <div class="data-row" onclick="openRequest(${req.id})">
     <div class="row-main">
         <div class="row-icon"><i data-lucide="help-circle"></i></div>
         <div>
-            <div class="row-title">${req.title}</div>
+            <div class="row-title" style="display:flex; align-items:center;">${req.title} ${categoryTag}</div>
             <div class="row-desc">Posted by ${req.email}</div>
         </div>
     </div>
@@ -168,12 +178,22 @@ function renderSearchUI() {
     searchWrapper.style = "margin-left: auto; display: flex; align-items: center; padding-right: 24px; pointer-events: auto;";
 
     searchWrapper.innerHTML = `
-        <div style="position: relative; display: flex; align-items: center;">
-            <i data-lucide="search" style="position: absolute; left: 12px; width: 14px; height: 14px; color: var(--text-tertiary);"></i>
-            <input type="text" id="requestSearch" placeholder="SEARCH_DATABASE..." 
-                style="background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 6px; padding: 8px 12px 8px 36px; color: var(--text-primary); font-family: var(--font-mono); font-size: 0.75rem; width: 220px; transition: all 0.2s; outline: none;"
-                onfocus="this.style.borderColor='var(--text-secondary)'"
-                onblur="this.style.borderColor='var(--border-dim)'">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <select id="categoryFilter" style="background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 6px; padding: 8px 12px; color: var(--text-primary); font-family: var(--font-mono); font-size: 0.75rem; outline: none; appearance: none; cursor:pointer;" onchange="currentPage=1; loadRequests();">
+                <option value="">ALL CATEGORIES</option>
+                <option value="Math">Math</option>
+                <option value="Code">Code</option>
+                <option value="Essay">Essay</option>
+                <option value="Science">Science</option>
+                <option value="Other">Other</option>
+            </select>
+            <div style="position: relative; display: flex; align-items: center;">
+                <i data-lucide="search" style="position: absolute; left: 12px; width: 14px; height: 14px; color: var(--text-tertiary);"></i>
+                <input type="text" id="requestSearch" placeholder="SEARCH_DATABASE..." 
+                    style="background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 6px; padding: 8px 12px 8px 36px; color: var(--text-primary); font-family: var(--font-mono); font-size: 0.75rem; width: 220px; transition: all 0.2s; outline: none;"
+                    onfocus="this.style.borderColor='var(--text-secondary)'"
+                    onblur="this.style.borderColor='var(--border-dim)'">
+            </div>
         </div>
     `;
 
@@ -226,7 +246,7 @@ async function loadDashboardMetrics() {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/dashboard_metrics", { headers });
+        const response = await fetch("http://127.0.0.1:5001/user_stats", { headers });
         
         if (response.status === 401) {
             localStorage.removeItem("access_token");
@@ -237,13 +257,13 @@ async function loadDashboardMetrics() {
         if (!response.ok) throw new Error("HTTP " + response.status);
         const data = await response.json();
 
+        const postedEl = document.getElementById("postedCount");
         const solvedEl = document.getElementById("solvedCount");
-        const pointsEl = document.getElementById("pointsCount");
-        const pendingEl = document.getElementById("pendingCount");
+        const rankEl = document.getElementById("rankCount");
 
-        if (solvedEl) solvedEl.innerText = data.bounties_cleared;
-        if (pointsEl) pointsEl.innerText = data.ledger_stake;
-        if (pendingEl) pendingEl.innerText = data.pending_jobs;
+        if (postedEl) postedEl.innerText = data.bounties_posted || 0;
+        if (solvedEl) solvedEl.innerText = data.bounties_completed || 0;
+        if (rankEl) rankEl.innerText = data.rank ? `#${data.rank}` : "N/A";
     } catch (e) {
         console.error("Dashboard metrics load error:", e);
     }
@@ -354,14 +374,44 @@ function renderModalAnswers(answers) {
     }
     
     container.innerHTML = answers.map(ans => `
-        <div class="answer-card">
+        <div class="answer-card" style="position: relative;">
             <div class="answer-header">
                 <span class="answer-author">${ans.email}</span>
                 <span class="answer-date">${new Date(ans.created_at).toLocaleDateString()}</span>
             </div>
             <div class="answer-content">${ans.answer}</div>
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+                <button onclick="upvoteAnswer(${ans.id}, this)" class="btn-outline" style="padding: 4px 8px; font-size: 0.7rem; background: var(--bg-base);">
+                    <i data-lucide="chevron-up" style="width: 12px; height: 12px;"></i> UPVOTE (${ans.upvotes || 0})
+                </button>
+            </div>
         </div>
     `).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+async function upvoteAnswer(answerId, btnElement) {
+    const originalText = btnElement.innerHTML;
+    btnElement.innerHTML = "Voting...";
+    btnElement.disabled = true;
+
+    try {
+        const response = await fetch("http://127.0.0.1:5001/upvote_answer", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ answer_id: answerId })
+        });
+        
+        if (!response.ok) throw new Error("Failed to upvote");
+        
+        // Refresh modal to see new data
+        openRequest(currentActiveRequestId);
+    } catch (e) {
+        console.error(e);
+        alert("Failed to upvote");
+        btnElement.innerHTML = originalText;
+        btnElement.disabled = false;
+    }
 }
 
 async function submitModalAnswer() {

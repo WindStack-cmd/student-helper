@@ -683,11 +683,42 @@
 Accept Answer
 </button>
 
+<button onclick="upvoteAnswer(${ans.id}, this)">
+Upvote (${ans.upvotes || 0})
+</button>
+
 </div>
 
 `
 
             })
+            
+        }
+            
+        async function upvoteAnswer(answerId, btnElement) {
+            const originalText = btnElement.innerHTML;
+            btnElement.innerHTML = "Voting...";
+            btnElement.disabled = true;
+
+            try {
+                const response = await fetch("http://127.0.0.1:5001/upvote_answer", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + localStorage.getItem("access_token")
+                    },
+                    body: JSON.stringify({ answer_id: answerId })
+                });
+                
+                if (!response.ok) throw new Error("Failed to upvote");
+                
+                loadAnswers();
+            } catch (e) {
+                console.error(e);
+                alert("Failed to upvote");
+                btnElement.innerHTML = originalText;
+                btnElement.disabled = false;
+            }
 
         }
 
