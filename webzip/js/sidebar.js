@@ -47,6 +47,38 @@ function renderSidebar(options = {}) {
     if (window.lucide) {
         lucide.createIcons();
     }
+
+    // Fetch and display notification count
+    if (isLoggedIn) {
+        fetchNotificationsCount();
+    }
+}
+
+async function fetchNotificationsCount() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+        
+        const res = await fetch('http://127.0.0.1:5001/notifications', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (!res.ok) return;
+        const notifications = await res.json();
+        
+        // Count unseen notifications
+        const unseenCount = notifications.filter(n => !n.seen).length;
+        
+        const badge = document.getElementById('global-notif-badge');
+        if (badge && unseenCount > 0) {
+            badge.textContent = unseenCount;
+            badge.style.display = 'inline-block';
+        } else if (badge) {
+            badge.style.display = 'none';
+        }
+    } catch (e) {
+        console.error("Failed to load notifications count", e);
+    }
 }
 
 /**
@@ -94,6 +126,11 @@ function buildAppSidebar({ activePage, rootPrefix, pagesPrefix, userName, userIn
 
             <div class="nav-section">
                 <h4>System</h4>
+                <a href="${pagesPrefix}notifications.html" class="nav-item ${activePage === 'notifications' ? 'active accent-purple' : ''}">
+                    <i data-lucide="bell" style="width: 18px; height: 18px;"></i>
+                    <span>Alerts</span>
+                    <span class="nav-badge" id="global-notif-badge" style="display:none; background:var(--danger-red); color:white;">0</span>
+                </a>
                 <a href="${pagesPrefix}profile.html" class="nav-item ${activePage === 'profile' ? 'active accent-purple' : ''}">
                     <i data-lucide="user" style="width: 18px; height: 18px;"></i>
                     <span>Identity</span>

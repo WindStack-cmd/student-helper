@@ -241,6 +241,24 @@ def init_db():
         except Exception:
             pass
 
+        try:
+            cursor.execute("ALTER TABLE requests ADD COLUMN views INT DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE answers ADD COLUMN file_path VARCHAR(255)")
+            conn.commit()
+        except Exception:
+            pass
+            
+        try:
+            cursor.execute("ALTER TABLE answers ADD COLUMN rating INT DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+
         # FEATURE #4: Database Performance Optimization (Indexes)
         # 1. Index for status-based filtering and date-based sorting
         try:
@@ -509,6 +527,9 @@ def get_requests():
         offset = request.args.get('offset', default=0, type=int)
         search = request.args.get('search', default="", type=str).strip()
         category = request.args.get('category', default="", type=str).strip()
+        sort_by = request.args.get('sort', default="newest", type=str).strip()
+
+        status_filter = request.args.get('status', default="open", type=str).strip()
 
         # Validation
         if limit > 100:
@@ -522,8 +543,18 @@ def get_requests():
         cursor = conn.cursor()
         try:
             # Base conditions
-            conditions = "WHERE status = 'open' AND (solved = 0 OR solved IS NULL) AND user_email IS NOT NULL AND user_email != ''"
+            conditions = "WHERE user_email IS NOT NULL AND user_email != ''"
             params = []
+            
+            if status_filter == 'open':
+                conditions += " AND status = 'open' AND (solved = 0 OR solved IS NULL)"
+            elif status_filter == 'in_progress' or status_filter == 'captured':
+                conditions += " AND status = 'captured'"
+            elif status_filter == 'completed' or status_filter == 'closed':
+                conditions += " AND (status = 'closed' OR solved = 1)"
+            elif status_filter and status_filter != 'all':
+                conditions += " AND status = %s"
+                params.append(status_filter)
             
             # Add search filter if provided
             if search:
@@ -535,6 +566,12 @@ def get_requests():
                 conditions += " AND category = %s"
                 params.append(category)
 
+            order_clause = "ORDER BY created_at DESC"
+            if sort_by == 'highest_bounty':
+                order_clause = "ORDER BY bounty DESC, created_at DESC"
+            elif sort_by == 'most_viewed':
+                order_clause = "ORDER BY views DESC, created_at DESC"
+
             # First, fetch total count of eligible records with search filter
             count_query = f"SELECT COUNT(*) FROM requests {conditions}"
             cursor.execute(count_query, tuple(params))
@@ -545,7 +582,7 @@ def get_requests():
             data_query = f"""
                 SELECT * FROM requests 
                 {conditions}
-                ORDER BY created_at DESC 
+                {order_clause}
                 LIMIT %s OFFSET %s
             """
             cursor.execute(data_query, tuple(params + [limit, offset]))
@@ -563,10 +600,11 @@ def get_requests():
                     "bounty": r[6],
                     "captured_by": r[7] if len(r) > 7 else None,
                     "solved": bool(r[8]) if len(r) > 8 else False,
-                    "category": r[9] if len(r) > 9 else ""
+                    "category": r[9] if len(r) > 9 else "",
+                    "views": r[10] if len(r) > 10 else 0
                 })
             
-            log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Total: {total_count}, Limit: {limit}, Offset: {offset}, Search: '{search}', Category: '{category}')", "INFO")
+            log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Sort: {sort_by})", "INFO")
             
             return jsonify({
                 "data": requests_list,
@@ -594,6 +632,10 @@ def get_request_details(request_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Use dictionary for easier mapping
         try:
+            # Increment views
+            cursor.execute("UPDATE requests SET views = views + 1 WHERE id = %s", (request_id,))
+            conn.commit()
+
             # 1. Fetch Request Data
             cursor.execute("SELECT * FROM requests WHERE id = %s", (request_id,))
             request_data = cursor.fetchone()
@@ -671,6 +713,17 @@ def get_answers(request_id):
             conn.close()
     except Exception as e:
         return jsonify([]), 500
+
+import werkzeug.utils
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+@app.route("/uploads/<filename>")
+def uploaded_file(filename):
+    from flask import send_from_directory
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route("/get_active_bounties", methods=["GET"])
 def get_active_bounties():
@@ -769,10 +822,30 @@ def get_archived_requests():
 @limiter.limit("30 per minute")  # FEATURE #3: Rate limiting
 def post_answer():
     try:
-        data = request.json or {}
-        request_id = data.get("request_id")
+        # Support multipart/form-data for file uploads
+        is_form = request.content_type and "multipart/form-data" in request.content_type
+        data = request.form if is_form else (request.json or {})
+        
+        request_id_raw = data.get("request_id")
+        try:
+            request_id = int(request_id_raw)
+        except (ValueError, TypeError):
+            request_id = None
+            
         answer = str(data.get("answer") or "").strip()
         email = str(data.get("email") or "").strip()
+
+        # Handle file upload
+        file_path = None
+        if is_form and "file" in request.files:
+            file = request.files["file"]
+            if file and file.filename:
+                import werkzeug.utils
+                import uuid
+                filename = f"{uuid.uuid4()}_{werkzeug.utils.secure_filename(file.filename)}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                file_path = f"/uploads/{filename}"
 
         # FIX #3: Input validation
         if not request_id or not isinstance(request_id, int):
@@ -790,9 +863,9 @@ def post_answer():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
-            cursor.execute("INSERT INTO answers (request_id, answer, email) VALUES (%s,%s,%s)", (request_id, answer, email))
+            cursor.execute("INSERT INTO answers (request_id, answer, email, file_path) VALUES (%s,%s,%s,%s)", (request_id, answer, email, file_path))
             conn.commit()
-            log_event("POST_ANSWER", f"Answer posted for request {request_id} by {email}", "INFO")
+            log_event("POST_ANSWER", f"Answer posted for request {request_id} by {email} with file {file_path}", "INFO")
 
             cursor.execute("SELECT user_email FROM requests WHERE id=%s", (request_id,))
             row = cursor.fetchone()
@@ -828,15 +901,22 @@ def accept_answer():
             log_event("ACCEPT_ANSWER", f"Invalid helper email: {helper_email}", "WARNING")
             return jsonify({"message": "Invalid helper email", "error_code": "INVALID_EMAIL"}), 400
 
+        amount_to_add = 20
+        rating = data.get("rating", 0)
+        try:
+            rating = int(rating)
+        except:
+            rating = 0
+
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("UPDATE answers SET accepted = 1 WHERE id = %s", (answer_id,))
+            cursor.execute("UPDATE answers SET accepted = 1, rating = %s WHERE id = %s", (rating, answer_id,))
             cursor.execute("UPDATE requests SET solved = 1, status = 'closed' WHERE id = %s", (request_id,))
             if helper_email:
                 cursor.execute(
-                    "UPDATE users SET points = points + 20, reputation = reputation + 20, bounties_completed = bounties_completed + 1 WHERE email = %s",
-                    (helper_email,)
+                    "UPDATE users SET points = points + %s, reputation = reputation + %s, bounties_completed = bounties_completed + 1 WHERE email = %s",
+                    (amount_to_add, amount_to_add, helper_email)
                 )
             conn.commit()
             log_event("ACCEPT_ANSWER", f"Answer {answer_id} accepted for request {request_id}, points awarded to {helper_email}", "INFO")

@@ -447,8 +447,15 @@
         }
 
         .status-badge.completed {
-            color: var(--text-secondary);
-            border-color: var(--border-dim);
+            color: var(--success-green);
+            border-color: rgba(204, 255, 0, 0.3);
+            background: rgba(204, 255, 0, 0.05);
+        }
+
+        .status-badge.in-progress {
+            color: var(--accent-blue);
+            border-color: rgba(0, 229, 255, 0.3);
+            background: rgba(0, 229, 255, 0.05);
         }
 
         .btn-hunt {
@@ -756,8 +763,9 @@
                 <input type="text" id="searchInput" class="search-box" placeholder="Search by title or description...">
                 <div class="filter-controls">
                     <select id="statusFilter" class="filter-select">
-                        <option value="">All Status</option>
-                        <option value="open">Open</option>
+                        <option value="all">All Status</option>
+                        <option value="open" selected>Open</option>
+                        <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
                     </select>
                     <select id="bountyFilter" class="filter-select">
@@ -767,11 +775,10 @@
                         <option value="500-999">500-999 PTS</option>
                         <option value="1000+">1000+ PTS</option>
                     </select>
-                    <select id="dateFilter" class="filter-select">
-                        <option value="">All Dates</option>
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
+                    <select id="sortFilter" class="filter-select">
+                        <option value="newest">Sort: Newest</option>
+                        <option value="highest_bounty">Sort: Highest Bounty</option>
+                        <option value="most_viewed">Sort: Most Viewed</option>
                     </select>
                 </div>
             </div>
@@ -818,48 +825,38 @@
         window.currentRequests = [];
 
         // Filter and render requests based on current filter values
-        function filterAndRenderRequests() {
+        async function filterAndRenderRequests() {
+            // We now re-fetch using backend handling for sort/status
             const searchTerm = document.getElementById("searchInput").value.toLowerCase();
             const statusFilter = document.getElementById("statusFilter").value;
-            const bountyFilter = document.getElementById("bountyFilter").value;
-            const dateFilter = document.getElementById("dateFilter").value;
+            const sortFilter = document.getElementById("sortFilter").value;
 
-            const filtered = window.currentRequests.filter(req => {
-                // Search filter
-                if (searchTerm && !req.title.toLowerCase().includes(searchTerm) &&
-                    !req.description.toLowerCase().includes(searchTerm)) {
-                    return false;
-                }
-
-                // Status filter
-                if (statusFilter && req.status !== statusFilter) {
-                    return false;
-                }
-
-                // Bounty filter
+            try {
+                const res = await fetch(`http://127.0.0.1:5001/get_requests?status=${statusFilter}&sort=${sortFilter}&search=${encodeURIComponent(searchTerm)}`);
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                const result = await res.json();
+                let data = result.data || [];
+                
+                // Local bounty filter (fallback since backend doesn't handle bounty brackets natively yet)
+                const bountyFilter = document.getElementById("bountyFilter").value;
                 if (bountyFilter) {
-                    const bounty = req.bounty || 0;
-                    if (bountyFilter === "0-99" && (bounty < 0 || bounty > 99)) return false;
-                    if (bountyFilter === "100-499" && (bounty < 100 || bounty > 499)) return false;
-                    if (bountyFilter === "500-999" && (bounty < 500 || bounty > 999)) return false;
-                    if (bountyFilter === "1000+" && bounty < 1000) return false;
+                    data = data.filter(req => {
+                        const bounty = req.bounty || 0;
+                        if (bountyFilter === "0-99" && (bounty < 0 || bounty > 99)) return false;
+                        if (bountyFilter === "100-499" && (bounty < 100 || bounty > 499)) return false;
+                        if (bountyFilter === "500-999" && (bounty < 500 || bounty > 999)) return false;
+                        if (bountyFilter === "1000+" && bounty < 1000) return false;
+                        return true;
+                    });
                 }
-
-                // Date filter
-                if (dateFilter && req.created_at) {
-                    const reqDate = new Date(req.created_at);
-                    const today = new Date();
-                    const daysDiff = Math.floor((today - reqDate) / (1000 * 60 * 60 * 24));
-
-                    if (dateFilter === "today" && daysDiff > 0) return false;
-                    if (dateFilter === "week" && daysDiff > 7) return false;
-                    if (dateFilter === "month" && daysDiff > 30) return false;
-                }
-
-                return true;
-            });
-
-            renderRequests(filtered);
+                
+                window.currentRequests = data;
+                renderRequests(data);
+            } catch (e) {
+                console.error("Filter error:", e);
+                // Fallback to local
+                renderRequests(window.currentRequests);
+            }
         }
 
         // Render requests to the container
@@ -879,6 +876,27 @@
             }
 
             data.forEach(req => {
+                let badgeClass = "pending";
+                let badgeText = "OPEN";
+                let badgeIcon = "clock";
+                if (req.solved || req.status === "closed") {
+                    badgeClass = "completed";
+                    badgeText = "COMPLETED";
+                    badgeIcon = "check-circle";
+                } else if (req.status === "captured") {
+                    badgeClass = "in-progress";
+                    badgeText = "IN PROGRESS";
+                    badgeIcon = "activity";
+                }
+
+                let actions = "";
+                if (req.status === "open") {
+                    actions = `<button class="btn-view" onclick="inspectRequest(${req.id})">INSPECT</button>
+                               <button id="cap-btn-${req.id}" class="btn-hunt" onclick="captureRequest(${req.id})">CAPTURE</button>`;
+                } else {
+                    actions = `<button class="btn-view" onclick="inspectRequest(${req.id})">VIEW DETAILS</button>`;
+                }
+
                 container.innerHTML += `
             <div class="bounty-card" id="bounty-card-${req.id}">
                 <div class="bounty-header">
@@ -890,13 +908,12 @@
                 </div>
                 <p class="bounty-desc">${req.description}</p>
                 <div class="bounty-meta">
-                    <span class="status-badge pending" style="cursor:pointer;" onclick="window.location.href='request-details.html?id=${req.id}'">
-                        <i data-lucide="clock" style="width:12px;height:12px;"></i>
-                        OPEN
+                    <span class="status-badge ${badgeClass}" style="cursor:pointer;" onclick="window.location.href='request-details.html?id=${req.id}'">
+                        <i data-lucide="${badgeIcon}" style="width:12px;height:12px;"></i>
+                        ${badgeText}
                     </span>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn-view" onclick="inspectRequest(${req.id})">INSPECT</button>
-                        <button id="cap-btn-${req.id}" class="btn-hunt" onclick="captureRequest(${req.id})">CAPTURE</button>
+                        ${actions}
                     </div>
                 </div>
             </div>
@@ -985,7 +1002,7 @@
             document.getElementById("searchInput").addEventListener("input", filterAndRenderRequests);
             document.getElementById("statusFilter").addEventListener("change", filterAndRenderRequests);
             document.getElementById("bountyFilter").addEventListener("change", filterAndRenderRequests);
-            document.getElementById("dateFilter").addEventListener("change", filterAndRenderRequests);
+            document.getElementById("sortFilter").addEventListener("change", filterAndRenderRequests);
 
             const userStr = localStorage.getItem("loggedInUser");
             if (userStr) {
