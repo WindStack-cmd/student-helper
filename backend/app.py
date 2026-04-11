@@ -151,6 +151,7 @@ DB_CONFIG = {
     "user": os.getenv("DB_USER", "root"),
     "password": DB_PASSWORD,
     "database": os.getenv("DB_NAME", "student_helper"),
+    "port": int(os.getenv("DB_PORT", 3306)),
     "ssl_disabled": parse_bool_env("DB_SSL_DISABLED", False),
 }
 
@@ -189,6 +190,7 @@ def init_db():
             "host": DB_CONFIG["host"],
             "user": DB_CONFIG["user"],
             "password": DB_CONFIG["password"],
+            "port": DB_CONFIG.get("port", 3306),
             "ssl_disabled": DB_CONFIG["ssl_disabled"],
         }
         if DB_CONFIG.get("auth_plugin"):
