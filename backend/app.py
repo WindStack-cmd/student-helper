@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_talisman import Talisman
+import bleach
 # from flask_socketio import SocketIO, send  # Disabled on Windows due to socket binding issues
 import mysql.connector
 import os
@@ -15,6 +17,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+# Add Security Headers via Talisman
+Talisman(app, force_https=False, content_security_policy=None)
 
 # FEATURE #3: Rate Limiter initialization with custom key function
 def custom_key_func():
@@ -309,7 +313,7 @@ def favicon():
 @limiter.limit("5 per minute")  # FEATURE #3: Rate limiting
 def register():
     data = request.json or {}
-    first_name = str(data.get("first_name") or "").strip()
+    first_name = bleach.clean(str(data.get("first_name") or "").strip())
     email = str(data.get("email") or "").strip().lower()  # Lowercase for consistency
     password = str(data.get("password") or "").strip()
 
@@ -478,10 +482,10 @@ def leaderboard():
 def post_request():
     try:
         data = request.json or {}
-        title = str(data.get("title") or "").strip()
-        description = str(data.get("description") or "").strip()
+        title = bleach.clean(str(data.get("title") or "").strip())
+        description = bleach.clean(str(data.get("description") or "").strip())
         email = str(data.get("email") or "").strip()
-        category = str(data.get("category") or "").strip()
+        category = bleach.clean(str(data.get("category") or "").strip())
         try:
             bounty = int(data.get("bounty") or 0)
         except (ValueError, TypeError):
@@ -834,7 +838,7 @@ def post_answer():
         except (ValueError, TypeError):
             request_id = None
             
-        answer = str(data.get("answer") or "").strip()
+        answer = bleach.clean(str(data.get("answer") or "").strip())
         email = str(data.get("email") or "").strip()
 
         # Handle file upload
@@ -1032,7 +1036,7 @@ def create_post():
     try:
         data = request.json or {}
         email = str(data.get("email") or "").strip()
-        content = str(data.get("content") or "").strip()
+        content = bleach.clean(str(data.get("content") or "").strip())
         try:
             bounty = int(data.get("bounty") or 0)
         except (ValueError, TypeError):
