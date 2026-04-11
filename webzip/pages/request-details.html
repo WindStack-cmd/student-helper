@@ -397,6 +397,9 @@
             border-radius: 12px !important;
             padding: 20px 22px !important;
             margin-bottom: 0 !important;
+            position: relative;
+            z-index: 3;
+            overflow: visible;
             transition: border-color 0.2s, transform 0.2s;
             animation: fadeUp 0.35s ease both;
         }
@@ -442,12 +445,125 @@
             color: var(--success) !important;
         }
 
+        .rating-control {
+            position: relative;
+            min-width: 220px;
+            flex: 1;
+            z-index: 20;
+        }
+
+        .rating-trigger {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(16, 21, 28, 0.98), rgba(10, 13, 18, 0.98));
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .rating-trigger:hover {
+            border-color: rgba(198, 241, 53, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .rating-trigger:focus {
+            outline: none;
+            border-color: rgba(198, 241, 53, 0.5);
+            box-shadow: 0 0 0 3px rgba(198, 241, 53, 0.08);
+        }
+
+        .rating-trigger .rating-trigger-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .rating-trigger .rating-trigger-icon {
+            width: 14px;
+            height: 14px;
+            color: var(--text-dim);
+            flex-shrink: 0;
+        }
+
+        .rating-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            z-index: 30;
+            width: 100%;
+            padding: 8px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(7, 11, 15, 0.98);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+            display: none;
+        }
+
+        .rating-menu.open {
+            display: block;
+        }
+
+        .rating-option {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+
+        .rating-option:hover {
+            background: rgba(198, 241, 53, 0.08) !important;
+            border-color: rgba(198, 241, 53, 0.18) !important;
+            color: var(--text) !important;
+        }
+
+        .rating-option.selected {
+            background: rgba(198, 241, 53, 0.12);
+            border-color: rgba(198, 241, 53, 0.22);
+            color: var(--accent);
+        }
+
+        .rating-option-star {
+            color: var(--warning-amber);
+            font-size: 14px;
+            width: 16px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .rating-trigger-text {
+            color: var(--text);
+        }
+
         /* ── post answer box ── */
         .post-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
             padding: 28px;
+            position: relative;
+            z-index: 1;
             animation: fadeUp 0.4s 0.35s ease both;
         }
 
@@ -693,14 +809,21 @@ ${fileLink}
 
 <div style="display:flex; justify-content:space-between; align-items:center;">
     ${!ans.accepted ? `
-    <div style="display:flex;gap:10px;align-items:center;">
-        <select id="rating-${ans.id}" style="padding:6px; background:var(--bg-input); color:var(--text); border:1px solid var(--border-dim); border-radius:4px; font-size:13px;">
-            <option value="5">★ 5 (Excellent)</option>
-            <option value="4">★ 4 (Good)</option>
-            <option value="3">★ 3 (Okay)</option>
-            <option value="2">★ 2 (Poor)</option>
-            <option value="1">★ 1 (Terrible)</option>
-        </select>
+    	    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div class="rating-control" data-rating-control="${ans.id}">
+            <button type="button" class="rating-trigger" id="rating-trigger-${ans.id}" onclick="toggleRatingMenu(${ans.id})">
+                <span class="rating-trigger-label"><span class="rating-trigger-text" id="rating-label-${ans.id}">★ 5 (Excellent)</span></span>
+                <i data-lucide="chevron-down" class="rating-trigger-icon"></i>
+            </button>
+            <div class="rating-menu" id="rating-menu-${ans.id}">
+                <button type="button" class="rating-option selected" data-value="5" onclick="selectRating(${ans.id}, 5)"><span class="rating-option-star">★</span><span>5 (Excellent)</span></button>
+                <button type="button" class="rating-option" data-value="4" onclick="selectRating(${ans.id}, 4)"><span class="rating-option-star">★</span><span>4 (Good)</span></button>
+                <button type="button" class="rating-option" data-value="3" onclick="selectRating(${ans.id}, 3)"><span class="rating-option-star">★</span><span>3 (Okay)</span></button>
+                <button type="button" class="rating-option" data-value="2" onclick="selectRating(${ans.id}, 2)"><span class="rating-option-star">★</span><span>2 (Poor)</span></button>
+                <button type="button" class="rating-option" data-value="1" onclick="selectRating(${ans.id}, 1)"><span class="rating-option-star">★</span><span>1 (Terrible)</span></button>
+            </div>
+            <input type="hidden" id="rating-${ans.id}" value="5">
+        </div>
         <button class="btn-hunt" onclick="acceptAnswer(${ans.id}, ${ans.request_id}, '${ans.email}')">
             Approve Answer
         </button>
@@ -743,6 +866,62 @@ ${fileLink}
             }
 
         }
+
+        function closeRatingMenus(exceptId = null) {
+            document.querySelectorAll('.rating-menu.open').forEach(menu => {
+                const menuId = menu.id.replace('rating-menu-', '');
+                if (exceptId !== null && String(exceptId) === menuId) {
+                    return;
+                }
+                menu.classList.remove('open');
+            });
+        }
+
+        function toggleRatingMenu(answerId) {
+            const menu = document.getElementById(`rating-menu-${answerId}`);
+            if (!menu) return;
+
+            const willOpen = !menu.classList.contains('open');
+            closeRatingMenus(answerId);
+            if (willOpen) {
+                menu.classList.add('open');
+            }
+        }
+
+        function selectRating(answerId, rating) {
+            const menu = document.getElementById(`rating-menu-${answerId}`);
+            const hiddenInput = document.getElementById(`rating-${answerId}`);
+            const label = document.getElementById(`rating-label-${answerId}`);
+
+            if (hiddenInput) {
+                hiddenInput.value = String(rating);
+            }
+
+            if (label) {
+                const labelMap = {
+                    5: '★ 5 (Excellent)',
+                    4: '★ 4 (Good)',
+                    3: '★ 3 (Okay)',
+                    2: '★ 2 (Poor)',
+                    1: '★ 1 (Terrible)'
+                };
+                label.textContent = labelMap[rating] || '★ 5 (Excellent)';
+            }
+
+            if (menu) {
+                menu.querySelectorAll('.rating-option').forEach(option => {
+                    option.classList.toggle('selected', option.dataset.value === String(rating));
+                });
+                menu.classList.remove('open');
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const control = event.target.closest('.rating-control');
+            if (!control) {
+                closeRatingMenus();
+            }
+        });
 
         loadAnswers()
 
