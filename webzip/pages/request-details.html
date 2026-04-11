@@ -556,6 +556,69 @@
             color: var(--text);
         }
 
+        .file-upload {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-upload-label {
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .file-upload-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .file-upload-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(16, 21, 28, 0.98), rgba(10, 13, 18, 0.98));
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .file-upload-button:hover {
+            border-color: rgba(198, 241, 53, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .file-upload-button:focus-within {
+            border-color: rgba(198, 241, 53, 0.5);
+            box-shadow: 0 0 0 3px rgba(198, 241, 53, 0.08);
+        }
+
+        .file-upload-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .file-upload-name {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
         /* ── post answer box ── */
         .post-card {
             background: var(--surface);
@@ -720,9 +783,16 @@
 
                 <textarea id="answerText" rows="6" cols="60" placeholder="Write your answer here" style="width:100%; box-sizing:border-box;"></textarea>
 
-                <div style="margin-top: 14px;">
-                    <label for="answerFile" style="font-size: 13px; color: var(--text-dim);">Attach File (optional):</label><br>
-                    <input type="file" id="answerFile" style="color: var(--text); font-size: 13px; margin-top: 6px;">
+                <div class="file-upload">
+                    <label class="file-upload-label" for="answerFile">Attach File (optional):</label>
+                    <div class="file-upload-row">
+                        <label class="file-upload-button" for="answerFile">
+                            <i data-lucide="paperclip" style="width:14px;height:14px;"></i>
+                            <span>Choose file</span>
+                        </label>
+                        <span class="file-upload-name" id="answerFileName">No file chosen</span>
+                        <input type="file" id="answerFile" class="file-upload-input">
+                    </div>
                 </div>
 
                 <br><br>
@@ -922,6 +992,14 @@ ${fileLink}
                 closeRatingMenus();
             }
         });
+
+        const answerFileInput = document.getElementById('answerFile');
+        const answerFileName = document.getElementById('answerFileName');
+        if (answerFileInput && answerFileName) {
+            answerFileInput.addEventListener('change', function() {
+                answerFileName.textContent = this.files && this.files.length ? this.files[0].name : 'No file chosen';
+            });
+        }
 
         loadAnswers()
 
