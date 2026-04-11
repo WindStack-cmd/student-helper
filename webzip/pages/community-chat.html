@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -869,8 +869,10 @@
                     <div class="user-name" id="sidebarName">Loading...</div>
                     <div class="user-role" id="sidebarEmail">...</div>
                 </div>
-                <i data-lucide="power" onclick="event.stopPropagation(); localStorage.removeItem('loggedInUser'); window.location.href='login.html';"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
+                <i data-lucide="power"
+                    onclick="event.stopPropagation(); localStorage.removeItem('loggedInUser'); window.location.href='login.html';"
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;"
+                    title="Logout"></i>
             </div>
         </aside>
 
@@ -904,13 +906,13 @@
                                     style="width: 18px; height: 18px;"></i></button>
                         </div>
 
-                        <!-- DYNAMIC POSTS WILL COME HERE -->
-                        <div id="postsContainer"></div>
-
                         <button onclick="sendMessage()" class="btn-primary"
                             style="height: 36px; font-size: 0.75rem;">Transmit</button>
                     </div>
                 </div>
+
+                <!-- DYNAMIC POSTS WILL COME HERE -->
+                <div id="postsContainer" style="display: flex; flex-direction: column; gap: 24px;"></div>
 
 
 
@@ -1026,15 +1028,33 @@
                     feed.innerHTML = '<p style="text-align:center;opacity:0.5">SCANNING NETWORK FOR MORE PROTOCOLS...</p>';
                     return;
                 }
-                feed.innerHTML = posts.map(post => `
-            <div class="post-card">
+                feed.innerHTML = posts.map(post => {
+                    const name = post.first_name || (post.user_email ? post.user_email.split('@')[0] : "User");
+                    const initial = name.substring(0, 2).toUpperCase();
+                    return `
+            <div class="feed-post">
                 <div class="post-header">
-                    <span class="post-author">${post.first_name || post.user_email}</span>
-                    <span class="post-bounty">${post.bounty || 0} PTS</span>
+                    <div class="post-author">
+                        <div class="author-pfp pfp-1">${initial}</div>
+                        <div class="author-meta">
+                            <h4>${name}</h4>
+                            <p>Network Node</p>
+                        </div>
+                    </div>
+                    <div class="bounty-badge">${post.bounty || 0} PTS</div>
                 </div>
-                <div class="post-content">${post.content}</div>
+                <div class="post-body">
+                    <p>${post.content}</p>
+                </div>
+                <div class="post-footer">
+                    <div class="interaction-group">
+                        <button class="interact-btn"><i class="lucide-message-square" style="width: 14px; height: 14px; border: 1px solid transparent"></i> Reply</button>
+                    </div>
+                </div>
             </div>
-        `).join('');
+        `;
+                }).join('');
+                if (window.lucide) { window.lucide.createIcons(); }
             } catch (e) {
                 console.error("Failed to load posts:", e);
             }
