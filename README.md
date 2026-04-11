@@ -6,34 +6,41 @@ StudentsHelper connects students who need help with students who can solve probl
 
 - Backend framework: Flask (Python)
 - Database: MySQL
-- Auth stack: bcrypt password hashing + JWT token issuance
+- Auth stack: bcrypt password hashing + JWT token issuance/verification
 - Frontend: HTML/CSS/Vanilla JavaScript (multi-page app)
 - Realtime chat: Socket.IO code is present, but disabled on Windows runtime
+- Frontend architecture: shared `global.css` + reusable `sidebar.js` across pages
 
 ## Key Features
 
 - User registration and login
 - Bounty-based request posting
 - Answer submission and answer acceptance flow
+- Optional answer file attachments (saved to backend uploads)
+- Answer upvotes with reputation increment
 - Reputation and leaderboard stats
 - Dashboard metrics
 - Notifications when a request receives an answer
+- Request details endpoint with answers + view counting
+- Request filtering with pagination, search, category, and sort controls
 - Profile and account purge flows
 - Shared frontend styling and sidebar navigation across pages
+- Theme persistence via localStorage dark mode toggle
 
 ## Changes Implemented
 
 This section summarizes the major changes already applied in the project.
 
-### 1) Security hardening
+### 1) Security hardening and auth updates
 
 - Restricted CORS from wildcard to an allowlist using CORS_ORIGINS.
 - Removed hardcoded DB password fallback and now require DB_PASSWORD in environment.
 - Added bcrypt password hashing and secure password verification.
-- Added JWT token generation on login.
+- Added JWT token generation on login with token verification helpers.
 - Added helper auth utilities:
   - get_token_from_request
   - verify_jwt_token
+  - resolve_request_email
   - require_auth decorator (available for protected routes)
 - Added input validation helpers for email, password, title, and description.
 - Added route-level rate limiting with Flask-Limiter.
@@ -43,7 +50,10 @@ This section summarizes the major changes already applied in the project.
 - Added structured logging helper (log_event) and applied across endpoints.
 - Added /notifications endpoint and wired notification creation when answers are posted.
 - Added /get_request_details/<request_id> endpoint for request + answers details.
+- Added /upvote_answer endpoint.
+- Added uploads serving route: /uploads/<filename>.
 - Improved /get_requests with pagination and search support.
+- Extended /get_requests with status filter, category filter, and sort options.
 - Removed duplicate route issues noted in prior revisions.
 - Standardized many API error responses with message + error_code patterns.
 
@@ -51,7 +61,7 @@ This section summarizes the major changes already applied in the project.
 
 - Added startup database bootstrap with CREATE DATABASE IF NOT EXISTS.
 - Ensured core tables exist: users, requests, answers, posts, notifications.
-- Added safe ALTER operations for legacy requests columns.
+- Added safe ALTER operations for legacy and new columns (e.g., category, views, upvotes, file_path, rating).
 - Added performance indexes for:
   - status/created_at queries
   - user_email lookups
@@ -65,12 +75,27 @@ This section summarizes the major changes already applied in the project.
 
 ### 5) Frontend refactors and integration updates
 
-- Refactored pages to shared global.css and reusable sidebar.js patterns.
+- Refactored all pages to shared global.css and reusable sidebar.js patterns.
+- Unified navigation injection pattern across app and public pages.
 - Request help page styling improvements applied.
 - Frontend API integration updated to align with backend port and notifications flow.
-- Added safer response handling in key frontend pages (as documented in project notes).
+- Notifications badge count now loads from /notifications with bearer token.
+- Added theme bootstrap script with persisted dark mode preference.
+
+### 6) Recent repository changes (summary)
+
+- Refactor: migrated HTML pages to shared global.css and sidebar.js.
+- UI: dashboard/chat/auth/core pages integrated and stabilized.
+- Backend: Flask API hardening and data-flow fixes merged.
+- Merge/conflict cleanup: duplicate logic and fetch-flow conflicts resolved.
 
 ## Backend API Endpoints
+
+### System
+
+- GET /
+- GET /favicon.ico
+- GET /uploads/<filename>
 
 ### Auth
 
@@ -83,6 +108,7 @@ This section summarizes the major changes already applied in the project.
 - GET /get_requests
 - GET /get_request_details/<int:request_id>
 - GET /get_answers/<int:request_id>
+- POST /upvote_answer
 - GET /get_active_bounties
 - GET /get_my_requests
 - GET /get_archived_requests
@@ -107,9 +133,12 @@ This section summarizes the major changes already applied in the project.
 ## Project Structure
 
 - backend/
+  - .env.example
+  - .gitignore
   - app.py
   - requirements.txt
   - FIXES_APPLIED.md
+  - uploads/
 - webzip/
   - index.html
   - css/
@@ -142,6 +171,7 @@ DB_PASSWORD=your_password
 DB_NAME=student_helper
 JWT_SECRET=change_this_secret
 CORS_ORIGINS=http://127.0.0.1:5501,http://localhost:3000,http://localhost:8000
+DB_SSL_DISABLED=1
 FLASK_DEBUG=1
 ```
 
@@ -172,3 +202,4 @@ Frontend URL: http://127.0.0.1:5501
 
 - Chat websocket handler is currently disabled in backend runtime for Windows compatibility.
 - The repository includes helper scripts and logs used during migration and fix phases.
+- A local `backend/student_helper.db` file exists in the repo, but the active backend runtime in `backend/app.py` uses MySQL.
