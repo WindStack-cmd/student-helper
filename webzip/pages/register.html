@@ -304,7 +304,9 @@
 
         function togglePassword() {
             const passInput = document.getElementById('password');
-            const icon = document.querySelector('.password-toggle i');
+            const toggleBtn = document.querySelector('.password-toggle');
+            const icon = toggleBtn.querySelector('i') || toggleBtn.querySelector('svg');
+            
             if (passInput.type === 'password') {
                 passInput.type = 'text';
                 icon.setAttribute('data-lucide', 'eye-off');
@@ -370,10 +372,12 @@
                 if (response.ok) {
                     msg.className = "message success";
                     msg.innerHTML = `<i data-lucide="check-circle"></i> ${data.message || "Registration successful!"}`;
+                    lucide.createIcons();
                     setTimeout(() => { window.location.href = "login.html"; }, 1500);
                 } else {
                     msg.className = "message error";
                     msg.innerHTML = `<i data-lucide="alert-circle"></i> ${data.message || "Registration failed"}`;
+                    lucide.createIcons();
                 }
             } catch (error) {
                 console.error("Registration Error:", error);

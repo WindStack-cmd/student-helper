@@ -70,12 +70,40 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
         data.forEach(req => {
             const badge = renderBadge(req);
             const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3); margin-left:8px;">${req.category}</span>` : '';
+            
+            // Feature 1 & 2: Bounty and Expiry Badges
+            let bountyBadge = '';
+            if (req.escrowed_bounty > 0) {
+                bountyBadge = `<span class="status-badge" style="background: rgba(204, 255, 0, 0.1); color: var(--accent-lime); border: 1px solid var(--accent-lime); margin-left:8px;"><i data-lucide="lock" style="width:10px; height:10px; margin-right:4px;"></i>${req.escrowed_bounty} LOCKED</span>`;
+            } else if (req.solved && req.bounty > 0) {
+                bountyBadge = `<span class="status-badge" style="background: rgba(0, 229, 255, 0.1); color: var(--accent-blue); border: 1px solid var(--accent-blue); margin-left:8px;"><i data-lucide="check" style="width:10px; height:10px; margin-right:4px;"></i>${req.bounty} AWARDED</span>`;
+            }
+
+            let expiryInfo = '';
+            if (req.status === 'expired') {
+                expiryInfo = `<span class="status-badge" style="background: rgba(255, 51, 102, 0.1); color: var(--danger-red); border: 1px solid var(--danger-red); margin-left:8px;">EXPIRED</span>`;
+            } else if (req.expires_at) {
+                const expires = new Date(req.expires_at);
+                const now = new Date();
+                const diffMs = expires - now;
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                
+                if (diffMs <= 0) {
+                    expiryInfo = `<span class="status-badge" style="background: rgba(255, 51, 102, 0.1); color: var(--danger-red); border: 1px solid var(--danger-red); margin-left:8px;">EXPIRED</span>`;
+                } else if (diffHours < 24) {
+                    expiryInfo = `<span class="status-badge" style="background: rgba(255, 165, 0, 0.1); color: #ffa500; border: 1px solid #ffa500; margin-left:8px;"><i data-lucide="clock" style="width:10px; height:10px; margin-right:4px;"></i>EXPIRING SOON</span>`;
+                } else {
+                    const dateStr = expires.toLocaleDateString('en-GB'); // DD/MM/YYYY
+                    expiryInfo = `<span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary); margin-left:8px;">EXPIRES: ${dateStr}</span>`;
+                }
+            }
+
             container.innerHTML += `
 <div class="data-row" onclick="openRequest(${req.id})">
     <div class="row-main">
         <div class="row-icon"><i data-lucide="help-circle"></i></div>
         <div>
-            <div class="row-title" style="display:flex; align-items:center;">${req.title} ${categoryTag}</div>
+            <div class="row-title" style="display:flex; align-items:center;">${req.title} ${categoryTag} ${bountyBadge} ${expiryInfo}</div>
             <div class="row-desc">Posted by ${req.email}</div>
         </div>
     </div>
@@ -223,14 +251,18 @@ function renderSearchUI() {
 async function loadRequests() {
     currentTab = "Network Feed";
     await fetchAndRenderRequests("http://127.0.0.1:5001/get_requests", "NO_ACTIVE_REQUESTS",
-        () => `<span class="status-badge status-active">LIVE</span>`, true);
+        (req) => req.status === 'solved' || req.solved
+            ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
+            : `<span class="status-badge status-active">LIVE</span>`, true);
 }
 
 async function loadMyRequests() {
     currentTab = "My Data";
     // For now, only Network Feed is paginated on backend, but we prepare the logic
     await fetchAndRenderRequests("http://127.0.0.1:5001/get_my_requests", "NO DATA FOUND",
-        () => `<span class="status-badge status-active">LIVE</span>`, false);
+        (req) => req.status === 'solved' || req.solved
+            ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
+            : `<span class="status-badge status-active">LIVE</span>`, false);
 }
 
 async function loadArchivedRequests() {
@@ -338,21 +370,138 @@ async function openRequest(id) {
         document.getElementById("modalBounty").innerText = `${req.bounty || 0} PTS`;
         document.getElementById("answerCount").innerText = `(${answers.length})`;
         
+        // Expiry Status in Modal
+        const bountyVal = document.getElementById("modalBounty");
+        if (req.status === 'expired') {
+            bountyVal.innerHTML = `<span style="color: var(--danger-red);">EXPIRED (Bounty Returned)</span>`;
+            document.getElementById("modalAnswerInput").disabled = true;
+            document.getElementById("modalAnswerInput").placeholder = "This request has EXPIRED and no longer accepts answers.";
+            document.getElementById("modalSubmitBtn").disabled = true;
+        } else {
+            bountyVal.innerText = `${req.bounty || 0} PTS`;
+            document.getElementById("modalAnswerInput").disabled = false;
+            document.getElementById("modalAnswerInput").placeholder = "Enter your technical solution or guidance here...";
+            document.getElementById("modalSubmitBtn").disabled = false;
+        }
+
+        // Claims Logic
+        const currentUser = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
+        const isOwner = req.user_email === currentUser.email;
+        
+        const claimsCount = document.getElementById("claimsCount");
+        const claimantsList = document.getElementById("claimantsList");
+        const claimBtn = document.getElementById("claimBtn");
+        
+        const currentFirstName = currentUser.first_name || currentUser.name || "";
+        
+        claimsCount.innerText = data.claims_count || 0;
+        claimantsList.innerText = data.claimants && data.claimants.length > 0 ? `WORKING_NOW: ${data.claimants.join(', ')}` : 'NO_ACTIVE_CLAIMS';
+        
+        // Fix 2: Hide claim button entirely for owner
+        if (isOwner) {
+            claimBtn.style.display = 'none';
+        } else {
+            claimBtn.style.display = 'flex';
+            const isClaimedByMe = data.claimants && data.claimants.includes(currentFirstName);
+            
+            if (isClaimedByMe) {
+                claimBtn.innerHTML = '<i data-lucide="x-circle" style="width: 14px; height: 14px;"></i> DROP_CLAIM';
+                claimBtn.style.background = 'var(--danger-red)';
+                claimBtn.style.borderColor = 'var(--danger-red)';
+                claimBtn.onclick = () => toggleClaim(req.id, true);
+            } else {
+                claimBtn.innerHTML = '<i data-lucide="target" style="width: 14px; height: 14px;"></i> CLAIM_OBJECTIVE';
+                claimBtn.style.background = 'var(--accent-blue)';
+                claimBtn.style.borderColor = 'var(--accent-blue)';
+                claimBtn.onclick = () => toggleClaim(req.id, false);
+            }
+            
+            if (req.status !== 'open') {
+                claimBtn.disabled = true;
+                claimBtn.style.opacity = '0.5';
+            } else {
+                claimBtn.disabled = false;
+                claimBtn.style.opacity = '1';
+            }
+        }
+        
         // Setup Full Page link
         document.getElementById("modalExternalLink").onclick = () => {
             window.location.href = "request-details.html?id=" + id;
         };
 
+        const footer = document.querySelector(".modal-footer");
+        // Remove existing delete btn if any
+        const oldDel = document.getElementById("modalDeleteBtn");
+        if (oldDel) oldDel.remove();
+
+        if (isOwner && req.status === 'open') {
+            const delBtn = document.createElement("button");
+            delBtn.id = "modalDeleteBtn";
+            delBtn.className = "btn-outline";
+            delBtn.style.color = "var(--danger-red)";
+            delBtn.style.borderColor = "rgba(255, 51, 102, 0.2)";
+            delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;margin-right:8px;vertical-align:middle;"></i> DELETE_REQUEST';
+            delBtn.onclick = () => deleteRequest(req.id);
+            footer.prepend(delBtn);
+        }
+
         // Render Answers
-        renderModalAnswers(answers);
+        renderModalAnswers(answers, isOwner, req.status, req.id, req.user_email);
 
         loading.style.display = "none";
         content.style.display = "block";
+
+        // UX SIGNAL: Block owner from seeing answer form (Fix)
+        const answerSection = document.querySelector(".answer-section");
+        if (answerSection) {
+            if (isOwner) {
+                answerSection.innerHTML = `
+                    <div style="padding: 16px; text-align: center; border: 1px dashed var(--border-dim); border-radius: 8px; opacity: 0.6;">
+                        <span style="color: var(--text-tertiary); font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                           CANNOT_RESPOND: REQUEST_OWNER
+                        </span>
+                    </div>
+                `;
+            } else {
+                answerSection.style.display = (req.status === 'open' || req.status === 'captured') ? "block" : "none";
+            }
+        }
         
         if (window.lucide) lucide.createIcons();
     } catch (error) {
         console.error("Modal load error:", error);
         document.getElementById("modalBody").innerHTML = `<div style="padding:40px; color:var(--danger-red); text-align:center; font-family:var(--font-mono);">ERROR_FETCHING_NODE_DATA</div>`;
+    }
+}
+
+async function deleteRequest(id) {
+    if (!confirm("Are you sure? This will delete the request and return your escrowed bounty.")) return;
+    
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    
+    try {
+        const res = await fetch("http://127.0.0.1:5001/delete_request", {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({ request_id: id })
+        });
+        
+        if (res.ok) {
+            showNotification("Request deleted and bounty returned.", "success");
+            closeRequestModal();
+            // Refresh current view
+            if (currentTab === "Network Feed") await loadRequests();
+            else if (currentTab === "My Data") await loadMyRequests();
+            else if (currentTab === "Archived") await loadArchivedRequests();
+            if (typeof fetchBalance === 'function') fetchBalance();
+        } else {
+            const data = await res.json();
+            alert(data.message || "Deletion failed.");
+        }
+    } catch (e) {
+        console.error("Delete error:", e);
     }
 }
 
@@ -364,7 +513,7 @@ function closeRequestModal() {
     document.getElementById("modalSubmitBtn").innerHTML = '<i data-lucide="send" style="width: 14px; height: 14px;"></i> PUSH_ANSWER';
 }
 
-function renderModalAnswers(answers) {
+function renderModalAnswers(answers, isOwner, requestStatus, requestId, ownerEmail) {
     const container = document.getElementById("modalAnswers");
     if (!container) return;
     
@@ -373,21 +522,94 @@ function renderModalAnswers(answers) {
         return;
     }
     
-    container.innerHTML = answers.map(ans => `
-        <div class="answer-card" style="position: relative;">
-            <div class="answer-header">
-                <span class="answer-author">${ans.email}</span>
-                <span class="answer-date">${new Date(ans.created_at).toLocaleDateString()}</span>
-            </div>
-            <div class="answer-content">${ans.answer}</div>
-            <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
-                <button onclick="upvoteAnswer(${ans.id}, this)" class="btn-outline" style="padding: 4px 8px; font-size: 0.7rem; background: var(--bg-base);">
-                    <i data-lucide="chevron-up" style="width: 12px; height: 12px;"></i> UPVOTE (${ans.upvotes || 0})
+    container.innerHTML = answers.map(ans => {
+        let acceptBtn = '';
+        // Fix: Do not show accept button if the owner is the one who wrote the answer
+        const isSelfAnswer = ans.email === ownerEmail; 
+
+        if (isOwner && requestStatus === 'open' && !ans.accepted && !isSelfAnswer) {
+            acceptBtn = `
+                <button onclick="acceptAnswer(${ans.id}, ${requestId})" class="btn-outline" style="padding: 4px 8px; font-size: 0.7rem; color: var(--accent-lime); border-color: var(--accent-lime); margin-left: 8px;">
+                    <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> ACCEPT_ANSWER
                 </button>
+            `;
+        } else if (ans.accepted) {
+            acceptBtn = `<span class="status-badge" style="background: rgba(204, 255, 0, 0.1); color: var(--accent-lime); border: 1px solid var(--accent-lime); margin-left: 8px; font-size: 0.6rem;">ACCEPTED_SOLUTION</span>`;
+        }
+
+        return `
+            <div class="answer-card" style="position: relative; ${ans.accepted ? 'border-left: 2px solid var(--accent-lime);' : ''}">
+                <div class="answer-header">
+                    <span class="answer-author">${ans.email}</span>
+                    <span class="answer-date">${new Date(ans.created_at).toLocaleDateString()}</span>
+                </div>
+                <div class="answer-content">${ans.answer}</div>
+                <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+                    <button onclick="upvoteAnswer(${ans.id}, this)" class="btn-outline" style="padding: 4px 8px; font-size: 0.7rem; background: var(--bg-base);">
+                        <i data-lucide="chevron-up" style="width: 12px; height: 12px;"></i> UPVOTE (${ans.upvotes || 0})
+                    </button>
+                    ${acceptBtn}
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
     if (window.lucide) lucide.createIcons();
+}
+
+async function acceptAnswer(answerId, requestId) {
+    if (!confirm("Are you sure? This will award the bounty and close the request.")) return;
+    
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    
+    try {
+        const response = await fetch("http://127.0.0.1:5001/accept_answer", {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({ answer_id: answerId, request_id: requestId })
+        });
+        
+        if (response.ok) {
+            showNotification("Solution accepted! Bounty awarded.", "success");
+            openRequest(requestId); // Refresh modal
+            // Refresh feed to update status badges
+            if (currentTab === "Network Feed") await loadRequests();
+            else if (currentTab === "My Data") await loadMyRequests();
+            else if (currentTab === "Archived") await loadArchivedRequests();
+        } else {
+            const data = await response.json();
+            showNotification(data.message || "Failed to accept answer", "error");
+        }
+    } catch (e) {
+        console.error("Accept error:", e);
+        showNotification("Network error", "error");
+    }
+}
+
+async function toggleClaim(requestId, isCurrentlyClaimed) {
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    
+    const url = isCurrentlyClaimed ? "http://127.0.0.1:5001/unclaim_request" : "http://127.0.0.1:5001/claim_request";
+    const method = isCurrentlyClaimed ? "DELETE" : "POST";
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: headers,
+            body: JSON.stringify({ request_id: requestId })
+        });
+        
+        if (response.ok) {
+            showNotification(isCurrentlyClaimed ? "Claim dropped" : "Objective claimed!", "success");
+            openRequest(requestId); // Refresh modal
+        } else {
+            const err = await response.json();
+            showNotification(err.message || "Action failed", "error");
+        }
+    } catch (e) {
+        console.error("Claim toggle error:", e);
+    }
 }
 
 async function upvoteAnswer(answerId, btnElement) {

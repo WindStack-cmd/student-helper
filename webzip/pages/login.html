@@ -663,7 +663,8 @@ lucide.createIcons();
 // Password toggle
 function togglePassword() {
     const passInput = document.getElementById('password');
-    const icon = document.querySelector('.password-toggle i');
+    const toggleBtn = document.querySelector('.password-toggle');
+    const icon = toggleBtn.querySelector('i') || toggleBtn.querySelector('svg');
 
     if (passInput.type === 'password') {
         passInput.type = 'text';
@@ -711,11 +712,11 @@ const data = await response.json()
 
 msg.style.display="flex"
 
-if(data.message === "Login successful"){
+if(response.ok){
 
 msg.className="message success"
-msg.innerHTML="ACCESS GRANTED"
-
+msg.innerHTML=`<i data-lucide="shield-check"></i> ${data.message || "ACCESS GRANTED"}`
+lucide.createIcons();
 
 // SAVE JWT TOKEN DATA
 localStorage.setItem("access_token", data.access_token);
@@ -735,8 +736,8 @@ window.location.href="dashboard.html"
 }else{
 
 msg.className="message error"
-msg.innerHTML="INVALID EMAIL OR PASSWORD"
-
+msg.innerHTML=`<i data-lucide="alert-triangle"></i> ${data.message || "INVALID EMAIL OR PASSWORD"}`
+lucide.createIcons();
 }
 
 }catch(error){

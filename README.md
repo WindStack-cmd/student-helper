@@ -89,6 +89,50 @@ This section summarizes the major changes already applied in the project.
 - Backend: Flask API hardening and data-flow fixes merged.
 - Merge/conflict cleanup: duplicate logic and fetch-flow conflicts resolved.
 
+### 7) Bug Fixes & Stability Improvements (Latest - 2026-04-12)
+
+#### CORS Preflight & Rate Limiting
+- **Issue**: "Response to preflight request doesn't pass access control check: It does not have HTTP ok status"
+- **Solution**:
+  - Created custom rate limiter key function that exempts OPTIONS requests
+  - Added explicit `@app.before_request` handler for OPTIONS method returning 200 status
+  - Enhanced CORS config to explicitly include all HTTP methods
+  - **Files**: `backend/app.py` (lines 19-50)
+
+#### 429 Too Many Requests Errors
+- **Issue**: Read-only GET endpoints (dashboard, help-others, community-chat) hitting rate limits
+- **Solution**:
+  - Increased default rate limits: 500/hour, 2000/day (from 50/hour, 200/day)
+  - Custom key function exempts: OPTIONS requests, `/get_requests`, `/get_leaderboard`, `/get_user_stats`
+  - Removed redundant endpoint-specific rate limit decorators
+  - **Files**: `backend/app.py` (lines 19-50, 485-486), `webzip/js/dashboard.js` (lines 30-36), `webzip/pages/help-others.html` (lines 737-745)
+
+#### Leaderboard Null Reference Error
+- **Issue**: "Cannot read properties of null (reading 'substring')" on leaderboard load
+- **Root Cause**: Backend returned user data with null `first_name` values
+- **Solution**: Added null checks with fallback chain: `u.first_name || u.name || u.email?.split('@')[0] || "User"`
+- **Files**: `webzip/pages/community-chat.html` (lines 1070-1082)
+
+#### Missing Favicon
+- **Issue**: 404 error for favicon requests
+- **Solution**: Added `/favicon.ico` route returning 204 No Content
+- **Files**: `backend/app.py` (lines 266-268)
+
+#### Request Posting - Missing Auth Headers
+- **Issue**: `getAuthHeaders is not defined` error in request-help.js
+- **Root Cause**: script.js (containing getAuthHeaders) was not included in request-help.html
+- **Solution**:
+  - Added `<script src="../js/script.js"></script>` to request-help.html
+  - Simplified request-help.js to extract email from localStorage directly
+  - Now sends proper JSON body: `{ title, description, email, bounty }`
+- **Files**: `webzip/pages/request-help.html` (line 598), `webzip/js/request-help.js` (lines 1-67)
+
+#### Duplicate Request Creation
+- **Issue**: Submitting one request created multiple entries in database
+- **Root Cause**: Multiple fetch calls or form resubmission
+- **Solution**: Simplified form submission with single fetch call and proper error handling
+- **Files**: `webzip/js/request-help.js`
+
 ## Backend API Endpoints
 
 ### System
@@ -197,6 +241,33 @@ Frontend URL: http://127.0.0.1:5501
 - Backend: Flask, Flask-CORS, Flask-Limiter, bcrypt, PyJWT, python-dotenv
 - Database: MySQL (mysql-connector-python)
 - Frontend: HTML, CSS, Vanilla JavaScript
+
+## Current Stable Features ✅
+
+- User registration with bcrypt password hashing
+- JWT-based authentication & login
+- Post help requests with bounty amounts
+- Hunt Mode - browse and filter active requests
+- Search, filter, and sort requests (by title, status, bounty, date)
+- Leaderboard with user rankings
+- Dashboard with metrics
+- User profiles with reputation tracking
+- Notifications system
+- Clean, modern dark-theme UI
+
+## Known Limitations & Next Priority Features
+
+### Critical for SaaS (Next Sprint):
+1. **Request Claiming System** - User claims a request to solve it (prevents duplicate work)
+2. **Email Verification** - Verify email on signup to prevent spam/abuse
+3. **Answer Submission Flow** - Complete the bounty transfer when answer is accepted
+4. **Request Status Lifecycle** - Open → In Progress → Completed workflow
+
+### Medium Priority:
+5. Request categories/tags (Math, Code, Essay, etc)
+6. User reputation system (earn points for answers)
+7. Answer rating/quality system
+8. Request sorting options (newest, highest bounty, most viewed)
 
 ## Notes
 

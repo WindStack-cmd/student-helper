@@ -48,9 +48,31 @@ function renderSidebar(options = {}) {
         lucide.createIcons();
     }
 
-    // Fetch and display notification count
+    // Fetch and display notification count and balance
     if (isLoggedIn) {
         fetchNotificationsCount();
+        fetchBalance();
+    }
+}
+
+async function fetchBalance() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+        
+        const res = await fetch('http://127.0.0.1:5001/get_balance', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const balanceEl = document.getElementById('sidebar-balance');
+        if (balanceEl) {
+            balanceEl.textContent = data.balance + ' PTS';
+        }
+    } catch (e) {
+        console.error("Failed to load balance", e);
     }
 }
 
@@ -146,7 +168,7 @@ function buildAppSidebar({ activePage, rootPrefix, pagesPrefix, userName, userIn
             <div class="user-avatar" id="sidebarAvatar">${userInitials}</div>
             <div class="user-info">
                 <div class="user-name" id="sidebarName">${userName}</div>
-                <div class="user-role">${userEmail}</div>
+                <div class="user-role" id="sidebar-balance">LOADING...</div>
             </div>
             <i data-lucide="power" onclick="event.stopPropagation(); logout()" style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
         </div>

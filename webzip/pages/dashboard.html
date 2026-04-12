@@ -1163,6 +1163,20 @@
                             <span class="meta-value" id="modalBounty" style="color: var(--accent-lime);">0 PTS</span>
                         </div>
                     </div>
+                    <div class="modal-section" style="margin-top: 24px;">
+                        <div class="section-label">ACTIVE_CLAIMS</div>
+                        <div id="modalClaimsInfo" style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 229, 255, 0.05); padding: 16px; border-radius: 8px; border: 1px dashed rgba(0, 229, 255, 0.3);">
+                            <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-blue);">
+                                <i data-lucide="users" style="width: 14px; height: 14px; margin-right: 8px; vertical-align: middle;"></i>
+                                <span id="claimsCount">0</span> NODES_WORKING_ON_THIS
+                            </div>
+                            <button id="claimBtn" class="btn-primary" style="height: 36px; padding: 0 16px; font-size: 0.75rem; background: var(--accent-blue); color: var(--bg-base); border-color: var(--accent-blue);">
+                                <i data-lucide="target" style="width: 14px; height: 14px;"></i>
+                                CLAIM_OBJECTIVE
+                            </button>
+                        </div>
+                        <div id="claimantsList" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary); margin-top: 8px; padding-left: 8px;"></div>
+                    </div>
 
                     <div class="modal-section" style="margin-top: 40px; border-top: 1px dashed var(--border-dim); padding-top: 32px;">
                         <div class="section-label">COMMUNITY_RESPONSES <span id="answerCount" style="color: var(--text-tertiary); margin-left: 8px;">(0)</span></div>
