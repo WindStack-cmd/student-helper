@@ -13,15 +13,18 @@ StudentsHelper connects students who need help with students who can solve probl
 
 ## Key Features
 
-- User registration and login
-- Bounty-based request posting
+- User registration and login with JWT persistence
+- **New User Onboarding**: 100 PTS starting balance for all new accounts
+- **Bounty Escrow System**: Automated point deduction on post and awarding on acceptance
+- **Expiry Lifecycle Tracking**: Visual countdowns (EXPIRING SOON) and automated expiration badges
+- **Node Claims**: Students can "Claim" an objective to signal they are working on it
 - Answer submission and answer acceptance flow
 - Optional answer file attachments (saved to backend uploads)
-- Answer upvotes with reputation increment
-- Reputation and leaderboard stats
-- Dashboard metrics
+- Answer upvotes and community ranking
+- Reputation and leaderboard stats (Ledger)
+- Dashboard metrics for bounties posted, completed, and global rank
 - Notifications when a request receives an answer
-- Request details endpoint with answers + view counting
+- Request details modal with answers + view counting
 - Request filtering with pagination, search, category, and sort controls
 - Profile and account purge flows
 - Shared frontend styling and sidebar navigation across pages
@@ -89,7 +92,29 @@ This section summarizes the major changes already applied in the project.
 - Backend: Flask API hardening and data-flow fixes merged.
 - Merge/conflict cleanup: duplicate logic and fetch-flow conflicts resolved.
 
-### 7) Bug Fixes & Stability Improvements (Latest - 2026-04-12)
+### 7) Bounty Lifecycle & Security Hardening (Latest - 2026-04-12)
+- **Feature: Starting Balance Migration**:
+  - Implemented automatic 100 PTS / 100 Reputation credit for new users in `/register`.
+  - Added a one-time database migration hook in `init_db` to credit 100 PTS to all existing users at 0 balance.
+- **Feature: Expiry Intelligence**:
+  - Updated dashboard cards with real-time expiry indicators.
+  - Added "EXPIRING SOON" warning for requests with <24h remaining.
+  - Added "EXPIRED" badge for past-due requests (automated locking).
+- **Feature: Security & Ownership Integrity**:
+  - **Self-Answering Block**: Implemented dual-layer block (Frontend + Backend 403 Forbidden) to prevent owners from answering their own requests.
+  - **Self-Claiming Block**: Owners are restricted from claiming their own objectives.
+  - **Dynamic Modal UI**: Users now see `CANNOT_RESPOND: REQUEST_OWNER` instead of the answer form on their own posts.
+- **Bug Fix: SQL Reserved Word Conflict**:
+  - Resolved `MySQL 8.0+` syntax error where `rank` (reserved for window functions) was used as an unquoted alias. Escaped as `` `rank` ``.
+- **Bug Fix: Bounty Awarding Flow**:
+  - Resolved 500 error on `/accept_answer` by fixing `UnboundLocalError` related to helper email retrieval.
+  - Standardized status update from `closed` to `solved` for better UI badge targeting.
+  - Fixed "Bounties Posted" metric returning 0 by correcting the backend aggregation query.
+- **UI/UX Refinement**:
+  - Improved "Accept Answer" button visibility (Owner-only).
+  - Awarded bounties now show as `ACCEPTED_SOLUTION` in the modal.
+
+### 8) Bug Fixes & Stability Improvements (Latest - 2026-04-12)
 
 #### CORS Preflight & Rate Limiting
 - **Issue**: "Response to preflight request doesn't pass access control check: It does not have HTTP ok status"
@@ -246,22 +271,25 @@ Frontend URL: http://127.0.0.1:5501
 
 - User registration with bcrypt password hashing
 - JWT-based authentication & login
+- **Starting Balance**: 100 PTS onboarding credit
+- **Bounty Escrow**: Points are held in escrow and awarded automatically to the solver
+- **Request Claiming System**: Students can signal active work on an objective
+- **Request Status Lifecycle**: Open → Expiring Soon → Solved/Expired
 - Post help requests with bounty amounts
 - Hunt Mode - browse and filter active requests
 - Search, filter, and sort requests (by title, status, bounty, date)
-- Leaderboard with user rankings
-- Dashboard with metrics
-- User profiles with reputation tracking
+- Leaderboard with user rankings (Ledger)
+- Dashboard with real-time metrics (Posted, Completed, Rank)
+- User profiles with reputation tracking (Identity)
 - Notifications system
 - Clean, modern dark-theme UI
 
 ## Known Limitations & Next Priority Features
 
 ### Critical for SaaS (Next Sprint):
-1. **Request Claiming System** - User claims a request to solve it (prevents duplicate work)
-2. **Email Verification** - Verify email on signup to prevent spam/abuse
-3. **Answer Submission Flow** - Complete the bounty transfer when answer is accepted
-4. **Request Status Lifecycle** - Open → In Progress → Completed workflow
+1. **Email Verification** - Verify email on signup to prevent spam/abuse
+2. **Pro Stripe Integration** - Platform fee deduction on bounty payouts
+3. **Advanced Filtering** - Filter by "Claimed vs Unclaimed"
 
 ### Medium Priority:
 5. Request categories/tags (Math, Code, Essay, etc)
