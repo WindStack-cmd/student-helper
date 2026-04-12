@@ -16,13 +16,14 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# FEATURE #3: Rate Limiter initialization with custom key function
 def custom_key_func():
-    # Exempt OPTIONS requests (CORS preflight) and GET requests to read-only endpoints
+    # Exempt OPTIONS requests (CORS preflight)
     if request.method == "OPTIONS":
-        return "exempt"
+        return None
+    # Exempt GET requests to read-only endpoints for certain keys? 
+    # Actually, let's keep it simple: return None means NO LIMIT.
     if request.method == "GET" and request.path in ["/get_requests", "/get_leaderboard", "/get_user_stats"]:
-        return "exempt_read_only"
+        return None
     return get_remote_address()
 
 limiter = Limiter(
@@ -36,18 +37,19 @@ limiter = Limiter(
 # FIX #1: CORS - Restrict to specific origins instead of wildcard
 ALLOWED_ORIGINS = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:8000,http://localhost:3000,http://127.0.0.1:5501"
+    "http://localhost:8000,http://localhost:3000,http://127.0.0.1:5500,http://127.0.0.1:5501,http://127.0.0.1:5502,http://127.0.0.1:3000,http://localhost:5502"
 ).split(",")
-CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True, methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"])
+CORS(app, resources={r"/*": {
+    "origins": "*",
+    "allow_headers": ["Content-Type", "Authorization"],
+    "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"]
+}}, supports_credentials=True)
 
-# Explicitly handle OPTIONS requests
-@app.before_request
-def handle_options():
-    if request.method == "OPTIONS":
-        return "", 200
+# Explicitly handle OPTIONS requests via route if needed, 
+# but flask-cors usually covers this automatically for all routes.
 
 # socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)  # Disabled on Windows due to socket binding issues
-app.config['CORS_HEADERS'] = 'Content-Type'
+# app.config['CORS_HEADERS'] = 'Content-Type'  # Removed to avoid restriction
 
 # FEATURE #2: JWT Configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
@@ -168,7 +170,7 @@ def get_db_connection():
 # FIX #3: Input validation helpers
 def validate_email(email):
     """Validate email format"""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$'
     return bool(re.match(pattern, email))
 
 def validate_password(password):
@@ -203,10 +205,11 @@ def init_db():
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
         cursor.execute(f"USE `{db_name}`")
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), email VARCHAR(255) UNIQUE, password VARCHAR(255), points INT DEFAULT 0, first_name VARCHAR(255), reputation INT DEFAULT 0, bounties_completed INT DEFAULT 0)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS requests (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), description TEXT, user_email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR(50), bounty INT DEFAULT 0, captured_by VARCHAR(255), solved BOOLEAN DEFAULT 0)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS requests (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), description TEXT, user_email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR(50), bounty INT DEFAULT 0, captured_by VARCHAR(255), solved BOOLEAN DEFAULT 0, escrowed_bounty INT DEFAULT 0, expires_at TIMESTAMP NULL)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS answers (id INT AUTO_INCREMENT PRIMARY KEY, request_id INT, answer TEXT, email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, accepted BOOLEAN DEFAULT 0)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS posts (id INT AUTO_INCREMENT PRIMARY KEY, first_name VARCHAR(255), title VARCHAR(255), content TEXT, user_email VARCHAR(255), bounty INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(255), message TEXT, seen BOOLEAN DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS claims (id INT AUTO_INCREMENT PRIMARY KEY, request_id INT, user_email VARCHAR(255), claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_claim (request_id, user_email))''')
 
         # Ensure solved and captured_by columns exist on already-created tables
         try:
@@ -256,6 +259,16 @@ def init_db():
             pass
             
         try:
+            cursor.execute("ALTER TABLE requests ADD COLUMN escrowed_bounty INT DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            cursor.execute("ALTER TABLE requests ADD COLUMN expires_at TIMESTAMP NULL")
+            conn.commit()
+        except Exception:
+            pass
+        try:
             cursor.execute("ALTER TABLE answers ADD COLUMN rating INT DEFAULT 0")
             conn.commit()
         except Exception:
@@ -283,6 +296,13 @@ def init_db():
         except Exception:
             pass
 
+        # Give 100 points onboarding bonus to anyone with 0 (one-time migration for existing users)
+        try:
+            cursor.execute("UPDATE users SET points = 100, reputation = 100 WHERE points = 0 AND reputation = 0")
+            conn.commit()
+        except Exception:
+            pass
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -306,7 +326,7 @@ def favicon():
     return "", 204  # Return empty response with No Content status
 
 @app.route("/register", methods=["POST"])
-@limiter.limit("5 per minute")  # FEATURE #3: Rate limiting
+# @limiter.limit("20 per minute")  # Disabled for debugging
 def register():
     data = request.json or {}
     first_name = str(data.get("first_name") or "").strip()
@@ -340,8 +360,8 @@ def register():
         hashed_password = hash_password(password)
 
         cursor.execute(
-            "INSERT INTO users (first_name, email, password, points) VALUES (%s,%s,%s,%s)",
-            (first_name, email, hashed_password, 0)
+            "INSERT INTO users (first_name, name, email, password, points, reputation) VALUES (%s,%s,%s,%s,%s,%s)",
+            (first_name, first_name, email, hashed_password, 100, 100)
         )
         conn.commit()
         log_event("REGISTER", f"User registered successfully: {email}", "INFO")
@@ -357,7 +377,7 @@ def register():
         conn.close()
 
 @app.route("/login", methods=["POST"])
-@limiter.limit("5 per minute")  # FEATURE #3: Rate limiting (5 login attempts per minute)
+# @limiter.limit("5 per minute")  # Temporarily disabled for CORS debugging
 def login():
     data = request.json or {}
     email = str(data.get("email") or "").strip().lower()  # Lowercase for consistency
@@ -409,6 +429,26 @@ def login():
     finally:
         cursor.close()
         conn.close()
+
+@app.route("/get_balance", methods=["GET"])
+@require_auth
+def get_balance():
+    try:
+        email = request.user_email
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT COALESCE(reputation, points, 0) as balance FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({"message": "User not found", "error_code": "USER_NOT_FOUND"}), 404
+            return jsonify({"balance": user["balance"]}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("GET_BALANCE", str(e), "ERROR")
+        return jsonify({"message": "Failed to get balance", "error_code": "INTERNAL_ERROR"}), 500
 
 @app.route("/dashboard_metrics")
 def dashboard_metrics():
@@ -504,16 +544,33 @@ def post_request():
             bounty = 0
 
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         try:
+            # Validate balance - use reputation as the balance
+            cursor.execute("SELECT COALESCE(reputation, points, 0) as balance FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+            if not user or user["balance"] < bounty:
+                return jsonify({"message": "Insufficient balance", "error_code": "INSUFFICIENT_BALANCE"}), 400
+            
+            # Deduct bounty and set expires_at
+            expiry_date = datetime.now() + timedelta(days=7)
+            
             cursor.execute(
-                "INSERT INTO requests (title, description, user_email, bounty, status, solved, category) VALUES (%s, %s, %s, %s, 'open', 0, %s)",
-                (title, description, email, bounty, category)
+                "UPDATE users SET reputation = reputation - %s, points = points - %s WHERE email = %s",
+                (bounty, bounty, email)
+            )
+            
+            cursor.execute(
+                "INSERT INTO requests (title, description, user_email, bounty, status, solved, category, escrowed_bounty, expires_at) VALUES (%s, %s, %s, %s, 'open', 0, %s, %s, %s)",
+                (title, description, email, bounty, category, bounty, expiry_date)
             )
             conn.commit()
             request_id = cursor.lastrowid
-            log_event("POST_REQUEST", f"Request posted successfully (ID: {request_id}) by {email} with bounty {bounty}", "INFO")
+            log_event("POST_REQUEST", f"Request posted successfully (ID: {request_id}) by {email} with bounty {bounty} (escrowed)", "INFO")
             return jsonify({"message": "Request posted successfully", "request_id": request_id}), 201
+        except Exception as e:
+            conn.rollback()
+            raise e
         finally:
             cursor.close()
             conn.close()
@@ -523,6 +580,42 @@ def post_request():
 
 @app.route("/get_requests", methods=["GET"])
 def get_requests():
+    # Hook to check for expired requests
+    try:
+        conn_expiry = get_db_connection()
+        cursor_expiry = conn_expiry.cursor(dictionary=True)
+        try:
+            # Find requests that should expire
+            cursor_expiry.execute(
+                "SELECT id, user_email, escrowed_bounty FROM requests WHERE status = 'open' AND expires_at < NOW() AND escrowed_bounty > 0"
+            )
+            expired_requests = cursor_expiry.fetchall()
+            
+            for req in expired_requests:
+                # Return bounty
+                cursor_expiry.execute(
+                    "UPDATE users SET reputation = reputation + %s, points = points + %s WHERE email = %s",
+                    (req["escrowed_bounty"], req["escrowed_bounty"], req["user_email"])
+                )
+                # Set status and clear escrow
+                cursor_expiry.execute(
+                    "UPDATE requests SET status = 'expired', escrowed_bounty = 0 WHERE id = %s",
+                    (req["id"],)
+                )
+                log_event("EXPIRY", f"Request {req['id']} expired, returned {req['escrowed_bounty']} to {req['user_email']}", "INFO")
+            
+            # Also catch requests with 0 bounty but expired
+            cursor_expiry.execute(
+                "UPDATE requests SET status = 'expired' WHERE status = 'open' AND expires_at < NOW() AND escrowed_bounty = 0"
+            )
+            
+            conn_expiry.commit()
+        finally:
+            cursor_expiry.close()
+            conn_expiry.close()
+    except Exception as e:
+        log_event("EXPIRY_CHECK", f"Error during expiry check: {str(e)}", "ERROR")
+
     try:
         # Get pagination and search parameters from query string
         limit = request.args.get('limit', default=20, type=int)
@@ -588,11 +681,14 @@ def get_requests():
                 LIMIT %s OFFSET %s
             """
             cursor.execute(data_query, tuple(params + [limit, offset]))
+            # Get column names to handle mapping properly without dictionary=True if needed,
+            # but since we want to be safe, let's keep the manual mapping or switch to dict.
             rows = cursor.fetchall()
             
             requests_list = []
             for r in rows:
-                requests_list.append({
+                # Check column count to avoid index errors in different environments
+                req = {
                     "id": r[0],
                     "title": r[1],
                     "description": r[2],
@@ -602,9 +698,15 @@ def get_requests():
                     "bounty": r[6],
                     "captured_by": r[7] if len(r) > 7 else None,
                     "solved": bool(r[8]) if len(r) > 8 else False,
-                    "category": r[9] if len(r) > 9 else "",
-                    "views": r[10] if len(r) > 10 else 0
-                })
+                }
+                # Handle extended columns (category, views, escrowed_bounty, expires_at)
+                # These indices assumes standard order from init_db + alters
+                if len(r) > 9: req["category"] = r[9]
+                if len(r) > 10: req["views"] = r[10]
+                if len(r) > 11: req["escrowed_bounty"] = r[11]
+                if len(r) > 12: req["expires_at"] = str(r[12]) if r[12] else None
+                
+                requests_list.append(req)
             
             log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Sort: {sort_by})", "INFO")
             
@@ -650,18 +752,31 @@ def get_request_details(request_id):
             cursor.execute("SELECT * FROM answers WHERE request_id = %s ORDER BY created_at ASC", (request_id,))
             answers_list = cursor.fetchall()
             
+            # 3. Fetch Claims
+            cursor.execute("""
+                SELECT u.first_name as username 
+                FROM claims c
+                JOIN users u ON c.user_email = u.email
+                WHERE c.request_id = %s
+            """, (request_id,))
+            claims_list = cursor.fetchall()
+            claimants = [c['username'] for c in claims_list]
+            
             # Formatting for JSON
             if request_data:
                 request_data['created_at'] = str(request_data['created_at']) if request_data['created_at'] else None
+                request_data['expires_at'] = str(request_data['expires_at']) if request_data.get('expires_at') else None
             
             for ans in answers_list:
                 ans['created_at'] = str(ans['created_at']) if ans['created_at'] else None
             
-            log_event("GET_DETAILS", f"Retrieved details for request ID {request_id} with {len(answers_list)} answers", "INFO")
+            log_event("GET_DETAILS", f"Retrieved details for request ID {request_id} with {len(answers_list)} answers and {len(claimants)} claims", "INFO")
             
             return jsonify({
                 "request": request_data,
-                "answers": answers_list
+                "answers": answers_list,
+                "claims_count": len(claimants),
+                "claimants": claimants
             })
         finally:
             cursor.close()
@@ -764,23 +879,16 @@ def get_my_requests():
         if not email:
             return jsonify([])
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute("SELECT * FROM requests WHERE user_email = %s ORDER BY created_at DESC", (email,))
             rows = cursor.fetchall()
             requests_list = []
             for r in rows:
-                requests_list.append({
-                    "id": r[0],
-                    "title": r[1],
-                    "description": r[2],
-                    "email": r[3],
-                    "created_at": r[4],
-                    "status": r[5],
-                    "bounty": r[6],
-                    "captured_by": r[7] if len(r) > 7 else None,
-                    "solved": bool(r[8]) if len(r) > 8 else False
-                })
+                r['email'] = r.get('user_email')
+                r['created_at'] = str(r['created_at']) if r['created_at'] else None
+                r['expires_at'] = str(r['expires_at']) if r.get('expires_at') else None
+                requests_list.append(r)
             log_event("GET_MY_REQUESTS", f"Retrieved {len(requests_list)} requests for {email}", "INFO")
             return jsonify(requests_list)
         finally:
@@ -794,23 +902,16 @@ def get_my_requests():
 def get_archived_requests():
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute("SELECT * FROM requests WHERE solved = 1 OR status = 'closed' ORDER BY created_at DESC")
             rows = cursor.fetchall()
             requests_list = []
             for r in rows:
-                requests_list.append({
-                    "id": r[0],
-                    "title": r[1],
-                    "description": r[2],
-                    "email": r[3],
-                    "created_at": r[4],
-                    "status": r[5],
-                    "bounty": r[6],
-                    "captured_by": r[7] if len(r) > 7 else None,
-                    "solved": bool(r[8]) if len(r) > 8 else False
-                })
+                r['email'] = r.get('user_email')
+                r['created_at'] = str(r['created_at']) if r['created_at'] else None
+                r['expires_at'] = str(r['expires_at']) if r.get('expires_at') else None
+                requests_list.append(r)
             log_event("GET_ARCHIVED_REQUESTS", f"Retrieved {len(requests_list)} archived requests", "INFO")
             return jsonify(requests_list)
         finally:
@@ -849,23 +950,38 @@ def post_answer():
                 file.save(filepath)
                 file_path = f"/uploads/{filename}"
 
+        # Extract logged-in email from JWT
+        logged_in_email = resolve_request_email()
+        if not logged_in_email:
+             return jsonify({"message": "Authentication required"}), 401
+             
+        # Use existing email from payload or fallback to authenticated email
+        target_email = email or logged_in_email
+
         # FIX #3: Input validation
         if not request_id or not isinstance(request_id, int):
             log_event("POST_ANSWER", f"Invalid request_id: {request_id}", "WARNING")
             return jsonify({"message": "Invalid request ID", "error_code": "INVALID_REQUEST_ID"}), 400
 
-        if not email or not validate_email(email):
-            log_event("POST_ANSWER", f"Invalid email: {email}", "WARNING")
+        if not target_email or not validate_email(target_email):
+            log_event("POST_ANSWER", f"Invalid email: {target_email}", "WARNING")
             return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
 
         if not answer or len(answer) < 5:
-            log_event("POST_ANSWER", f"Answer too short from {email}", "WARNING")
+            log_event("POST_ANSWER", f"Answer too short from {target_email}", "WARNING")
             return jsonify({"message": "Answer must be at least 5 characters", "error_code": "ANSWER_TOO_SHORT"}), 400
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
-            cursor.execute("INSERT INTO answers (request_id, answer, email, file_path) VALUES (%s,%s,%s,%s)", (request_id, answer, email, file_path))
+            # MISSION CRITICAL: Fetch owner to prevent self-answer (Fix)
+            cursor.execute("SELECT user_email FROM requests WHERE id = %s", (request_id,))
+            req_row = cursor.fetchone()
+            if req_row and req_row["user_email"] == logged_in_email:
+                log_event("POST_ANSWER", f"SECURITY_BLOCK: User {logged_in_email} tried to answer their own request {request_id}", "WARNING")
+                return jsonify({ "message": "Request owners cannot answer their own requests.", "error_code": "OWNER_CANNOT_ANSWER" }), 403
+
+            cursor.execute("INSERT INTO answers (request_id, answer, email, file_path) VALUES (%s,%s,%s,%s)", (request_id, answer, target_email, file_path))
             conn.commit()
             log_event("POST_ANSWER", f"Answer posted for request {request_id} by {email} with file {file_path}", "INFO")
 
@@ -911,17 +1027,37 @@ def accept_answer():
             rating = 0
 
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True) # Use dict for easier access
         try:
+            # First, fetch the answer info to get the helper's email
+            cursor.execute("SELECT email FROM answers WHERE id = %s", (answer_id,))
+            ans_row = cursor.fetchone()
+            if not ans_row:
+                return jsonify({"message": "Answer not found"}), 404
+            
+            target_helper_email = helper_email or ans_row["email"]
+
             cursor.execute("UPDATE answers SET accepted = 1, rating = %s WHERE id = %s", (rating, answer_id,))
-            cursor.execute("UPDATE requests SET solved = 1, status = 'closed' WHERE id = %s", (request_id,))
-            if helper_email:
+            cursor.execute("UPDATE requests SET solved = 1, status = 'solved' WHERE id = %s", (request_id,))
+            
+            # Transfer escrowed bounty
+            cursor.execute("SELECT escrowed_bounty FROM requests WHERE id = %s", (request_id,))
+            req_row = cursor.fetchone()
+            bounty_award = req_row["escrowed_bounty"] if req_row else 0
+            
+            total_to_add = amount_to_add + bounty_award
+
+            if target_helper_email:
                 cursor.execute(
                     "UPDATE users SET points = points + %s, reputation = reputation + %s, bounties_completed = bounties_completed + 1 WHERE email = %s",
-                    (amount_to_add, amount_to_add, helper_email)
+                    (total_to_add, total_to_add, target_helper_email)
                 )
+            
+            # Clear escrow
+            cursor.execute("UPDATE requests SET escrowed_bounty = 0 WHERE id = %s", (request_id,))
+            
             conn.commit()
-            log_event("ACCEPT_ANSWER", f"Answer {answer_id} accepted for request {request_id}, points awarded to {helper_email}", "INFO")
+            log_event("ACCEPT_ANSWER", f"Answer {answer_id} accepted for request {request_id}, total {total_to_add} points awarded to {target_helper_email}", "INFO")
             return jsonify({"message": "Answer accepted"}), 200
         finally:
             cursor.close()
@@ -1119,10 +1255,10 @@ def user_stats():
                 user["bounties_posted"] = res["count"] if res else 0
                 
                 cursor.execute("""
-                    SELECT COUNT(*) + 1 as rank 
+                    SELECT COUNT(*) + 1 as `rank` 
                     FROM users 
-                    WHERE COALESCE(reputation, points, 0) > %s
-                """, (user["reputation"],))
+                    WHERE reputation > (SELECT reputation FROM users WHERE email = %s)
+                """, (email,))
                 res = cursor.fetchone()
                 user["rank"] = res["rank"] if res else 0
 
@@ -1169,6 +1305,114 @@ def get_notifications():
     except Exception as e:
         log_event("NOTIFICATIONS", f"Error retrieving notifications: {str(e)}", "ERROR")
         return jsonify([]), 500
+
+@app.route("/claim_request", methods=["POST"])
+@require_auth
+def claim_request():
+    try:
+        data = request.json or {}
+        request_id = data.get("request_id")
+        email = request.user_email
+
+        if not request_id:
+            return jsonify({"message": "Missing request_id", "error_code": "MISSING_PARAMS"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # Check if request is still open
+            cursor.execute("SELECT status FROM requests WHERE id = %s", (request_id,))
+            req = cursor.fetchone()
+            if not req or req[0] != 'open':
+                return jsonify({"message": "Request is not open for claims", "error_code": "NOT_OPEN"}), 400
+
+            cursor.execute(
+                "INSERT INTO claims (request_id, user_email) VALUES (%s, %s)",
+                (request_id, email)
+            )
+            conn.commit()
+            log_event("CLAIM", f"User {email} claimed request {request_id}", "INFO")
+            return jsonify({"message": "Claimed successfully"}), 201
+        except mysql.connector.IntegrityError:
+            return jsonify({"message": "Already claimed", "error_code": "ALREADY_CLAIMED"}), 400
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("CLAIM", str(e), "ERROR")
+        return jsonify({"message": "Failed to claim", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/unclaim_request", methods=["DELETE"])
+@require_auth
+def unclaim_request():
+    try:
+        data = request.json or {}
+        request_id = data.get("request_id")
+        email = request.user_email
+
+        if not request_id:
+            return jsonify({"message": "Missing request_id", "error_code": "MISSING_PARAMS"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM claims WHERE request_id = %s AND user_email = %s",
+                (request_id, email)
+            )
+            conn.commit()
+            log_event("UNCLAIM", f"User {email} unclaimed request {request_id}", "INFO")
+            return jsonify({"message": "Unclaimed successfully"}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("UNCLAIM", str(e), "ERROR")
+        return jsonify({"message": "Failed to unclaim", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/delete_request", methods=["POST"])
+@require_auth
+def delete_request():
+    try:
+        data = request.json or {}
+        request_id = data.get("request_id")
+        email = request.user_email
+
+        if not request_id:
+            return jsonify({"message": "Missing request_id"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT user_email, escrowed_bounty, status FROM requests WHERE id = %s", (request_id,))
+            req = cursor.fetchone()
+            
+            if not req:
+                return jsonify({"message": "Request not found"}), 404
+            
+            if req["user_email"] != email:
+                return jsonify({"message": "Unauthorized"}), 403
+
+            # Return escrowed bounty if any
+            if req["escrowed_bounty"] > 0:
+                cursor.execute(
+                    "UPDATE users SET reputation = reputation + %s, points = points + %s WHERE email = %s",
+                    (req["escrowed_bounty"], req["escrowed_bounty"], email)
+                )
+            
+            cursor.execute("DELETE FROM claims WHERE request_id = %s", (request_id,))
+            cursor.execute("DELETE FROM answers WHERE request_id = %s", (request_id,))
+            cursor.execute("DELETE FROM requests WHERE id = %s", (request_id,))
+            
+            conn.commit()
+            log_event("DELETE_REQUEST", f"Request {request_id} deleted by {email}, bounty returned", "INFO")
+            return jsonify({"message": "Request deleted"}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("DELETE_REQUEST", str(e), "ERROR")
+        return jsonify({"message": "Failed to delete"}), 500
 
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"

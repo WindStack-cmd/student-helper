@@ -14,35 +14,38 @@ async function submitHelpRequest(event){
     const description = document.getElementById("requestDesc").value.trim();
     const type = document.getElementById("helpType").value;
     const category = document.getElementById("requestCategory").value;
+    const bountyInput = document.getElementById("requestBounty");
+    const bounty = parseInt(bountyInput.value || 0);
 
-    // Get email from localStorage (user data stored on login)
-    let email = "";
-    const userStr = localStorage.getItem("loggedInUser");
-    if (userStr) {
-        try {
-            const user = JSON.parse(userStr);
-            email = user.email || user.first_name || "";
-        } catch(e) {
-            console.error("Failed to parse loggedInUser:", e);
-        }
-    }
-
-    if (!email) {
-        alert("You must be logged in to post a request.");
+    // Get auth headers
+    const headers = getAuthHeaders();
+    if (!headers) {
         btn.innerHTML = originalText;
         btn.disabled = false;
         return;
     }
 
     try {
+        // First validate balance
+        const balanceRes = await fetch("http://127.0.0.1:5001/get_balance", { headers });
+        if (!balanceRes.ok) throw new Error("Failed to verify balance");
+        const balanceData = await balanceRes.json();
+        
+        if (bounty > balanceData.balance) {
+            alert(`Insufficient balance! Your current balance is ${balanceData.balance} PTS.`);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
         const response = await fetch("http://127.0.0.1:5001/post_request", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify({
                 title: title,
                 description: description,
-                email: email,
-                bounty: 50,
+                email: localStorage.getItem("access_token") ? JSON.parse(atob(localStorage.getItem("access_token").split('.')[1])).email : "",
+                bounty: bounty,
                 category: category
             })
         });
@@ -55,7 +58,7 @@ async function submitHelpRequest(event){
 
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
-            const errMsg = errData.error || errData.message || ("HTTP " + response.status);
+            const errMsg = errData.message || ("HTTP " + response.status);
             alert("Failed to post request: " + errMsg);
             btn.innerHTML = originalText;
             btn.disabled = false;
@@ -86,4 +89,19 @@ document.addEventListener("DOMContentLoaded", function(){
     if (form) {
         form.addEventListener("submit", submitHelpRequest);
     }
+    
+    // Fetch and display balance for the current user
+    async function updateStatusBalance() {
+        const headers = getAuthHeaders();
+        if (!headers) return;
+        try {
+            const res = await fetch("http://127.0.0.1:5001/get_balance", { headers });
+            if (res.ok) {
+                const data = await res.json();
+                const display = document.getElementById("balanceDisplay");
+                if (display) display.textContent = `CURRENT_BALANCE: ${data.balance} PTS`;
+            }
+        } catch (e) {}
+    }
+    updateStatusBalance();
 });
