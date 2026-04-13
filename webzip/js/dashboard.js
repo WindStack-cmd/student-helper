@@ -798,21 +798,44 @@ function animateStatCards() {
 }
 
 function initializeChart() {
-    const canvas = document.getElementById("performanceChart");
-    if (!canvas) return;
+    const ctx = document.getElementById("performanceChart");
+    if (!ctx) return;
     
-    // Simple chart representation
-    const ctx = canvas.getContext("2d");
-    const width = canvas.width = canvas.offsetWidth;
-    const height = canvas.height = 200;
-    
-    ctx.fillStyle = "#667eea";
-    ctx.fillRect(0, height - 40, width / 7, 40);
-    ctx.fillRect(width / 6, height - 50, width / 7, 50);
-    ctx.fillRect(width / 3, height - 60, width / 7, 60);
-    ctx.fillRect(width / 2 - 10, height - 70, width / 7, 70);
-    ctx.fillRect(width * 2 / 3 - 10, height - 80, width / 7, 80);
-    ctx.fillRect(width * 5 / 6 - 15, height - 90, width / 7, 90);
+    // SaaS Level Visualization
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+            datasets: [{
+                label: 'CYCLE_EFFICIENCY',
+                data: [65, 59, 80, 81, 56, 55, 40],
+                backgroundColor: 'rgba(123, 66, 250, 0.3)',
+                borderColor: '#7b42fa',
+                borderWidth: 2,
+                borderRadius: 4,
+                hoverBackgroundColor: '#ccff00',
+                hoverBorderColor: '#ccff00'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#4a4a5e', font: { family: 'JetBrains Mono', size: 10 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#4a4a5e', font: { family: 'JetBrains Mono', size: 10 } }
+                }
+            }
+        }
+    });
 }
 
 document.addEventListener("click", function(e) {
@@ -824,5 +847,100 @@ document.addEventListener("click", function(e) {
     // Close modal if clicking overlay
     if (e.target.classList.contains("modal-overlay")) {
         closeRequestModal();
+        closeCommandPalette();
     }
 });
+
+// ----- COMMAND PALETTE LOGIC -----
+const commands = [
+    { name: "Create New Request", icon: "plus", action: () => window.location.href = "request-help.html", shortcut: "N" },
+    { name: "View Leaderboard", icon: "bar-chart-2", action: () => window.location.href = "leaderboard.html", shortcut: "L" },
+    { name: "Switch to Network Feed", icon: "cpu", action: () => document.querySelector(".tab")?.click(), shortcut: "1" },
+    { name: "View My Data", icon: "folder-open", action: () => document.querySelectorAll(".tab")[1]?.click(), shortcut: "2" },
+    { name: "View Archive", icon: "archive", action: () => document.querySelectorAll(".tab")[2]?.click(), shortcut: "3" },
+    { name: "Check Notifications", icon: "bell", action: () => loadNotifications(), shortcut: "B" },
+    { name: "Operational Settings", icon: "sliders", action: () => window.location.href = "settings.html", shortcut: "S" },
+    { name: "Logout Protocol", icon: "power", action: () => logoutUser(), shortcut: "X" }
+];
+
+let selectedCommandIndex = 0;
+
+function openCommandPalette() {
+    const palette = document.getElementById("commandPalette");
+    const input = document.getElementById("commandInput");
+    if (!palette || !input) return;
+
+    palette.style.display = "flex";
+    input.value = "";
+    input.focus();
+    renderCommands("");
+}
+
+function closeCommandPalette() {
+    const palette = document.getElementById("commandPalette");
+    if (palette) palette.style.display = "none";
+}
+
+function renderCommands(filter) {
+    const container = document.getElementById("commandResults");
+    if (!container) return;
+
+    const filtered = commands.filter(c => c.name.toLowerCase().includes(filter.toLowerCase()));
+    
+    container.innerHTML = filtered.map((c, i) => `
+        <div class="command-item ${i === selectedCommandIndex ? 'selected' : ''}" onclick="executeCommand(${commands.indexOf(c)})">
+            <i data-lucide="${c.icon}" style="width: 14px; height: 14px;"></i>
+            <span>${c.name}</span>
+            <span class="command-shortcut">${c.shortcut}</span>
+        </div>
+    `).join("");
+
+    if (window.lucide) lucide.createIcons();
+}
+
+function executeCommand(index) {
+    if (commands[index]) {
+        commands[index].action();
+        closeCommandPalette();
+    }
+}
+
+// Global Keyboard Shortcuts
+document.addEventListener("keydown", (e) => {
+    // Ctrl+K to open
+    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        openCommandPalette();
+    }
+
+    const palette = document.getElementById("commandPalette");
+    if (palette && palette.style.display === "flex") {
+        if (e.key === "Escape") {
+            closeCommandPalette();
+        } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            selectedCommandIndex = (selectedCommandIndex + 1) % commands.length;
+            renderCommands(document.getElementById("commandInput").value);
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            selectedCommandIndex = (selectedCommandIndex - 1 + commands.length) % commands.length;
+            renderCommands(document.getElementById("commandInput").value);
+        } else if (e.key === "Enter") {
+            e.preventDefault();
+            const filter = document.getElementById("commandInput").value;
+            const filtered = commands.filter(c => c.name.toLowerCase().includes(filter.toLowerCase()));
+            if (filtered[selectedCommandIndex]) {
+                filtered[selectedCommandIndex].action();
+                closeCommandPalette();
+            }
+        }
+    }
+});
+
+const cmdInput = document.getElementById("commandInput");
+if (cmdInput) {
+    cmdInput.addEventListener("input", (e) => {
+        selectedCommandIndex = 0;
+        renderCommands(e.target.value);
+    });
+}
