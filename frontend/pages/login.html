@@ -733,21 +733,9 @@ setTimeout(()=>{
 window.location.href="dashboard.html"
 },1000)
 
-} else if (data.error_code === "EMAIL_NOT_VERIFIED") {
-
-msg.className="message error"
-msg.style.background = "rgba(255, 165, 0, 0.1)";
-msg.style.borderColor = "rgba(255, 165, 0, 0.4)";
-msg.style.color = "#ffa500";
-msg.innerHTML=`<i data-lucide="mail-warning"></i> EMAIL NOT VERIFIED — Check your inbox for the verification link, or <a href="#" onclick="resendVerification('${email}')" style="color:#ffa500; text-decoration:underline; cursor:pointer;">resend it</a>.`
-lucide.createIcons();
-
 }else{
 
 msg.className="message error"
-msg.style.background = "";
-msg.style.borderColor = "";
-msg.style.color = "";
 msg.innerHTML=`<i data-lucide="alert-triangle"></i> ${data.message || "INVALID EMAIL OR PASSWORD"}`
 lucide.createIcons();
 }
@@ -760,35 +748,9 @@ msg.innerHTML="SERVER ERROR"
 
 }
 
-btn.innerHTML='<i data-lucide="log-in" style="width: 18px; height: 18px;"></i> Execute Login'
-lucide.createIcons();
+btn.innerHTML="Execute Login"
 
 })
-
-async function resendVerification(email) {
-    const token = localStorage.getItem("access_token");
-    const msg = document.getElementById("messageContainer");
-    try {
-        const res = await fetch("http://127.0.0.1:5001/resend_verification", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                ...(token ? { "Authorization": "Bearer " + token } : {})
-            }
-        });
-        const data = await res.json();
-        if (res.ok) {
-            msg.style.color = "#ccff00";
-            msg.innerHTML = `<i data-lucide="send"></i> Verification email resent! Check your inbox.`;
-        } else {
-            msg.innerHTML = `<i data-lucide="alert-triangle"></i> ${data.message || "Could not resend email."}`;
-        }
-        lucide.createIcons();
-    } catch(e) {
-        msg.innerHTML = `<i data-lucide="wifi-off"></i> Failed to connect to server.`;
-        lucide.createIcons();
-    }
-}
 
 </script>
 

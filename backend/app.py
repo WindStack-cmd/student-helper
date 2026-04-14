@@ -333,34 +333,6 @@ def init_db():
             conn.commit()
         except Exception:
             pass
-
-        try:
-            cursor.execute("ALTER TABLE users ADD COLUMN referral_code VARCHAR(255) UNIQUE")
-            conn.commit()
-        except Exception:
-            pass
-        try:
-            cursor.execute("ALTER TABLE users ADD COLUMN referred_by VARCHAR(255)")
-            conn.commit()
-        except Exception:
-            pass
-        try:
-            cursor.execute("ALTER TABLE users ADD COLUMN referral_earnings INT DEFAULT 0")
-            conn.commit()
-        except Exception:
-            pass
-        
-        try:
-            cursor.execute("SELECT id FROM users WHERE referral_code IS NULL")
-            unreferred_users = cursor.fetchall()
-            for row in unreferred_users:
-                import secrets
-                new_code = secrets.token_hex(4)
-                cursor.execute("UPDATE users SET referral_code = %s WHERE id = %s", (new_code, row[0]))
-            conn.commit()
-        except Exception:
-            pass
-
         try:
             cursor.execute("ALTER TABLE answers ADD COLUMN rating INT DEFAULT 0")
             conn.commit()
@@ -515,7 +487,6 @@ def register():
     first_name = str(data.get("first_name") or "").strip()
     email = str(data.get("email") or "").strip().lower()  # Lowercase for consistency
     password = str(data.get("password") or "").strip()
-    referral_code = str(data.get("referral_code") or "").strip()
 
     # FIX #3: Input validation
     if not email or not validate_email(email):
@@ -546,18 +517,10 @@ def register():
         token = secrets.token_urlsafe(32)
         token_expires_at = datetime.now() + timedelta(hours=24)
         created_at = datetime.now()
-        
-        referred_by_code = None
-        if referral_code:
-            cursor.execute("SELECT referral_code FROM users WHERE referral_code=%s", (referral_code,))
-            if cursor.fetchone():
-                referred_by_code = referral_code
-
-        new_referral_code = secrets.token_hex(4)
 
         cursor.execute(
-            "INSERT INTO users (first_name, name, email, password, points, reputation, is_verified, verification_token, token_expires_at, created_unverified_at, referral_code, referred_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-            (first_name, first_name, email, hashed_password, 100, 100, 0, token, token_expires_at, created_at, new_referral_code, referred_by_code)
+            "INSERT INTO users (first_name, name, email, password, points, reputation, is_verified, verification_token, token_expires_at, created_unverified_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (first_name, first_name, email, hashed_password, 100, 100, 0, token, token_expires_at, created_at)
         )
         conn.commit()
         
@@ -597,20 +560,11 @@ def login():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT id, email, first_name, name, password, is_verified FROM users WHERE email=%s", (email,))
+        cursor.execute("SELECT id, email, first_name, name, password FROM users WHERE email=%s", (email,))
         user = cursor.fetchone()
 
         if user and verify_password(password, user["password"]):
             # FEATURE #1: Password verified with bcrypt
-
-            # Block unverified users
-            if not user.get("is_verified"):
-                log_event("LOGIN", f"Login blocked - email not verified: {email}", "WARNING")
-                return jsonify({
-                    "message": "Please verify your email before logging in. Check your inbox for the verification link.",
-                    "error_code": "EMAIL_NOT_VERIFIED"
-                }), 403
-
             display_name = user.get("first_name")
             if not display_name:
                 name_val = user.get("name") or ""
@@ -784,20 +738,6 @@ def post_request():
             )
             conn.commit()
             request_id = cursor.lastrowid
-            
-            # Add referral commission
-            if bounty > 0:
-                cursor.execute("SELECT referred_by FROM users WHERE email = %s", (email,))
-                referrer_check = cursor.fetchone()
-                if referrer_check and referrer_check.get('referred_by'):
-                    ref_code = referrer_check['referred_by']
-                    commission = int(bounty * 0.10)
-                    if commission > 0:
-                        cursor.execute(
-                            "UPDATE users SET points = points + %s, reputation = reputation + %s, referral_earnings = referral_earnings + %s WHERE referral_code = %s",
-                            (commission, commission, commission, ref_code)
-                        )
-                        conn.commit()
             log_event("POST_REQUEST", f"Request posted successfully (ID: {request_id}) by {email} with bounty {bounty} (escrowed)", "INFO")
             return jsonify({"message": "Request posted successfully", "request_id": request_id}), 201
         except Exception as e:
@@ -1475,7 +1415,7 @@ def user_stats():
         cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute("""
-                SELECT first_name, email, referral_code, COALESCE(referral_earnings, 0) as referral_earnings,
+                SELECT first_name, email,
                        COALESCE(reputation, points, 0) as reputation,
                        COALESCE(bounties_completed, 0) as bounties_completed
                 FROM users
