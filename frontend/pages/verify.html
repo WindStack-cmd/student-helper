@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email | StudentsHelper</title>
+    <link rel="stylesheet" href="../css/global.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@700&family=Outfit:wght@900&display=swap" rel="stylesheet">
+    <style>
+        .verify-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            background: var(--bg-base);
+            z-index: 10;
+            position: relative;
+        }
+        .verify-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 48px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            z-index: 2;
+        }
+        .verify-icon {
+            font-size: 4rem;
+            margin-bottom: 24px;
+        }
+        .verify-title {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .verify-text {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-dim);
+            border-top: 3px solid var(--accent-lime);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .btn-container {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .btn-primary {
+            width: 100%;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-text">VERIFY</div>
+    
+    <div class="verify-container">
+        <div class="verify-card" id="verify-card">
+            <div id="loading-state">
+                <div class="loading-spinner"></div>
+                <h2 class="verify-title">Verifying</h2>
+                <p class="verify-text">Checking your verification token...</p>
+            </div>
+
+            <div id="success-state" style="display: none;">
+                <div class="verify-icon">✅</div>
+                <h2 class="verify-title" style="color: var(--success-green);">EMAIL_VERIFIED</h2>
+                <p class="verify-text">Success! Your email has been verified. You can now post requests and help others in the community.</p>
+                <div class="btn-container">
+                    <a href="dashboard.html" class="btn-primary">Go to Dashboard</a>
+                </div>
+            </div>
+
+            <div id="error-state" style="display: none;">
+                <div class="verify-icon">❌</div>
+                <h2 class="verify-title" id="error-title" style="color: var(--danger-red);">INVALID_TOKEN</h2>
+                <p class="verify-text" id="error-text">This link is not valid or has already been used.</p>
+                <div class="btn-container">
+                    <a href="login.html" class="btn-primary">Back to Login</a>
+                    <button id="resend-btn" class="btn-primary" style="display: none; background: var(--warning-amber); border-color: var(--warning-amber); color: #000;">Resend Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Since there's no config.js, we use the port from app.py
+        const API_BASE_URL = "http://127.0.0.1:5001";
+
+        async function verify() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+
+            if (!token) {
+                showError('INVALID_TOKEN', 'No verification token provided.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/verify_email?token=${token}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess();
+                } else if (data.error_code === 'TOKEN_EXPIRED') {
+                    showError('TOKEN_EXPIRED', 'Your verification link has expired. Request a new one to continue.', true);
+                } else {
+                    showError(data.error_code || 'INVALID_TOKEN', data.message || 'This link is not valid.');
+                }
+            } catch (error) {
+                showError('SYSTEM_ERROR', 'Something went wrong connecting to the server.');
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('success-state').style.display = 'block';
+        }
+
+        function showError(title, text, showResend = false) {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('error-state').style.display = 'block';
+            document.getElementById('error-title').textContent = title;
+            document.getElementById('error-text').textContent = text;
+            if (showResend) {
+                const resendBtn = document.getElementById('resend-btn');
+                resendBtn.style.display = 'flex';
+                // Check if user is logged in
+                const authToken = localStorage.getItem('access_token');
+                if (!authToken) {
+                    resendBtn.textContent = 'Login to Resend';
+                }
+            }
+        }
+
+        document.getElementById('resend-btn').onclick = async () => {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/resend_verification`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Verification email sent! Check your inbox.');
+                } else {
+                    alert(data.message || 'Failed to resend email.');
+                }
+            } catch (error) {
+                alert('System error. Please try again later.');
+            }
+        };
+
+        verify();
+    </script>
+</body>
+</html>

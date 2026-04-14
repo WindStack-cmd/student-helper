@@ -6,3 +6,4 @@ python-dotenv>=1.0
 bcrypt>=4.0
 PyJWT>=2.8
 flask-limiter>=3.5
+Flask-Mail>=0.9.1

@@ -52,6 +52,7 @@ function renderSidebar(options = {}) {
     if (isLoggedIn) {
         fetchNotificationsCount();
         fetchBalance();
+        checkVerificationStatus();
     }
 }
 
@@ -101,6 +102,110 @@ async function fetchNotificationsCount() {
     } catch (e) {
         console.error("Failed to load notifications count", e);
     }
+}
+
+async function checkVerificationStatus() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        const res = await fetch('http://127.0.0.1:5001/me', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (!res.ok) return;
+        const user = await res.json();
+        
+        if (user.is_verified === 0) {
+            injectVerificationBanner();
+        }
+    } catch (e) {
+        console.error("Failed to check verification status", e);
+    }
+}
+
+function injectVerificationBanner() {
+    // Check if banner already exists
+    if (document.getElementById('verification-banner')) return;
+    
+    // Do not show on login or register pages
+    const path = window.location.pathname;
+    if (path.includes('login.html') || path.includes('register.html') || path.includes('verify.html')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'verification-banner';
+    banner.style.cssText = `
+        background: var(--warning-amber);
+        color: #000;
+        padding: 12px 24px;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        z-index: 1000;
+        position: relative;
+    `;
+    
+    banner.innerHTML = `
+        <i data-lucide="alert-triangle" style="width: 18px; height: 18px;"></i>
+        <span>⚠ VERIFY_EMAIL — CHECK_INBOX OR</span>
+        <a href="#" id="resend-verification-link" style="
+            background: #000;
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-left: 12px;
+            font-size: 0.7rem;
+            font-weight: 900;
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.2s;
+        ">RESEND_LINK</a>
+    `;
+    
+    // Inject at the top of the workspace if it exists, else at the top of body
+    const workspace = document.querySelector('.workspace');
+    if (workspace) {
+        workspace.prepend(banner);
+    } else {
+        document.body.prepend(banner);
+    }
+    
+    if (window.lucide) lucide.createIcons();
+    
+    document.getElementById('resend-verification-link').onclick = async (e) => {
+        e.preventDefault();
+        const link = e.target;
+        const originalText = link.textContent;
+        link.textContent = 'SENDING...';
+        
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch('http://127.0.0.1:5001/resend_verification', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                link.textContent = 'EMAIL_SENT';
+                setTimeout(() => { link.textContent = 'RESEND_LINK'; }, 3000);
+            } else {
+                alert(data.message || 'Failed to resend email.');
+                link.textContent = 'ERROR';
+                setTimeout(() => { link.textContent = 'RESEND_LINK'; }, 3000);
+            }
+        } catch (err) {
+            alert('System error.');
+            link.textContent = 'ERROR';
+            setTimeout(() => { link.textContent = 'RESEND_LINK'; }, 3000);
+        }
+    };
 }
 
 /**
