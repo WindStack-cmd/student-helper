@@ -325,6 +325,9 @@
             const password = document.getElementById("password").value;
             const registerBtn = document.getElementById("registerBtn");
             const msg = document.getElementById("messageContainer");
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const referralCode = urlParams.get('ref') || "";
 
             // Client-side validation
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -362,7 +365,8 @@
                     body: JSON.stringify({ 
                         first_name: firstName,
                         email, 
-                        password 
+                        password,
+                        referral_code: referralCode
                     })
                 });
 
@@ -371,9 +375,14 @@
                 
                 if (response.ok) {
                     msg.className = "message success";
-                    msg.innerHTML = `<i data-lucide="check-circle"></i> ACCOUNT_CREATED — A verification email has been sent. Please verify before posting requests.`;
+                    const emailSent = data.email_sent;
+                    if (emailSent) {
+                        msg.innerHTML = `<i data-lucide="mail-check"></i> ACCOUNT_CREATED — A verification email has been sent to <strong>${email}</strong>. Please verify before logging in.`;
+                    } else {
+                        msg.innerHTML = `<i data-lucide="check-circle"></i> ACCOUNT_CREATED — Email sending failed. Contact admin or try logging in directly.`;
+                    }
                     lucide.createIcons();
-                    setTimeout(() => { window.location.href = "login.html"; }, 3000);
+                    setTimeout(() => { window.location.href = "login.html"; }, 4000);
                 } else {
                     msg.className = "message error";
                     msg.innerHTML = `<i data-lucide="alert-circle"></i> ${data.message || "Registration failed"}`;

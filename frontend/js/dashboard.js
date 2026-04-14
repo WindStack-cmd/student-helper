@@ -22,7 +22,7 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
             if (searchQuery) {
                 fetchUrl += `&search=${encodeURIComponent(searchQuery)}`;
             }
-            
+
             const categorySelect = document.getElementById("categoryFilter");
             if (categorySelect && categorySelect.value) {
                 fetchUrl += `&category=${encodeURIComponent(categorySelect.value)}`;
@@ -70,7 +70,7 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
         data.forEach(req => {
             const badge = renderBadge(req);
             const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3); margin-left:8px;">${req.category}</span>` : '';
-            
+
             // Feature 1 & 2: Bounty and Expiry Badges
             let bountyBadge = '';
             if (req.escrowed_bounty > 0) {
@@ -87,7 +87,7 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
                 const now = new Date();
                 const diffMs = expires - now;
                 const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                
+
                 if (diffMs <= 0) {
                     expiryInfo = `<span class="status-badge" style="background: rgba(255, 51, 102, 0.1); color: var(--danger-red); border: 1px solid var(--danger-red); margin-left:8px;">EXPIRED</span>`;
                 } else if (diffHours < 24) {
@@ -131,7 +131,7 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
 
 function renderPaginationControls(visible) {
     let paginationDiv = document.getElementById("paginationContainer");
-    
+
     // Create Search UI if it doesn't exist
     renderSearchUI();
 
@@ -139,7 +139,7 @@ function renderPaginationControls(visible) {
     if (!paginationDiv) {
         const workspacePanel = document.querySelector(".workspace-panel");
         if (!workspacePanel) return;
-        
+
         paginationDiv = document.createElement("div");
         paginationDiv.id = "paginationContainer";
         paginationDiv.style = "display: flex; justify-content: center; align-items: center; gap: 15px; padding: 20px; border-top: 1px solid var(--border-dim); background: rgba(10, 10, 14, 0.4);";
@@ -176,12 +176,12 @@ function renderPaginationControls(visible) {
 
 async function changePage(newPage) {
     if (newPage < 1 || (newPage - 1) * limit >= totalRequests) return;
-    
+
     currentPage = newPage;
     // Scroll to top of list
     const panel = document.querySelector(".workspace-panel");
     if (panel) panel.scrollTop = 0;
-    
+
     // Show loading state
     const container = document.getElementById("requestsContainer");
     if (container) container.innerHTML = `<div style="padding:30px;font-family:var(--font-mono);color:var(--text-secondary); text-align: center;">REFRESHING_FEED...</div>`;
@@ -233,7 +233,7 @@ function renderSearchUI() {
         searchTimeout = setTimeout(async () => {
             searchQuery = e.target.value.trim();
             currentPage = 1; // RESET_PAGINATION
-            
+
             // Re-load current tab with search
             if (currentTab === "Network Feed") {
                 await loadRequests();
@@ -279,7 +279,7 @@ async function loadDashboardMetrics() {
 
     try {
         const response = await fetch("http://127.0.0.1:5001/user_stats", { headers });
-        
+
         if (response.status === 401) {
             localStorage.removeItem("access_token");
             window.location.href = "login.html";
@@ -292,13 +292,43 @@ async function loadDashboardMetrics() {
         const postedEl = document.getElementById("postedCount");
         const solvedEl = document.getElementById("solvedCount");
         const rankEl = document.getElementById("rankCount");
+        const referralEarningsEl = document.getElementById("referralEarningsCount");
 
         if (postedEl) postedEl.innerText = data.bounties_posted || 0;
         if (solvedEl) solvedEl.innerText = data.bounties_completed || 0;
         if (rankEl) rankEl.innerText = data.rank ? `#${data.rank}` : "N/A";
+        if (referralEarningsEl) referralEarningsEl.innerText = data.referral_earnings || 0;
+
+        const referralNodeLink = document.getElementById("referralNodeLink");
+        if (referralNodeLink) {
+            if (data.referral_code) {
+                const origin = window.location.origin;
+                const currentPath = window.location.pathname;
+                let basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+                if (!basePath) basePath = '/pages';
+                const link = `${origin}${basePath}/register.html?ref=${data.referral_code}`;
+                referralNodeLink.innerText = link;
+                referralNodeLink.setAttribute('data-link', link);
+            } else {
+                referralNodeLink.innerText = "NOT_AVAILABLE";
+            }
+        }
     } catch (e) {
         console.error("Dashboard metrics load error:", e);
     }
+}
+
+function copyReferral() {
+    const linkEl = document.getElementById('referralNodeLink');
+    if (!linkEl) return;
+    const link = linkEl.getAttribute('data-link');
+    if (!link) return;
+    navigator.clipboard.writeText(link).then(() => {
+        showNotification("Referral link copied to clipboard!", "success");
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        showNotification("Failed to copy link.", "error");
+    });
 }
 
 async function loadNotifications() {
@@ -345,9 +375,9 @@ async function openRequest(id) {
     const modal = document.getElementById("requestModal");
     const loading = document.getElementById("modalLoading");
     const content = document.getElementById("modalContent");
-    
+
     if (!modal) return;
-    
+
     currentActiveRequestId = id;
     modal.style.display = "flex";
     loading.style.display = "flex";
@@ -357,7 +387,7 @@ async function openRequest(id) {
     try {
         const response = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, { headers });
         if (!response.ok) throw new Error("Load failed");
-        
+
         const data = await response.json();
         const req = data.request;
         const answers = data.answers;
@@ -369,7 +399,7 @@ async function openRequest(id) {
         document.getElementById("modalDate").innerText = new Date(req.created_at).toLocaleString();
         document.getElementById("modalBounty").innerText = `${req.bounty || 0} PTS`;
         document.getElementById("answerCount").innerText = `(${answers.length})`;
-        
+
         // Expiry Status in Modal
         const bountyVal = document.getElementById("modalBounty");
         if (req.status === 'expired') {
@@ -387,23 +417,23 @@ async function openRequest(id) {
         // Claims Logic
         const currentUser = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
         const isOwner = req.user_email === currentUser.email;
-        
+
         const claimsCount = document.getElementById("claimsCount");
         const claimantsList = document.getElementById("claimantsList");
         const claimBtn = document.getElementById("claimBtn");
-        
+
         const currentFirstName = currentUser.first_name || currentUser.name || "";
-        
+
         claimsCount.innerText = data.claims_count || 0;
         claimantsList.innerText = data.claimants && data.claimants.length > 0 ? `WORKING_NOW: ${data.claimants.join(', ')}` : 'NO_ACTIVE_CLAIMS';
-        
+
         // Fix 2: Hide claim button entirely for owner
         if (isOwner) {
             claimBtn.style.display = 'none';
         } else {
             claimBtn.style.display = 'flex';
             const isClaimedByMe = data.claimants && data.claimants.includes(currentFirstName);
-            
+
             if (isClaimedByMe) {
                 claimBtn.innerHTML = '<i data-lucide="x-circle" style="width: 14px; height: 14px;"></i> DROP_CLAIM';
                 claimBtn.style.background = 'var(--danger-red)';
@@ -415,7 +445,7 @@ async function openRequest(id) {
                 claimBtn.style.borderColor = 'var(--accent-blue)';
                 claimBtn.onclick = () => toggleClaim(req.id, false);
             }
-            
+
             if (req.status !== 'open') {
                 claimBtn.disabled = true;
                 claimBtn.style.opacity = '0.5';
@@ -424,7 +454,7 @@ async function openRequest(id) {
                 claimBtn.style.opacity = '1';
             }
         }
-        
+
         // Setup Full Page link
         document.getElementById("modalExternalLink").onclick = () => {
             window.location.href = "request-details.html?id=" + id;
@@ -467,7 +497,7 @@ async function openRequest(id) {
                 answerSection.style.display = (req.status === 'open' || req.status === 'captured') ? "block" : "none";
             }
         }
-        
+
         if (window.lucide) lucide.createIcons();
     } catch (error) {
         console.error("Modal load error:", error);
@@ -477,17 +507,17 @@ async function openRequest(id) {
 
 async function deleteRequest(id) {
     if (!confirm("Are you sure? This will delete the request and return your escrowed bounty.")) return;
-    
+
     const headers = getAuthHeaders();
     if (!headers) return;
-    
+
     try {
         const res = await fetch("http://127.0.0.1:5001/delete_request", {
             method: "POST",
             headers: headers,
             body: JSON.stringify({ request_id: id })
         });
-        
+
         if (res.ok) {
             showNotification("Request deleted and bounty returned.", "success");
             closeRequestModal();
@@ -516,16 +546,16 @@ function closeRequestModal() {
 function renderModalAnswers(answers, isOwner, requestStatus, requestId, ownerEmail) {
     const container = document.getElementById("modalAnswers");
     if (!container) return;
-    
+
     if (answers.length === 0) {
         container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--text-tertiary); font-family:var(--font-mono); font-size:0.8rem;">NO_RESPONSES_LOGGED_YET</div>`;
         return;
     }
-    
+
     container.innerHTML = answers.map(ans => {
         let acceptBtn = '';
         // Fix: Do not show accept button if the owner is the one who wrote the answer
-        const isSelfAnswer = ans.email === ownerEmail; 
+        const isSelfAnswer = ans.email === ownerEmail;
 
         if (isOwner && requestStatus === 'open' && !ans.accepted && !isSelfAnswer) {
             acceptBtn = `
@@ -558,17 +588,17 @@ function renderModalAnswers(answers, isOwner, requestStatus, requestId, ownerEma
 
 async function acceptAnswer(answerId, requestId) {
     if (!confirm("Are you sure? This will award the bounty and close the request.")) return;
-    
+
     const headers = getAuthHeaders();
     if (!headers) return;
-    
+
     try {
         const response = await fetch("http://127.0.0.1:5001/accept_answer", {
             method: "POST",
             headers: headers,
             body: JSON.stringify({ answer_id: answerId, request_id: requestId })
         });
-        
+
         if (response.ok) {
             showNotification("Solution accepted! Bounty awarded.", "success");
             openRequest(requestId); // Refresh modal
@@ -589,17 +619,17 @@ async function acceptAnswer(answerId, requestId) {
 async function toggleClaim(requestId, isCurrentlyClaimed) {
     const headers = getAuthHeaders();
     if (!headers) return;
-    
+
     const url = isCurrentlyClaimed ? "http://127.0.0.1:5001/unclaim_request" : "http://127.0.0.1:5001/claim_request";
     const method = isCurrentlyClaimed ? "DELETE" : "POST";
-    
+
     try {
         const response = await fetch(url, {
             method: method,
             headers: headers,
             body: JSON.stringify({ request_id: requestId })
         });
-        
+
         if (response.ok) {
             showNotification(isCurrentlyClaimed ? "Claim dropped" : "Objective claimed!", "success");
             openRequest(requestId); // Refresh modal
@@ -623,9 +653,9 @@ async function upvoteAnswer(answerId, btnElement) {
             headers: getAuthHeaders(),
             body: JSON.stringify({ answer_id: answerId })
         });
-        
+
         if (!response.ok) throw new Error("Failed to upvote");
-        
+
         // Refresh modal to see new data
         openRequest(currentActiveRequestId);
     } catch (e) {
@@ -734,7 +764,7 @@ function logoutUser() {
 }
 
 // Initialize Dashboard
-window.addEventListener("load", function() {
+window.addEventListener("load", function () {
     const userStr = localStorage.getItem("loggedInUser");
     if (!userStr) {
         window.location.href = "login.html";
@@ -742,7 +772,7 @@ window.addEventListener("load", function() {
     }
     const user = JSON.parse(userStr);
     const username = user.first_name || user.name || (user.email ? user.email.split('@')[0] : "User");
-    
+
     // Update identity display
     const userNameEls = document.querySelectorAll("#userName");
     const userAvatarEls = document.querySelectorAll("#userAvatar");
@@ -751,11 +781,11 @@ window.addEventListener("load", function() {
     userNameEls.forEach(el => el.innerText = username);
     userAvatarEls.forEach(el => el.innerText = username.charAt(0).toUpperCase());
     userEmailEls.forEach(el => el.innerText = user.email || "");
-    
+
     // Load dynamic data
     loadDashboardMetrics();
     loadRequests();
-    
+
     // Setup Tab listeners
     const tabs = document.querySelectorAll(".panel-tabs .tab");
     tabs.forEach(tab => {
@@ -764,10 +794,10 @@ window.addEventListener("load", function() {
 
             tabs.forEach(t => t.classList.remove("active"));
             tab.classList.add("active");
-            
+
             currentPage = 1; // Reset pagination
             const tabText = tab.textContent.trim();
-            
+
             if (tabText === "Network Feed") {
                 await loadRequests();
             } else if (tabText === "My Data") {
@@ -780,10 +810,10 @@ window.addEventListener("load", function() {
 
     // Initialize chart
     initializeChart();
-    
+
     // Add animation to stat cards
     animateStatCards();
-    
+
     // Create icons
     if (window.lucide) lucide.createIcons();
 });
@@ -800,7 +830,7 @@ function animateStatCards() {
 function initializeChart() {
     const ctx = document.getElementById("performanceChart");
     if (!ctx) return;
-    
+
     // SaaS Level Visualization
     new Chart(ctx, {
         type: 'bar',
@@ -838,12 +868,12 @@ function initializeChart() {
     });
 }
 
-document.addEventListener("click", function(e) {
+document.addEventListener("click", function (e) {
     if (!e.target.closest(".user-profile-nav")) {
         const dropdown = document.getElementById("profileDropdown");
         if (dropdown) dropdown.classList.remove("show");
     }
-    
+
     // Close modal if clicking overlay
     if (e.target.classList.contains("modal-overlay")) {
         closeRequestModal();
@@ -886,7 +916,7 @@ function renderCommands(filter) {
     if (!container) return;
 
     const filtered = commands.filter(c => c.name.toLowerCase().includes(filter.toLowerCase()));
-    
+
     container.innerHTML = filtered.map((c, i) => `
         <div class="command-item ${i === selectedCommandIndex ? 'selected' : ''}" onclick="executeCommand(${commands.indexOf(c)})">
             <i data-lucide="${c.icon}" style="width: 14px; height: 14px;"></i>
