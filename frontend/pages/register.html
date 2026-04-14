@@ -371,9 +371,9 @@
                 
                 if (response.ok) {
                     msg.className = "message success";
-                    msg.innerHTML = `<i data-lucide="check-circle"></i> ${data.message || "Registration successful!"}`;
+                    msg.innerHTML = `<i data-lucide="check-circle"></i> ACCOUNT_CREATED — A verification email has been sent. Please verify before posting requests.`;
                     lucide.createIcons();
-                    setTimeout(() => { window.location.href = "login.html"; }, 1500);
+                    setTimeout(() => { window.location.href = "login.html"; }, 3000);
                 } else {
                     msg.className = "message error";
                     msg.innerHTML = `<i data-lucide="alert-circle"></i> ${data.message || "Registration failed"}`;

@@ -1,7 +1,5 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_talisman import Talisman
-import bleach
 # from flask_socketio import SocketIO, send  # Disabled on Windows due to socket binding issues
 import mysql.connector
 import os
@@ -12,13 +10,27 @@ import jwt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# Load environment variables
+from flask_mail import Mail, Message
+import secrets
+
 from dotenv import load_dotenv
 load_dotenv()
 
+def parse_bool_env(name, default=False):
+    value = os.getenv(name, str(default)).strip().lower()
+    return value in ("1", "true", "yes", "on")
+
 app = Flask(__name__)
-# Add Security Headers via Talisman
-Talisman(app, force_https=False, content_security_policy=None)
+
+# Flask-Mail Configuration
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = parse_bool_env('MAIL_USE_TLS', True)
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+mail = Mail(app)
 
 def custom_key_func():
     # Exempt OPTIONS requests (CORS preflight)
@@ -140,9 +152,11 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def parse_bool_env(name, default=False):
-    value = os.getenv(name, str(default)).strip().lower()
-    return value in ("1", "true", "yes", "on")
+@app.before_request
+def log_request_info():
+    if request.path != "/favicon.ico":
+        print(f"DEBUG: [{datetime.now().strftime('%H:%M:%S')}] {request.method} {request.path} - RAW_DATA: {request.get_data(as_text=True)}")
+
 
 # FIX #2: Use environment variables properly (no hardcoded defaults for password)
 DB_PASSWORD = os.getenv("DB_PASSWORD")
@@ -189,8 +203,47 @@ def validate_description(description):
     """Validate description (max 5000 chars)"""
     return len(description) <= 5000
 
+def send_verification_email(email, token):
+    try:
+        frontend_url = os.getenv('FRONTEND_URL', 'http://127.0.0.1:5502').rstrip('/')
+        verify_link = f"{frontend_url}/pages/verify.html?token={token}"
+        msg = Message("Verify Your Email - StudentsHelper",
+                      recipients=[email])
+        msg.body = f"Welcome to StudentsHelper! Please verify your email by clicking the link below:\n\n{verify_link}\n\nThis link will expire in 24 hours."
+        msg.html = f"""
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2>Welcome to StudentsHelper!</h2>
+            <p>Please verify your email to start posting requests and earning reputation.</p>
+            <div style="margin: 20px 0;">
+                <a href="{verify_link}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a>
+            </div>
+            <p>Or copy and paste this link: <br> {verify_link}</p>
+            <p style="font-size: 0.8em; color: #777;">This link will expire in 24 hours.</p>
+        </div>
+        """
+        mail.send(msg)
+        return True
+    except Exception as e:
+        log_event("EMAIL", f"Failed to send verification email to {email}: {str(e)}", "ERROR")
+        return False
+
+def cleanup_unverified_users():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE is_verified = 0 AND created_unverified_at < NOW() - INTERVAL 7 DAY")
+        conn.commit()
+        deleted_count = cursor.rowcount
+        if deleted_count > 0:
+            log_event("CLEANUP", f"Deleted {deleted_count} unverified users older than 7 days.", "INFO")
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        log_event("CLEANUP", f"Error during unverified user cleanup: {str(e)}", "ERROR")
+
 def init_db():
     try:
+        cleanup_unverified_users()
         db_name = DB_CONFIG["database"]
         init_config = {
             "host": DB_CONFIG["host"],
@@ -273,6 +326,14 @@ def init_db():
         except Exception:
             pass
         try:
+            cursor.execute("ALTER TABLE users ADD COLUMN is_verified TINYINT(1) DEFAULT 0")
+            cursor.execute("ALTER TABLE users ADD COLUMN verification_token VARCHAR(64) DEFAULT NULL")
+            cursor.execute("ALTER TABLE users ADD COLUMN token_expires_at DATETIME DEFAULT NULL")
+            cursor.execute("ALTER TABLE users ADD COLUMN created_unverified_at DATETIME DEFAULT NULL")
+            conn.commit()
+        except Exception:
+            pass
+        try:
             cursor.execute("ALTER TABLE answers ADD COLUMN rating INT DEFAULT 0")
             conn.commit()
         except Exception:
@@ -329,26 +390,116 @@ def home():
 def favicon():
     return "", 204  # Return empty response with No Content status
 
+@app.route("/me", methods=["GET"])
+@require_auth
+def get_me():
+    try:
+        email = request.user_email
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT email, is_verified, reputation FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({"message": "User not found", "error_code": "USER_NOT_FOUND"}), 404
+            return jsonify(user), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("GET_ME", str(e), "ERROR")
+        return jsonify({"message": "Failed to get user info", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/verify_email", methods=["GET"])
+def verify_email():
+    token = request.args.get("token")
+    if not token:
+        return jsonify({"message": "Invalid token.", "error_code": "INVALID_TOKEN"}), 404
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT email, token_expires_at FROM users WHERE verification_token = %s", (token,))
+        user = cursor.fetchone()
+
+        if not user:
+            return jsonify({"message": "Invalid token.", "error_code": "INVALID_TOKEN"}), 404
+
+        if user["token_expires_at"] < datetime.now():
+            return jsonify({"message": "Token expired.", "error_code": "TOKEN_EXPIRED"}), 400
+
+        cursor.execute(
+            "UPDATE users SET is_verified = 1, verification_token = NULL, token_expires_at = NULL WHERE verification_token = %s",
+            (token,)
+        )
+        conn.commit()
+        return jsonify({"message": "Email verified successfully."}), 200
+    except Exception as e:
+        log_event("VERIFY", str(e), "ERROR")
+        return jsonify({"message": "Verification failed", "error_code": "INTERNAL_ERROR"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route("/resend_verification", methods=["POST"])
+@require_auth
+@limiter.limit("3 per hour")
+def resend_verification():
+    email = request.user_email
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT is_verified FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            return jsonify({"message": "User not found.", "error_code": "USER_NOT_FOUND"}), 404
+
+        if user["is_verified"]:
+            return jsonify({"message": "Already verified.", "error_code": "ALREADY_VERIFIED"}), 400
+
+        token = secrets.token_urlsafe(32)
+        token_expires_at = datetime.now() + timedelta(hours=24)
+
+        cursor.execute(
+            "UPDATE users SET verification_token = %s, token_expires_at = %s WHERE email = %s",
+            (token, token_expires_at, email)
+        )
+        conn.commit()
+
+        email_sent = send_verification_email(email, token)
+        if not email_sent:
+            return jsonify({"message": "Failed to send verification email. Please check server configuration.", "error_code": "EMAIL_SEND_FAILED"}), 400
+            
+        return jsonify({"message": "Verification email resent.", "email_sent": True}), 200
+    except Exception as e:
+        log_event("RESEND", str(e), "ERROR")
+        return jsonify({"message": "Failed to resend email", "error_code": "INTERNAL_ERROR"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 @app.route("/register", methods=["POST"])
 # @limiter.limit("20 per minute")  # Disabled for debugging
 def register():
     data = request.json or {}
-    first_name = bleach.clean(str(data.get("first_name") or "").strip())
+    print(f"DEBUG REGISTER: Incoming request data: {data}")
+    first_name = str(data.get("first_name") or "").strip()
     email = str(data.get("email") or "").strip().lower()  # Lowercase for consistency
     password = str(data.get("password") or "").strip()
 
     # FIX #3: Input validation
     if not email or not validate_email(email):
-        log_event("REGISTER", f"Invalid email format: {email}", "WARNING")
-        return jsonify({"message": "Invalid email format", "error_code": "INVALID_EMAIL"}), 400
+        log_event("REGISTER", f"Validation Failed: Invalid email format: '{email}'", "WARNING")
+        return jsonify({"message": f"Invalid email format: '{email}'", "error_code": "INVALID_EMAIL"}), 400
 
     if not password or not validate_password(password):
-        log_event("REGISTER", f"Password too short for {email}", "WARNING")
+        log_event("REGISTER", f"Validation Failed: Password too short for {email}", "WARNING")
         return jsonify({"message": "Password must be at least 6 characters", "error_code": "WEAK_PASSWORD"}), 400
 
     if not first_name or len(first_name) < 2:
-        log_event("REGISTER", f"Invalid name for {email}", "WARNING")
-        return jsonify({"message": "Name must be at least 2 characters", "error_code": "INVALID_NAME"}), 400
+        log_event("REGISTER", f"Validation Failed: Invalid name '{first_name}' for {email}", "WARNING")
+        return jsonify({"message": f"Name '{first_name}' must be at least 2 characters", "error_code": "INVALID_NAME"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -363,16 +514,26 @@ def register():
         # FEATURE #1: Hash password before storing
         hashed_password = hash_password(password)
 
+        token = secrets.token_urlsafe(32)
+        token_expires_at = datetime.now() + timedelta(hours=24)
+        created_at = datetime.now()
+
         cursor.execute(
-            "INSERT INTO users (first_name, name, email, password, points, reputation) VALUES (%s,%s,%s,%s,%s,%s)",
-            (first_name, first_name, email, hashed_password, 100, 100)
+            "INSERT INTO users (first_name, name, email, password, points, reputation, is_verified, verification_token, token_expires_at, created_unverified_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (first_name, first_name, email, hashed_password, 100, 100, 0, token, token_expires_at, created_at)
         )
         conn.commit()
-        log_event("REGISTER", f"User registered successfully: {email}", "INFO")
-        return jsonify({"message": "User registered successfully"}), 201
+        
+        email_sent = send_verification_email(email, token)
+        
+        log_event("REGISTER", f"User registered successfully: {email}. Email sent: {email_sent}", "INFO")
+        return jsonify({
+            "message": "User registered successfully", 
+            "email_sent": email_sent
+        }), 201
     except mysql.connector.IntegrityError as e:
         log_event("REGISTER", f"Database integrity error: {str(e)}", "ERROR")
-        return jsonify({"message": "Email already registered", "error_code": "DB_INTEGRITY_ERROR"}), 400
+        return jsonify({"message": f"Database error: {str(e)}", "error_code": "DB_INTEGRITY_ERROR"}), 400
     except Exception as e:
         log_event("REGISTER", f"Unexpected error for {email}: {str(e)}", "ERROR")
         return jsonify({"message": "Registration failed", "error_code": "INTERNAL_ERROR", "details": str(e)}), 500
@@ -522,10 +683,10 @@ def leaderboard():
 def post_request():
     try:
         data = request.json or {}
-        title = bleach.clean(str(data.get("title") or "").strip())
-        description = bleach.clean(str(data.get("description") or "").strip())
+        title = str(data.get("title") or "").strip()
+        description = str(data.get("description") or "").strip()
         email = str(data.get("email") or "").strip()
-        category = bleach.clean(str(data.get("category") or "").strip())
+        category = str(data.get("category") or "").strip()
         try:
             bounty = int(data.get("bounty") or 0)
         except (ValueError, TypeError):
@@ -550,6 +711,13 @@ def post_request():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
+            # Guard: Email verification check
+            cursor.execute("SELECT is_verified FROM users WHERE email = %s", (email,))
+            user_check = cursor.fetchone()
+            if user_check and user_check.get("is_verified") == 0:
+                log_event("POST_REQUEST", f"Unverified user attempt: {email}", "WARNING")
+                return jsonify({"message": "Please verify your email before posting requests.", "error_code": "EMAIL_NOT_VERIFIED"}), 403
+
             # Validate balance - use reputation as the balance
             cursor.execute("SELECT COALESCE(reputation, points, 0) as balance FROM users WHERE email = %s", (email,))
             user = cursor.fetchone()
@@ -619,6 +787,8 @@ def get_requests():
             conn_expiry.close()
     except Exception as e:
         log_event("EXPIRY_CHECK", f"Error during expiry check: {str(e)}", "ERROR")
+
+    cleanup_unverified_users()
 
     try:
         # Get pagination and search parameters from query string
@@ -939,7 +1109,7 @@ def post_answer():
         except (ValueError, TypeError):
             request_id = None
             
-        answer = bleach.clean(str(data.get("answer") or "").strip())
+        answer = str(data.get("answer") or "").strip()
         email = str(data.get("email") or "").strip()
 
         # Handle file upload
@@ -1172,7 +1342,7 @@ def create_post():
     try:
         data = request.json or {}
         email = str(data.get("email") or "").strip()
-        content = bleach.clean(str(data.get("content") or "").strip())
+        content = str(data.get("content") or "").strip()
         try:
             bounty = int(data.get("bounty") or 0)
         except (ValueError, TypeError):

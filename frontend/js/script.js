@@ -95,12 +95,12 @@ async function registerWithBackend(email, password, firstName) {
 
         if (response.ok && data.message === "User registered successfully") {
             if (error) {
-                error.textContent = "Registration successful! Redirecting to login...";
+                error.textContent = "ACCOUNT_CREATED — A verification email has been sent. Please verify before posting requests.";
                 error.style.color = "var(--accent-lime, green)";
             }
             setTimeout(() => {
                 window.location.href = "login.html";
-            }, 1500);
+            }, 3000); // Increased timeout to let user read the message
         } else {
             if (error) {
                 error.textContent = data.message || "Registration failed!";
