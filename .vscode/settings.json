@@ -1,8 +1,8 @@
 {
-  "liveServer.settings.root": "/webzip",
+  "liveServer.settings.root": "/",
   "python.defaultInterpreterPath": "c:/Users/agraw/student-helper-new/.venv/Scripts/python.exe",
   "python.analysis.extraPaths": [
     "c:/Users/agraw/student-helper-new/backend"
   ],
-  "liveServer.settings.port": 5502
+  "liveServer.settings.port": 5504
 }
