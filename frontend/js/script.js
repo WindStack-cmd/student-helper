@@ -12,6 +12,49 @@ function getAuthHeaders() {
     };
 }
 
+function getCurrentUserEmail() {
+    const userStr = localStorage.getItem("loggedInUser");
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            if (user.email) return user.email;
+        } catch (e) {}
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) return "";
+
+    try {
+        const payloadPart = token.split(".")[1] || "";
+        const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payloadPart.length / 4) * 4, "=");
+        const payload = JSON.parse(atob(base64));
+        return payload.email || "";
+    } catch (e) {
+        return "";
+    }
+}
+
+function getAccessTokenPayload() {
+    const token = localStorage.getItem("access_token");
+    if (!token) return null;
+
+    try {
+        const payloadPart = token.split(".")[1] || "";
+        const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payloadPart.length / 4) * 4, "=");
+        return JSON.parse(atob(base64));
+    } catch (e) {
+        return null;
+    }
+}
+
+function hasValidAccessToken() {
+    const payload = getAccessTokenPayload();
+    if (!payload) return false;
+
+    if (!payload.exp) return true;
+    return Date.now() < payload.exp * 1000;
+}
+
 function logout() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("loggedInUser");

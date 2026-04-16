@@ -16,6 +16,7 @@ async function submitHelpRequest(event){
     const category = document.getElementById("requestCategory").value;
     const bountyInput = document.getElementById("requestBounty");
     const bounty = parseInt(bountyInput.value || 0);
+    const currentEmail = typeof getCurrentUserEmail === "function" ? getCurrentUserEmail() : "";
 
     // Get auth headers
     const headers = getAuthHeaders();
@@ -27,7 +28,16 @@ async function submitHelpRequest(event){
 
     try {
         // First validate balance
-        const balanceRes = await fetch("http://127.0.0.1:5001/get_balance", { headers });
+        const balanceUrl = currentEmail
+            ? `http://127.0.0.1:5001/get_balance?email=${encodeURIComponent(currentEmail)}`
+            : "http://127.0.0.1:5001/get_balance";
+        const balanceRes = await fetch(balanceUrl);
+        if (balanceRes.status === 401) {
+            alert("Your session has expired. Please sign in again.");
+            localStorage.removeItem("access_token");
+            window.location.href = "login.html";
+            return;
+        }
         if (!balanceRes.ok) throw new Error("Failed to verify balance");
         const balanceData = await balanceRes.json();
         
@@ -44,7 +54,7 @@ async function submitHelpRequest(event){
             body: JSON.stringify({
                 title: title,
                 description: description,
-                email: localStorage.getItem("access_token") ? JSON.parse(atob(localStorage.getItem("access_token").split('.')[1])).email : "",
+                email: currentEmail,
                 bounty: bounty,
                 category: category
             })
@@ -95,7 +105,11 @@ document.addEventListener("DOMContentLoaded", function(){
         const headers = getAuthHeaders();
         if (!headers) return;
         try {
-            const res = await fetch("http://127.0.0.1:5001/get_balance", { headers });
+            const currentEmail = typeof getCurrentUserEmail === "function" ? getCurrentUserEmail() : "";
+            const balanceUrl = currentEmail
+                ? `http://127.0.0.1:5001/get_balance?email=${encodeURIComponent(currentEmail)}`
+                : "http://127.0.0.1:5001/get_balance";
+            const res = await fetch(balanceUrl);
             if (res.ok) {
                 const data = await res.json();
                 const display = document.getElementById("balanceDisplay");

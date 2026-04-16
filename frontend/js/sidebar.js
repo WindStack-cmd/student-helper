@@ -58,12 +58,12 @@ function renderSidebar(options = {}) {
 
 async function fetchBalance() {
     try {
-        const token = localStorage.getItem('access_token');
-        if (!token) return;
-        
-        const res = await fetch('http://127.0.0.1:5001/get_balance', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
+        const currentEmail = typeof getCurrentUserEmail === 'function' ? getCurrentUserEmail() : '';
+        if (!currentEmail) return;
+
+        const balanceUrl = `http://127.0.0.1:5001/get_balance?email=${encodeURIComponent(currentEmail)}`;
+
+        const res = await fetch(balanceUrl);
         
         if (!res.ok) return;
         const data = await res.json();
@@ -106,6 +106,8 @@ async function fetchNotificationsCount() {
 
 async function checkVerificationStatus() {
     try {
+        if (typeof hasValidAccessToken === 'function' && !hasValidAccessToken()) return;
+
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
@@ -113,6 +115,11 @@ async function checkVerificationStatus() {
             headers: { 'Authorization': 'Bearer ' + token }
         });
         
+        if (res.status === 401) {
+            localStorage.removeItem('access_token');
+            return;
+        }
+
         if (!res.ok) return;
         const user = await res.json();
         

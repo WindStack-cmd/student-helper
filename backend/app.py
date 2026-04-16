@@ -642,10 +642,12 @@ def login():
         conn.close()
 
 @app.route("/get_balance", methods=["GET"])
-@require_auth
 def get_balance():
     try:
-        email = request.user_email
+        email = resolve_request_email()
+        if not email:
+            return jsonify({"message": "Authentication required", "error_code": "NO_TOKEN"}), 401
+
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         try:
@@ -731,7 +733,7 @@ def post_request():
         data = request.json or {}
         title = str(data.get("title") or "").strip()
         description = str(data.get("description") or "").strip()
-        email = str(data.get("email") or "").strip()
+        email = resolve_request_email() or str(data.get("email") or "").strip()
         category = str(data.get("category") or "").strip()
         try:
             bounty = int(data.get("bounty") or 0)
