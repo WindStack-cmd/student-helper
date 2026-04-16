@@ -1,3 +1,8 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 # from flask_socketio import SocketIO, send  # Disabled on Windows due to socket binding issues
@@ -8,6 +13,7 @@ from datetime import datetime, timedelta
 import bcrypt
 import jwt
 from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_limiter.util import get_remote_address
 
 from flask_mail import Mail, Message
@@ -31,6 +37,36 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
 mail = Mail(app)
+
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "super_secret_for_oauth")
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+from authlib.integrations.flask_client import OAuth
+from flask import session, url_for, redirect, make_response
+
+oauth = OAuth(app)
+
+google = oauth.register(
+    name='google',
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+    
+)
+
+
+
+github = oauth.register(
+    name='github',
+    client_id=os.getenv("GITHUB_CLIENT_ID"),
+    client_secret=os.getenv("GITHUB_CLIENT_SECRET"),
+    access_token_url='https://github.com/login/oauth/access_token',
+    access_token_params=None,
+    authorize_url='https://github.com/login/oauth/authorize',
+    authorize_params=None,
+    api_base_url='https://api.github.com/',
+    client_kwargs={'scope': 'user:email'}
+)
 
 def custom_key_func():
     # Exempt OPTIONS requests (CORS preflight)
@@ -243,7 +279,6 @@ def cleanup_unverified_users():
 
 def init_db():
     try:
-        cleanup_unverified_users()
         db_name = DB_CONFIG["database"]
         init_config = {
             "host": DB_CONFIG["host"],
@@ -298,6 +333,18 @@ def init_db():
             pass
 
         try:
+            cursor.execute("ALTER TABLE users ADD COLUMN reputation INT DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN bounties_completed INT DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+
+        try:
             cursor.execute("UPDATE users SET reputation = points WHERE reputation = 0 AND points > 0")
             conn.commit()
         except Exception:
@@ -327,12 +374,27 @@ def init_db():
             pass
         try:
             cursor.execute("ALTER TABLE users ADD COLUMN is_verified TINYINT(1) DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+        try:
             cursor.execute("ALTER TABLE users ADD COLUMN verification_token VARCHAR(64) DEFAULT NULL")
+            conn.commit()
+        except Exception:
+            pass
+        try:
             cursor.execute("ALTER TABLE users ADD COLUMN token_expires_at DATETIME DEFAULT NULL")
+            conn.commit()
+        except Exception:
+            pass
+        try:
             cursor.execute("ALTER TABLE users ADD COLUMN created_unverified_at DATETIME DEFAULT NULL")
             conn.commit()
         except Exception:
             pass
+
+        # Run cleanup AFTER verification columns are ensured to exist
+        cleanup_unverified_users()
 
         try:
             cursor.execute("ALTER TABLE users ADD COLUMN referral_code VARCHAR(255) UNIQUE")
@@ -418,91 +480,105 @@ def home():
 def favicon():
     return "", 204  # Return empty response with No Content status
 
-@app.route("/me", methods=["GET"])
-@require_auth
-def get_me():
+@app.route("/auth/google")
+def auth_google():
+    fwd = request.args.get("fwd")
+    if fwd:
+        session["fwd"] = fwd
+    redirect_uri = url_for("auth_google_callback", _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    token = google.authorize_access_token()
+    user_info = None
+    if "userinfo" in token:
+        user_info = token["userinfo"]
+    elif "id_token" in token:
+        user_info = google.parse_id_token(token)
+    if not user_info:
+        resp = google.get("userinfo")
+        user_info = resp.json()
+        
+    email = user_info.get("email")
+    name = user_info.get("name", email.split("@")[0] if email else "User")
+    return handle_oauth_login(email, name, "google")
+
+@app.route("/auth/github")
+def auth_github():
+    fwd = request.args.get("fwd")
+    if fwd:
+        session["fwd"] = fwd
+    redirect_uri = url_for("auth_github_callback", _external=True)
+    return github.authorize_redirect(redirect_uri)
+
+@app.route("/auth/github/callback")
+def auth_github_callback():
+    token = github.authorize_access_token()
+    resp = github.get("user")
+    user_info = resp.json()
+    
+    email = user_info.get("email")
+    if not email:
+        emails_resp = github.get("user/emails")
+        emails = emails_resp.json()
+        primary_email = next((e for e in emails if e.get("primary")), None)
+        if primary_email:
+            email = primary_email["email"]
+        elif emails:
+            email = emails[0]["email"]
+
+    email = email or f"{user_info.get('login', 'github_user')}@github.com"
+    name = user_info.get("name") or user_info.get("login") or email.split("@")[0]
+    return handle_oauth_login(email, name, "github")
+
+def handle_oauth_login(email, name, provider):
+    if not email:
+        return "Failed to retrieve email from provider", 400
     try:
-        email = request.user_email
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        try:
-            cursor.execute("SELECT email, is_verified, reputation FROM users WHERE email = %s", (email,))
-            user = cursor.fetchone()
-            if not user:
-                return jsonify({"message": "User not found", "error_code": "USER_NOT_FOUND"}), 404
-            return jsonify(user), 200
-        finally:
-            cursor.close()
-            conn.close()
-    except Exception as e:
-        log_event("GET_ME", str(e), "ERROR")
-        return jsonify({"message": "Failed to get user info", "error_code": "INTERNAL_ERROR"}), 500
-
-@app.route("/verify_email", methods=["GET"])
-def verify_email():
-    token = request.args.get("token")
-    if not token:
-        return jsonify({"message": "Invalid token.", "error_code": "INVALID_TOKEN"}), 404
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT email, token_expires_at FROM users WHERE verification_token = %s", (token,))
+        cursor.execute("SELECT id, email, first_name, name FROM users WHERE email=%s", (email,))
         user = cursor.fetchone()
 
         if not user:
-            return jsonify({"message": "Invalid token.", "error_code": "INVALID_TOKEN"}), 404
+            import os
+            hash_pw = hash_password(os.urandom(16).hex())
+            cursor.execute(
+                "INSERT INTO users (first_name, name, email, password, points, reputation) VALUES (%s,%s,%s,%s,%s,%s)",
+                (name, name, email, hash_pw, 100, 100)
+            )
+            conn.commit()
+            user_id = cursor.lastrowid
+            display_name = name
+        else:
+            user_id = user["id"]
+            display_name = user.get("first_name") or user.get("name") or user["email"].split("@")[0]
 
-        if user["token_expires_at"] < datetime.now():
-            return jsonify({"message": "Token expired.", "error_code": "TOKEN_EXPIRED"}), 400
+        access_token = generate_jwt_token(email, user_id)
+        log_event("OAUTH_LOGIN", f"Login successful via {provider}: {email}", "INFO")
 
-        cursor.execute(
-            "UPDATE users SET is_verified = 1, verification_token = NULL, token_expires_at = NULL WHERE verification_token = %s",
-            (token,)
-        )
-        conn.commit()
-        return jsonify({"message": "Email verified successfully."}), 200
+        # FIX: The session keys set must be IDENTICAL to what manual login sets
+        session['user_id'] = user_id
+        session['email'] = email
+        session['first_name'] = display_name
+        session['logged_in'] = True
+
+        fwd_url = session.get("fwd")
+        # Ensure redirect URL is absolute and correct
+        if not fwd_url or not fwd_url.startswith("http"):
+            fwd_url = "http://127.0.0.1:5502/pages/dashboard.html"
+        
+        # FIX: Pass token via URL hash fragment so the FRONTEND origin
+        # can store it in its own localStorage. localStorage is per-origin,
+        # so setting it here (port 5001) is invisible to the frontend (port 5502).
+        from urllib.parse import quote
+        hash_fragment = f"oauth_token={quote(access_token)}&oauth_email={quote(email)}&oauth_name={quote(display_name)}"
+        redirect_url = f"{fwd_url}#{hash_fragment}"
+        return redirect(redirect_url)
     except Exception as e:
-        log_event("VERIFY", str(e), "ERROR")
-        return jsonify({"message": "Verification failed", "error_code": "INTERNAL_ERROR"}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.route("/resend_verification", methods=["POST"])
-@require_auth
-@limiter.limit("3 per hour")
-def resend_verification():
-    email = request.user_email
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT is_verified FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
-
-        if not user:
-            return jsonify({"message": "User not found.", "error_code": "USER_NOT_FOUND"}), 404
-
-        if user["is_verified"]:
-            return jsonify({"message": "Already verified.", "error_code": "ALREADY_VERIFIED"}), 400
-
-        token = secrets.token_urlsafe(32)
-        token_expires_at = datetime.now() + timedelta(hours=24)
-
-        cursor.execute(
-            "UPDATE users SET verification_token = %s, token_expires_at = %s WHERE email = %s",
-            (token, token_expires_at, email)
-        )
-        conn.commit()
-
-        email_sent = send_verification_email(email, token)
-        if not email_sent:
-            return jsonify({"message": "Failed to send verification email. Please check server configuration.", "error_code": "EMAIL_SEND_FAILED"}), 400
-            
-        return jsonify({"message": "Verification email resent.", "email_sent": True}), 200
-    except Exception as e:
-        log_event("RESEND", str(e), "ERROR")
-        return jsonify({"message": "Failed to resend email", "error_code": "INTERNAL_ERROR"}), 500
+        log_event("OAUTH_LOGIN", f"Error setting up session for {email}: {str(e)}", "ERROR")
+        return f"Authentication failed: {str(e)}", 500
     finally:
         cursor.close()
         conn.close()
@@ -621,6 +697,12 @@ def login():
 
             # FEATURE #2: Generate JWT token
             access_token = generate_jwt_token(email, user["id"])
+            
+            # FIX: Ensure manual login sets identical session keys
+            session['user_id'] = user["id"]
+            session['email'] = email
+            session['first_name'] = display_name
+            session['logged_in'] = True
 
             log_event("LOGIN", f"Login successful: {email}", "INFO")
             return jsonify({
@@ -705,26 +787,29 @@ def dashboard_metrics():
 
 @app.route("/leaderboard", methods=["GET"])
 def leaderboard():
+    conn = None
+    cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        try:
-            cursor.execute("""
-                SELECT first_name, email,
-                       COALESCE(reputation, points, 0) as reputation,
-                       COALESCE(bounties_completed, 0) as bounties_completed
-                FROM users
-                ORDER BY COALESCE(reputation, points, 0) DESC
-            """)
-            users = cursor.fetchall()
-            log_event("LEADERBOARD", f"Retrieved leaderboard with {len(users)} users", "INFO")
-            return jsonify(users)
-        finally:
-            cursor.close()
-            conn.close()
+        cursor.execute("""
+            SELECT first_name, email,
+                   COALESCE(reputation, points, 0) as reputation,
+                   COALESCE(bounties_completed, 0) as bounties_completed
+            FROM users
+            ORDER BY COALESCE(reputation, points, 0) DESC
+        """)
+        users = cursor.fetchall()
+        log_event("LEADERBOARD", f"Retrieved leaderboard with {len(users)} users", "INFO")
+        return jsonify(users)
     except Exception as e:
         log_event("LEADERBOARD", f"Error retrieving leaderboard: {str(e)}", "ERROR")
-        return jsonify([]), 500
+        return jsonify({"message": "Failed to load leaderboard", "error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route("/post_request", methods=["POST"])
 @limiter.limit("20 per minute")  # FEATURE #3: Rate limiting (20 requests per minute)
