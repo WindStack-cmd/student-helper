@@ -1,5 +1,29 @@
 // ===== UTILITY FUNCTIONS FOR ALL PAGES =====
 
+// ===== OAUTH HASH HANDLER =====
+// After OAuth login, the backend redirects here with token data in the URL hash
+// (because localStorage is per-origin: setting it on port 5001 is invisible here on port 5502)
+(function handleOAuthHash() {
+    const hash = window.location.hash;
+    if (hash && hash.includes("oauth_token=")) {
+        const params = new URLSearchParams(hash.substring(1));
+        const token = params.get("oauth_token");
+        const email = params.get("oauth_email");
+        const name = params.get("oauth_name");
+
+        if (token) {
+            localStorage.setItem("access_token", token);
+            localStorage.removeItem("userEmail");
+            localStorage.setItem("loggedInUser", JSON.stringify({
+                email: email || "",
+                first_name: name || (email ? email.split("@")[0] : "User")
+            }));
+            // Clean the hash from the URL without triggering a reload
+            history.replaceState(null, "", window.location.pathname + window.location.search);
+        }
+    }
+})();
+
 function getAuthHeaders() {
     const token = localStorage.getItem("access_token");
     if (!token) {
