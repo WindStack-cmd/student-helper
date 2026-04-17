@@ -67,39 +67,46 @@ The platform implements a "Proof-of-Help" lifecycle to ensure fair point distrib
 ## ✨ Implemented Features
 
 ### 🔐 Security & Identity
+- **OAuth 2.0 Integration**: 
+    - Full support for **Google** and **GitHub** authentication via Authlib.
+    - Seamless session handoff from OAuth providers to JWT-secured local state.
 - **Robust Email Verification**: 
     - Automated verification link dispatch on registration.
     - **is_verified** state enforcement across all restricted endpoints.
     - Secure 32-character url-safe verification tokens.
-    - Automated purification: Unverified accounts older than 7 days are automatically purged to prevent database bloat and spam.
-- **JWT-Protected API**: All sensitive actions (posting, accepting, purging) require valid Bearer token verification.
+    - Automated purification: Unverified accounts older than 7 days are automatically purged.
+- **JWT-Protected API**: All sensitive actions require valid Bearer token verification.
 - **Bcrypt Hashing**: Military-grade password storage.
 - **Rate Limiting**: Integrated `Flask-Limiter` to protect against brute-force and DDoS attempts.
 
 ### 💰 Bounty & Economy System
 - **Escrow Logic**: Points are automatically deducted and held in escrow when a request is posted.
 - **Automated Payouts**: Bounties are instantly awarded to solvers upon answer acceptance.
-- **Starting Balance**: 100 PTS onboarding credit for every new user.
-- **Reputation (Ledger)**: Real-time global leaderboard based on community contribution.
+- **Starting Balance**: 100 PTS onboarding credit and reputation for every active node.
+- **Referral System**: 
+    - Unique referral codes for every user.
+    - Commission-based earnings for onboarding new active nodes.
+- **Reputation (Ledger)**: Real-time global leaderboard with performance-based rankings.
 
-### ⏱️ Request Lifecycle
-- **Expiry Intelligence**: Real-time tracking of request availability.
+### ⏱️ Request Lifecycle & "Hunt Mode"
+- **Claiming System**: Integrated "Hunt Mode" allowing users to claim objectives, signaling active work to prevent duplicate efforts.
+- **Expiry Intelligence**: Real-time tracking of request availability with automated bounty returns for expired tasks.
 - **Dynamic Badging**: Automatic state transitions (Open → Expiring Soon → Solved/Expired).
-- **Claiming System**: Integrated "Hunt Mode" allowing users to claim objectives and signal active work.
 
-### 📱 UI/UX & Global Components
+### 📱 SaaS-Level UI/UX
+- **Terminal Command Palette**: `Ctrl+K` interface for ultra-fast navigation and system operations.
+- **Performance Analytics**: Dynamic Chart.js integration visualizing "Cycle Efficiency" and activity trends.
 - **Unified Component System**: Shared `sidebar.js` and `global.css` ensure 100% UI consistency.
-- **Verification Banners**: Dynamic warning banners for unverified users with integrated "Resend Link" functionality.
-- **Dark Mode Persistence**: Native theme toggle with localStorage persistence.
-- **Notification Engine**: Real-time alerts for request interactions and answer submissions.
+- **Verification Banners**: Dynamic warning banners with integrated "Resend Link" functionality.
+- **Notification Engine**: Real-time alerts for request interactions and solution submissions.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Python 3.x, Flask, Flask-Mail, Flask-CORS, Flask-Limiter, PyJWT, bcrypt.
-- **Database**: MySQL 8.0+ (supports window functions and full-text indexing).
-- **Frontend**: HTML5, CSS3 (Custom Variables), ES6+ JavaScript.
+- **Backend**: Python 3.13, Flask, Authlib (OAuth), Flask-Mail, Flask-CORS, Flask-Limiter, PyJWT, bcrypt.
+- **Database**: MySQL 8.0+ (Optimized with Full-Text indexing and Relationship constraints).
+- **Frontend**: HTML5, Vanilla CSS3 (Custom Design System), ES6+ JavaScript, Lucide Icons, Chart.js.
 
 ---
 
