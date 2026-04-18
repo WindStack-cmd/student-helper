@@ -723,6 +723,68 @@ def login():
         cursor.close()
         conn.close()
 
+@app.route("/me", methods=["GET"])
+@require_auth
+def me():
+    """Return authenticated user profile summary used by frontend guards."""
+    try:
+        email = request.user_email
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                "SELECT id, email, first_name, name, is_verified, COALESCE(reputation, points, 0) AS balance FROM users WHERE email=%s",
+                (email,)
+            )
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({"message": "User not found", "error_code": "USER_NOT_FOUND"}), 404
+
+            return jsonify(user), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("ME", str(e), "ERROR")
+        return jsonify({"message": "Failed to fetch user profile", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/resend_verification", methods=["POST"])
+@require_auth
+def resend_verification():
+    """Resend verification email for logged-in users that are not yet verified."""
+    try:
+        email = request.user_email
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT is_verified FROM users WHERE email=%s", (email,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({"message": "User not found", "error_code": "USER_NOT_FOUND"}), 404
+
+            if int(user.get("is_verified") or 0) == 1:
+                return jsonify({"message": "Email already verified", "error_code": "ALREADY_VERIFIED"}), 400
+
+            token = secrets.token_urlsafe(32)
+            token_expires_at = datetime.now() + timedelta(hours=24)
+            cursor.execute(
+                "UPDATE users SET verification_token=%s, token_expires_at=%s, created_unverified_at=COALESCE(created_unverified_at, NOW()) WHERE email=%s",
+                (token, token_expires_at, email)
+            )
+            conn.commit()
+
+            email_sent = send_verification_email(email, token)
+            if not email_sent:
+                return jsonify({"message": "Verification email failed to send", "error_code": "EMAIL_SEND_FAILED"}), 500
+
+            return jsonify({"message": "Verification email sent", "email_sent": True}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("RESEND_VERIFICATION", str(e), "ERROR")
+        return jsonify({"message": "Failed to resend verification email", "error_code": "INTERNAL_ERROR"}), 500
+
 @app.route("/get_balance", methods=["GET"])
 def get_balance():
     try:
