@@ -69,19 +69,19 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
 
         data.forEach(req => {
             const badge = renderBadge(req);
-            const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3); margin-left:8px;">${req.category}</span>` : '';
+            const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3);">${req.category}</span>` : '';
 
             // Feature 1 & 2: Bounty and Expiry Badges
             let bountyBadge = '';
             if (req.escrowed_bounty > 0) {
-                bountyBadge = `<span class="status-badge" style="background: rgba(204, 255, 0, 0.1); color: var(--accent-lime); border: 1px solid var(--accent-lime); margin-left:8px;"><i data-lucide="lock" style="width:10px; height:10px; margin-right:4px;"></i>${req.escrowed_bounty} LOCKED</span>`;
+                bountyBadge = `<span class="status-badge" style="background: rgba(204, 255, 0, 0.1); color: var(--accent-lime); border: 1px solid var(--accent-lime);"><i data-lucide="lock" style="width:10px; height:10px; margin-right:4px;"></i>${req.escrowed_bounty} LOCKED</span>`;
             } else if (req.solved && req.bounty > 0) {
-                bountyBadge = `<span class="status-badge" style="background: rgba(0, 229, 255, 0.1); color: var(--accent-blue); border: 1px solid var(--accent-blue); margin-left:8px;"><i data-lucide="check" style="width:10px; height:10px; margin-right:4px;"></i>${req.bounty} AWARDED</span>`;
+                bountyBadge = `<span class="status-badge" style="background: rgba(0, 229, 255, 0.1); color: var(--accent-blue); border: 1px solid var(--accent-blue);"><i data-lucide="check" style="width:10px; height:10px; margin-right:4px;"></i>${req.bounty} AWARDED</span>`;
             }
 
             let expiryInfo = '';
             if (req.status === 'expired') {
-                expiryInfo = `<span class="status-badge" style="background: rgba(255, 51, 102, 0.1); color: var(--danger-red); border: 1px solid var(--danger-red); margin-left:8px;">EXPIRED</span>`;
+                expiryInfo = `<span class="status-badge" style="background: rgba(255, 51, 102, 0.1); color: var(--danger-red); border: 1px solid var(--danger-red);">EXPIRED</span>`;
             } else if (req.expires_at) {
                 const expires = new Date(req.expires_at);
                 const now = new Date();
@@ -89,12 +89,12 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
                 const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
                 if (diffMs <= 0) {
-                    expiryInfo = `<span class="status-badge" style="background: rgba(255, 51, 102, 0.1); color: var(--danger-red); border: 1px solid var(--danger-red); margin-left:8px;">EXPIRED</span>`;
+                    expiryInfo = `<span class="status-badge" style="background: rgba(255, 51, 102, 0.1); color: var(--danger-red); border: 1px solid var(--danger-red);">EXPIRED</span>`;
                 } else if (diffHours < 24) {
-                    expiryInfo = `<span class="status-badge" style="background: rgba(255, 165, 0, 0.1); color: #ffa500; border: 1px solid #ffa500; margin-left:8px;"><i data-lucide="clock" style="width:10px; height:10px; margin-right:4px;"></i>EXPIRING SOON</span>`;
+                    expiryInfo = `<span class="status-badge" style="background: rgba(255, 165, 0, 0.1); color: #ffa500; border: 1px solid #ffa500;"><i data-lucide="clock" style="width:10px; height:10px; margin-right:4px;"></i>EXPIRING SOON</span>`;
                 } else {
                     const dateStr = expires.toLocaleDateString('en-GB'); // DD/MM/YYYY
-                    expiryInfo = `<span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary); margin-left:8px;">EXPIRES: ${dateStr}</span>`;
+                    expiryInfo = `<span class="expiry-date">EXPIRES: ${dateStr}</span>`;
                 }
             }
 
@@ -103,7 +103,8 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
     <div class="row-main">
         <div class="row-icon"><i data-lucide="help-circle"></i></div>
         <div>
-            <div class="row-title" style="display:flex; align-items:center;">${req.title} ${categoryTag} ${bountyBadge} ${expiryInfo}</div>
+            <div class="row-title">${req.title}</div>
+            <div class="row-meta">${categoryTag}${bountyBadge}${expiryInfo}</div>
             <div class="row-desc">Posted by ${req.email}</div>
         </div>
     </div>

@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 # from flask_socketio import SocketIO, send  # Disabled on Windows due to socket binding issues
 import mysql.connector
@@ -26,7 +26,9 @@ def parse_bool_env(name, default=False):
     value = os.getenv(name, str(default)).strip().lower()
     return value in ("1", "true", "yes", "on")
 
-app = Flask(__name__)
+# Serve frontend from parent directory
+frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
+app = Flask(__name__, static_folder=frontend_path, static_url_path='/static')
 
 # Flask-Mail Configuration
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -192,6 +194,20 @@ def require_auth(f):
 def log_request_info():
     if request.path != "/favicon.ico":
         print(f"DEBUG: [{datetime.now().strftime('%H:%M:%S')}] {request.method} {request.path} - RAW_DATA: {request.get_data(as_text=True)}")
+
+@app.after_request
+def set_csp_headers(response):
+    """Set proper CSP headers to allow API calls and local connections"""
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "connect-src 'self' http://127.0.0.1:* http://localhost:*; "
+        "script-src 'self' https://unpkg.com https://fonts.googleapis.com https://cdn.jsdelivr.net 'unsafe-inline'; "
+        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "frame-ancestors 'none'; "
+    )
+    return response
 
 
 # FIX #2: Use environment variables properly (no hardcoded defaults for password)
@@ -472,13 +488,7 @@ def init_db():
 
 init_db()
 
-@app.route("/")
-def home():
-    return "Student Helper Backend Running"
-
-@app.route("/favicon.ico")
-def favicon():
-    return "", 204  # Return empty response with No Content status
+# Frontend routes will be defined at the end, after all API routes
 
 @app.route("/auth/google")
 def auth_google():
@@ -1796,6 +1806,33 @@ def delete_request():
     except Exception as e:
         log_event("DELETE_REQUEST", str(e), "ERROR")
         return jsonify({"message": "Failed to delete"}), 500
+
+# ============================================
+# FRONTEND ROUTES (Must be at the end to not intercept API routes)
+# ============================================
+
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204  # Return empty response with No Content status
+
+@app.route("/")
+def home():
+    return send_file(os.path.join(frontend_path, 'index.html'))
+
+@app.route("/<path:filename>")
+def serve_frontend(filename):
+    file_path = os.path.join(frontend_path, filename)
+    if os.path.isfile(file_path):
+        return send_from_directory(frontend_path, filename)
+    # If it's a page without .html extension, try with .html
+    if os.path.isfile(file_path + '.html'):
+        return send_from_directory(frontend_path, filename + '.html')
+    # Otherwise, try to serve as a directory request (e.g., /pages/login -> pages/login.html)
+    page_file = os.path.join(frontend_path, 'pages', filename + '.html')
+    if os.path.isfile(page_file):
+        return send_from_directory(os.path.join(frontend_path, 'pages'), filename + '.html')
+    # If not found, serve index.html (for client-side routing)
+    return send_file(os.path.join(frontend_path, 'index.html'))
 
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"

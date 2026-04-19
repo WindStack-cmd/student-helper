@@ -716,12 +716,13 @@
 
         .data-row {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
+            grid-template-columns: minmax(0, 2.5fr) auto auto;
             align-items: center;
             padding: 24px 32px;
             border-bottom: 1px solid var(--border-dim);
             transition: background 0.2s ease;
             cursor: pointer;
+            column-gap: 20px;
         }
 
         .data-row:hover {
@@ -736,6 +737,7 @@
             display: flex;
             align-items: center;
             gap: 20px;
+            min-width: 0;
         }
 
         .row-icon {
@@ -752,10 +754,19 @@
 
         .row-title {
             font-family: var(--font-display);
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 4px;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
+        .row-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
         }
 
         .row-desc {
@@ -768,13 +779,20 @@
         .status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 12px;
+            gap: 6px;
+            padding: 4px 10px;
             border-radius: 4px;
             font-family: var(--font-mono);
-            font-size: 0.7rem;
+            font-size: 0.62rem;
             font-weight: 700;
             text-transform: uppercase;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .row-status-col {
+            display: flex;
+            align-items: center;
         }
 
         .status-active {
@@ -787,11 +805,11 @@
         .status-active::before {
             content: '';
             display: inline-block;
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             background: var(--success-green);
             border-radius: 50%;
-            margin-right: 8px;
+            margin-right: 4px;
             animation: pulse 2s infinite;
         }
 
@@ -828,6 +846,14 @@
             font-family: var(--font-mono);
             font-size: 0.8rem;
             color: var(--text-tertiary);
+            white-space: nowrap;
+        }
+
+        .expiry-date {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-tertiary);
+            white-space: nowrap;
         }
 
         /* ----- RIGHT PANEL: PROPERTIES / INSPECTOR ----- */
