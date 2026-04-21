@@ -62,8 +62,14 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
         totalRequests = isPaginated ? (result.total || 0) : data.length;
 
         if (!data || data.length === 0) {
-            container.innerHTML = `<div style="padding:30px;font-family:var(--font-mono);color:var(--text-secondary); text-align: center;">${emptyText}</div>`;
+            container.innerHTML = `
+                <div style="padding:80px 30px; display:flex; flex-direction:column; align-items:center; gap:20px; opacity:0.2;">
+                    <i data-lucide="ghost" style="width:48px; height:48px;"></i>
+                    <div style="font-family:var(--font-mono); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em;">${emptyText}</div>
+                </div>
+            `;
             renderPaginationControls(false); // Hide pagination if no data
+            if (typeof lucide !== 'undefined') lucide.createIcons();
             return;
         }
 
@@ -332,6 +338,21 @@ function copyReferral() {
     });
 }
 
+function copyRequestLink(id) {
+    const origin = window.location.origin;
+    const currentPath = window.location.pathname;
+    let basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+    if (!basePath) basePath = '/pages';
+    const link = `${origin}${basePath}/request-details.html?id=${id}`;
+    
+    navigator.clipboard.writeText(link).then(() => {
+        showNotification("Share link copied to clipboard!", "success");
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        showNotification("Failed to copy link.", "error");
+    });
+}
+
 async function loadNotifications() {
     const headers = getAuthHeaders();
     if (!headers) return;
@@ -394,7 +415,14 @@ async function openRequest(id) {
         const answers = data.answers;
 
         // Fill Request details
-        document.getElementById("modalTitle").innerText = `REQUEST_ID_${String(req.id).padStart(3, '0')}`;
+        document.getElementById("modalTitle").innerHTML = `
+            <span style="display: flex; align-items: center; gap: 12px;">
+                REQUEST_ID_${String(req.id).padStart(3, '0')}
+                <button onclick="copyRequestLink(${req.id})" class="btn-icon" style="width: 28px; height: 28px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-dim);" title="COPY_SHARE_LINK">
+                    <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
+                </button>
+            </span>
+        `;
         document.getElementById("modalDesc").innerText = req.description;
         document.getElementById("modalAuthor").innerText = req.user_email || "ANONYMOUS_USER";
         document.getElementById("modalDate").innerText = new Date(req.created_at).toLocaleString();
