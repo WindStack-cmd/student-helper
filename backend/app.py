@@ -1813,7 +1813,7 @@ def delete_request():
 
 @app.route("/favicon.ico")
 def favicon():
-    return "", 204  # Return empty response with No Content status
+    return send_from_directory(frontend_path, "favicon.ico", mimetype="image/x-icon")
 
 @app.route("/")
 def home():
