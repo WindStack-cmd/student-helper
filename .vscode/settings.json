@@ -1,5 +1,5 @@
 {
-  "liveServer.settings.root": "/",
+  "liveServer.settings.root": "/frontend",
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "python.analysis.extraPaths": [
     "${workspaceFolder}/backend"

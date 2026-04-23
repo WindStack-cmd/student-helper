@@ -14,6 +14,32 @@ StudentsHelper is a full-stack community platform that facilitates **peer-to-pee
 - **Email Engine**: Flask-Mail via SMTP for secure transactional messaging.
 - **Frontend**: Modern Glassmorphic UI built with Vanilla JS and shared component architecture.
 
+---
+
+## 📸 Screenshots
+
+### Landing Page
+> The entry point with bold editorial typography, real-time network stats, and a sleek dark interface.
+
+![Landing Page](docs/screenshots/landing-page.png)
+
+### About Page
+> Core platform values — velocity, verified quality, reputation economy, and distributed access.
+
+![About Page](docs/screenshots/about-page.png)
+
+### Registration Page
+> Dual-mode onboarding (Seek Data / Distribute Data) with social proof and peer testimonials.
+
+![Registration Page](docs/screenshots/register-page.png)
+
+### Dashboard
+> Full workspace view with navigation tree, network metrics, and platform statistics.
+
+![Dashboard](docs/screenshots/dashboard-page.png)
+
+---
+
 ## 🏗️ System Architecture
 
 The platform follows a **decoupled client-server architecture** optimized for scalability and secure data flows.
@@ -109,6 +135,8 @@ flowchart TD
 | **Verification Banners** | Dynamic warning banners with "Resend Link" for unverified users. |
 | **Notification Engine** | Real-time alerts for request interactions and answer submissions. |
 | **Responsive Layout** | Mobile-friendly across all 19 pages. |
+| **Command Palette** | `Ctrl+K` for quick navigation across pages and actions. |
+| **Performance Charts** | Chart.js-powered metrics visualization on the dashboard. |
 
 ---
 
@@ -118,9 +146,9 @@ flowchart TD
 |-------|-------------|
 | **Backend** | Python 3.x · Flask · Flask-Mail · Flask-CORS · Flask-Limiter · Authlib · PyJWT · bcrypt |
 | **Database** | MySQL 8.0+ (full-text indexing, window functions) |
-| **Frontend** | HTML5 · CSS3 (Custom Properties) · ES6+ JavaScript |
+| **Frontend** | HTML5 · CSS3 (Custom Properties) · ES6+ JavaScript · Chart.js |
 | **Auth** | JWT (HS256, 24 h) · Google OAuth 2.0 · GitHub OAuth · Bcrypt |
-| **DevOps** | python-dotenv · `npx serve` (frontend dev server) |
+| **DevOps** | python-dotenv · VS Code Live Server (frontend dev server) |
 
 ---
 
@@ -223,7 +251,7 @@ The frontend consists of **19 dedicated pages**, all sharing a unified component
 
 - **Python 3.10+**
 - **MySQL 8.0+** (running locally or remotely)
-- **Node.js 14+** (for the frontend dev server)
+- **VS Code** with [Live Server extension](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) (for frontend)
 
 ### 1. Clone & Setup Backend
 
@@ -256,6 +284,7 @@ cp .env.example .env
 ### 3. Start the Backend
 
 ```bash
+cd backend
 python app.py
 ```
 
@@ -263,12 +292,11 @@ Backend available at **`http://127.0.0.1:5001`**. The database and tables are au
 
 ### 4. Start the Frontend
 
-```bash
-cd ../frontend
-npx serve .
-```
+Open the project in VS Code and click **"Go Live"** in the status bar. The Live Server is pre-configured to serve from the `frontend/` directory.
 
-Frontend available at **`http://127.0.0.1:5502`** (or whichever port `serve` assigns).
+Frontend available at **`http://127.0.0.1:5504`** (configured in `.vscode/settings.json`).
+
+> **Note:** Live Server root is set to `/frontend` in `.vscode/settings.json` so it serves the app directly without requiring a redirect file at the project root.
 
 ---
 
@@ -315,7 +343,8 @@ student-helper/
 │
 ├── frontend/
 │   ├── index.html          # Landing page
-│   ├── favicon.png         # Site favicon
+│   ├── favicon.ico         # Site favicon
+│   ├── favicon.png         # Site favicon (PNG format)
 │   ├── package.json        # Frontend dev server config
 │   ├── css/
 │   │   ├── global.css      # Shared design tokens & utilities
@@ -331,8 +360,12 @@ student-helper/
 │   │   └── theme.js        # Dark mode toggle
 │   └── pages/              # 19 HTML pages (see Pages & UI section)
 │
+├── docs/
+│   └── screenshots/        # Project screenshots for README
+│
 ├── scripts/                # DB patches, QA tests, & maintenance utilities
-├── index.html              # Root redirect
+├── .vscode/
+│   └── settings.json       # Live Server config (root: /frontend, port: 5504)
 ├── .gitignore              # Git exclusion rules
 └── README.md               # This file
 ```
@@ -381,16 +414,41 @@ python qa_test.py
 
 ---
 
+## 📋 Changelog (Latest)
+
+### v2.5 — Favicon & Project Structure Cleanup (April 2026)
+- **Fixed:** `/favicon.ico` route now serves the actual favicon file instead of returning an empty 204 response.
+- **Fixed:** Live Server root set to `/frontend` — eliminates need for root redirect files.
+- **Cleaned:** Removed stale `root_index_redirect.html` and `root_favicon_redirect.ico` from the project root.
+- **Added:** `docs/screenshots/` directory for project screenshots in README.
+- **Updated:** Repository structure documentation to reflect current layout.
+
+### v2.4 — Command Palette & Performance Charts
+- **Added:** Command Palette (`Ctrl+K`) for instant navigation across all pages.
+- **Added:** Chart.js-powered performance metrics visualization on the dashboard.
+
+### v2.3 — Bounty, Expiry & Claiming System
+- **Added:** Escrow-based bounty flow with automated payouts and refunds.
+- **Added:** 7-day request expiry with automatic state transitions.
+- **Added:** Claim/unclaim functionality with self-claim prevention.
+- **Security:** Blocked request owners from answering or claiming their own requests.
+
+### v2.2 — Email Verification & Referrals
+- **Added:** Email verification flow with 24h token expiry.
+- **Added:** Referral program with 10% commission on bounties.
+- **Added:** Auto-cleanup of unverified accounts after 7 days.
+
+### v2.1 — OAuth & Security Hardening
+- **Added:** Google OAuth 2.0 and GitHub OAuth sign-in.
+- **Security:** Bcrypt password hashing (12 rounds), JWT authentication.
+- **Security:** Rate limiting, input validation, CSP headers.
+
+---
+
 ## 📝 License
 This project is open-source. Please attribute the original author when using this implementation in your own portfolio.
 
 ---
-
-## 🏗️ Repository Organization
-The repository is structured for professional development workflows:
-- `backend/`: Core REST API logic, database schemas, and mail templates.
-- `frontend/`: Multi-page Glassmorphic UI with shared component injection.
-- `scripts/`: Maintenance, migration, and automation utilities.
 
 ## 🌟 Why This Project Matters
 This platform serves as a production-grade blueprint for peer-to-peer (P2P) economy systems. It demonstrates how to handle complex financial logic (Escrow), secure identity management (JWT + Multi-stage Verification), and real-time community engagement in a performant, lightweight environment. It is designed to showcase mastery over full-stack security, data integrity, and modern UI design.
