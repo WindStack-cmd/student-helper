@@ -257,7 +257,10 @@ def validate_description(description):
 
 def send_verification_email(email, token):
     try:
-        frontend_url = os.getenv('FRONTEND_URL', 'http://127.0.0.1:5502').rstrip('/')
+        frontend_url = os.getenv('FRONTEND_URL', 'http://127.0.0.1:5001').rstrip('/')
+        # Normalize old env values like http://127.0.0.1:5502/frontend
+        if frontend_url.endswith('/frontend'):
+            frontend_url = frontend_url[:-9]
         verify_link = f"{frontend_url}/pages/verify.html?token={token}"
         msg = Message("Verify Your Email - StudentsHelper",
                       recipients=[email])
@@ -794,6 +797,47 @@ def resend_verification():
     except Exception as e:
         log_event("RESEND_VERIFICATION", str(e), "ERROR")
         return jsonify({"message": "Failed to resend verification email", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/verify_email", methods=["GET"])
+def verify_email():
+    """Verify email using one-time token sent to user's inbox."""
+    token = str(request.args.get("token") or "").strip()
+    if not token:
+        return jsonify({"message": "Verification token is required", "error_code": "INVALID_TOKEN"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT id, email, is_verified, token_expires_at FROM users WHERE verification_token=%s",
+            (token,)
+        )
+        user = cursor.fetchone()
+
+        if not user:
+            return jsonify({"message": "This verification link is invalid or already used", "error_code": "INVALID_TOKEN"}), 400
+
+        if int(user.get("is_verified") or 0) == 1:
+            return jsonify({"message": "Email already verified", "error_code": "ALREADY_VERIFIED"}), 200
+
+        expires_at = user.get("token_expires_at")
+        if expires_at and expires_at < datetime.now():
+            return jsonify({"message": "Verification link expired", "error_code": "TOKEN_EXPIRED"}), 400
+
+        cursor.execute(
+            "UPDATE users SET is_verified=1, verification_token=NULL, token_expires_at=NULL, created_unverified_at=NULL WHERE id=%s",
+            (user["id"],)
+        )
+        conn.commit()
+
+        log_event("VERIFY_EMAIL", f"Email verified successfully: {user['email']}", "INFO")
+        return jsonify({"message": "Email verified successfully", "email": user["email"]}), 200
+    except Exception as e:
+        log_event("VERIFY_EMAIL", str(e), "ERROR")
+        return jsonify({"message": "Verification failed", "error_code": "INTERNAL_ERROR"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route("/get_balance", methods=["GET"])
 def get_balance():
