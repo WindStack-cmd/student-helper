@@ -406,6 +406,48 @@
             background: rgba(0, 229, 255, 0.05);
         }
 
+        .post-composer {
+            position: relative;
+        }
+
+        .emoji-picker {
+            position: absolute;
+            left: 24px;
+            bottom: 78px;
+            display: none;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 8px;
+            width: 220px;
+            padding: 12px;
+            background: rgba(10, 10, 14, 0.98);
+            border: 1px solid var(--border-bright);
+            border-radius: 10px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(12px);
+            z-index: 50;
+        }
+
+        .emoji-picker.open {
+            display: grid;
+        }
+
+        .emoji-option {
+            border: 1px solid transparent;
+            background: transparent;
+            border-radius: 6px;
+            font-size: 1rem;
+            line-height: 1;
+            padding: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .emoji-option:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--border-dim);
+            transform: translateY(-1px);
+        }
+
         /* Network Feed Cards */
         .feed-post {
             background: rgba(17, 17, 24, 0.4);
@@ -898,17 +940,19 @@
                         placeholder="Initiate network broadcast... Describe your query or share data."></textarea>
                     <div class="composer-actions">
                         <div class="composer-tools">
-                            <button class="tool-btn"><i data-lucide="code"
+                            <button type="button" class="tool-btn"><i data-lucide="code"
                                     style="width: 18px; height: 18px;"></i></button>
-                            <button class="tool-btn"><i data-lucide="paperclip"
+                            <button type="button" class="tool-btn"><i data-lucide="paperclip"
                                     style="width: 18px; height: 18px;"></i></button>
-                            <button class="tool-btn"><i data-lucide="smile"
+                            <button type="button" class="tool-btn" id="emojiToggleBtn" aria-label="Open emoji picker"><i data-lucide="smile"
                                     style="width: 18px; height: 18px;"></i></button>
                         </div>
 
                         <button onclick="sendMessage()" class="btn-primary"
                             style="height: 36px; font-size: 0.75rem;">Transmit</button>
                     </div>
+
+                        <div id="emojiPicker" class="emoji-picker" aria-hidden="true"></div>
                 </div>
 
                 <!-- DYNAMIC POSTS WILL COME HERE -->
@@ -1062,20 +1106,36 @@
 
         async function sendMessage() {
             const textarea = document.getElementById("chatInput");
-            if (!textarea || !textarea.value.trim()) return;
+            if (!textarea) return;
+
+            const content = textarea.value.trim();
+            if (!content) return;
+            if (content.length < 5) {
+                alert("Post must be at least 5 characters.");
+                textarea.focus();
+                return;
+            }
+
             const user = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
             const email = user.email || "guest@mail.com";
             try {
                 const response = await fetch("http://127.0.0.1:5001/create_post", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: email, content: textarea.value.trim(), bounty: 0 })
+                    body: JSON.stringify({ email: email, content: content, bounty: 0 })
                 });
-                if (!response.ok) throw new Error("HTTP " + response.status);
+
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const message = result.message || ("HTTP " + response.status);
+                    throw new Error(message);
+                }
+
                 textarea.value = "";
                 await loadPosts();
             } catch (e) {
                 console.error("Transmit failed:", e);
+                alert("Transmit failed: " + e.message);
             }
         }
 
@@ -1146,6 +1206,66 @@
                     document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
                 } catch (e) { }
             }
+
+            const emojiToggleBtn = document.getElementById("emojiToggleBtn");
+            const emojiPicker = document.getElementById("emojiPicker");
+            const chatInput = document.getElementById("chatInput");
+            const composer = document.querySelector(".post-composer");
+
+            if (!emojiToggleBtn || !emojiPicker || !chatInput || !composer) return;
+
+            const emojiList = [
+                "😀", "😄", "😁", "😅", "😉", "😊",
+                "😍", "🤩", "🤔", "🙌", "👏", "💯",
+                "🔥", "✨", "⚡", "🚀", "🎯", "✅",
+                "🧠", "💡", "📚", "🐛", "🛠️", "🧪"
+            ];
+
+            emojiPicker.innerHTML = emojiList.map((emoji) => (
+                `<button type="button" class="emoji-option" data-emoji="${emoji}" aria-label="Insert ${emoji}">${emoji}</button>`
+            )).join("");
+
+            function insertEmoji(emoji) {
+                const start = chatInput.selectionStart ?? chatInput.value.length;
+                const end = chatInput.selectionEnd ?? chatInput.value.length;
+                chatInput.value = chatInput.value.slice(0, start) + emoji + chatInput.value.slice(end);
+                const nextCaret = start + emoji.length;
+                chatInput.focus();
+                chatInput.setSelectionRange(nextCaret, nextCaret);
+            }
+
+            function setPickerState(isOpen) {
+                emojiPicker.classList.toggle("open", isOpen);
+                emojiPicker.setAttribute("aria-hidden", String(!isOpen));
+                emojiToggleBtn.setAttribute("aria-expanded", String(isOpen));
+            }
+
+            emojiToggleBtn.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setPickerState(!emojiPicker.classList.contains("open"));
+            });
+
+            emojiPicker.addEventListener("click", (event) => {
+                const option = event.target.closest(".emoji-option");
+                if (!option) return;
+                const emoji = option.getAttribute("data-emoji");
+                if (!emoji) return;
+                insertEmoji(emoji);
+                setPickerState(false);
+            });
+
+            document.addEventListener("click", (event) => {
+                if (!emojiPicker.classList.contains("open")) return;
+                if (composer.contains(event.target)) return;
+                setPickerState(false);
+            });
+
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "Escape") {
+                    setPickerState(false);
+                }
+            });
         });
     </script>
 </body>

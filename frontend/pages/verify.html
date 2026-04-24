@@ -106,8 +106,19 @@
     </div>
 
     <script type="module">
-        // Since there's no config.js, we use the port from app.py
-        const API_BASE_URL = "http://127.0.0.1:5001";
+        function resolveApiBaseUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const apiFromUrl = (params.get('api') || '').trim();
+            if (apiFromUrl) return apiFromUrl.replace(/\/$/, '');
+
+            const apiFromStorage = (localStorage.getItem('api_base_url') || '').trim();
+            if (apiFromStorage) return apiFromStorage.replace(/\/$/, '');
+
+            if (window.location.port === '5001') return window.location.origin;
+            return `${window.location.protocol}//127.0.0.1:5001`;
+        }
+
+        const API_BASE_URL = resolveApiBaseUrl();
 
         async function verify() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -120,7 +131,7 @@
 
             try {
                 const response = await fetch(`${API_BASE_URL}/verify_email?token=${token}`);
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
 
                 if (response.ok) {
                     showSuccess();
@@ -130,7 +141,7 @@
                     showError(data.error_code || 'INVALID_TOKEN', data.message || 'This link is not valid.');
                 }
             } catch (error) {
-                showError('SYSTEM_ERROR', 'Something went wrong connecting to the server.');
+                showError('SERVER_UNREACHABLE', 'Cannot reach verification server. Start backend on port 5001 and retry this link.');
             }
         }
 
