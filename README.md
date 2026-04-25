@@ -416,12 +416,15 @@ python qa_test.py
 
 ## 📋 Changelog (Latest)
 
+### v2.6 — Dynamic Leaderboard & Deep Cleanup (April 2026)
+- **Dynamicized "Top Nodes" Sidebar**: Implemented a live global leaderboard with a 30-second auto-refresh interval for real-time community engagement.
+- **Redesigned Referral Link**: Updated the referral section to a modern "Referral Card" UI with a dedicated COPY button and robust link generation.
+- **Deep Database Cleanup**: Automated the removal of legacy test users ("NAGI", "RIN", etc.) and their associated posts/requests to maintain a production-clean environment.
+- **Dynamic Identity Protocol**: Added real-time rank/level calculation, progress bars, and personalized active objectives to the user dashboard.
+- **Functional Network Filters**: Fully dynamicized the sort and data-type filters in the community feed, enabling seamless switching between help requests and knowledge sharing.
+- **UI/UX Refinement**: Removed non-functional search elements and improved the "Node Efficiency" chart on the dashboard.
+
 ### v2.5 — Favicon & Project Structure Cleanup (April 2026)
-- **Fixed:** `/favicon.ico` route now serves the actual favicon file instead of returning an empty 204 response.
-- **Fixed:** Live Server root set to `/frontend` — eliminates need for root redirect files.
-- **Cleaned:** Removed stale `root_index_redirect.html` and `root_favicon_redirect.ico` from the project root.
-- **Added:** `docs/screenshots/` directory for project screenshots in README.
-- **Updated:** Repository structure documentation to reflect current layout.
 
 ### v2.4 — Command Palette & Performance Charts
 - **Added:** Command Palette (`Ctrl+K`) for instant navigation across all pages.
