@@ -339,6 +339,7 @@ function updateIdentityProtocolPanel(data) {
     const rank = Number(data.rank || 0);
     const posted = Number(data.bounties_posted || 0);
     const completed = Number(data.bounties_completed || 0);
+    const reputation = Number(data.reputation || 0);
 
     const rankLabel = document.getElementById("identityRankLabel");
     const levelBar = document.getElementById("identityLevelBar");
@@ -352,35 +353,35 @@ function updateIdentityProtocolPanel(data) {
     }
 
     if (levelBar) {
-        let progress = 15;
-        if (rank > 0) {
-            progress = Math.max(20, Math.min(100, 100 - Math.min(rank, 1000) / 10));
+        // Calculate progress based on reputation or completed bounties
+        // Level up every 10 bounties?
+        const level = Math.floor(completed / 10) + 1;
+        const progressInLevel = (completed % 10) * 10; 
+        levelBar.style.width = `${Math.max(5, progressInLevel)}%`;
+        
+        // Update initialized value to show level too
+        if (initializedValue) {
+            initializedValue.textContent = `LVL_${level}_NODE`;
         }
-        levelBar.style.width = `${progress}%`;
     }
 
     if (tierProgress) {
-        const toNext = Math.max(0, 25 - completed);
+        const nextTierAt = (Math.floor(completed / 10) + 1) * 10;
+        const toNext = nextTierAt - completed;
         tierProgress.textContent = toNext > 0
-            ? `${toNext} COMPLETED BOUNTIES TO NEXT TIER`
+            ? `${toNext} COMPLETED BOUNTIES TO NEXT LEVEL`
             : "TIER UPGRADE READY";
-    }
-
-    if (initializedValue) {
-        const now = new Date();
-        const month = String(now.getMonth() + 1).padStart(2, "0");
-        initializedValue.textContent = `Cycle_${now.getFullYear()}.${month}`;
     }
 
     if (modulesWrap) {
         const modules = [
-            "Python",
-            posted > 0 ? "Bounties" : "Starter",
-            completed > 0 ? "Solver" : "Explorer"
+            "Protocol_v4",
+            completed > 5 ? "Elite_Solver" : (completed > 0 ? "Active_Solver" : "Junior_Solver"),
+            reputation > 500 ? "High_Trust" : "Standard"
         ];
         modulesWrap.innerHTML = modules.map((m, idx) => {
             if (idx === 1) {
-                return `<span class="sys-tag" style="border-color: var(--accent-blue); color: var(--accent-blue);">${m}</span>`;
+                return `<span class="sys-tag" style="border-color: var(--accent-lime); color: var(--accent-lime);">${m}</span>`;
             }
             return `<span class="sys-tag">${m}</span>`;
         }).join("");
@@ -389,11 +390,11 @@ function updateIdentityProtocolPanel(data) {
     if (objectives) {
         const name = user.first_name || user.name || "Node";
         if (posted === 0) {
-            objectives.textContent = `${name}, post your first request to activate your network pipeline.`;
+            objectives.textContent = `${name}, activate your network footprint by posting your first request.`;
         } else if (completed === 0) {
-            objectives.textContent = `${name}, your requests are live. Next objective: get your first accepted solution.`;
+            objectives.textContent = `${name}, system scan shows 0 solved objectives. Target a bounty to earn reputation.`;
         } else {
-            objectives.textContent = `${name}, keep momentum by solving more requests and improving your rank.`;
+            objectives.textContent = `${name}, performance optimal. Continue solving high-yield bounties to increase rank.`;
         }
     }
 }
@@ -933,18 +934,33 @@ function initializeChart() {
     const ctx = document.getElementById("performanceChart");
     if (!ctx) return;
 
+    // Generate semi-random data based on user reputation for a more dynamic feel
+    const userStr = localStorage.getItem("loggedInUser");
+    const user = JSON.parse(userStr || "{}");
+    const baseActivity = (user.points || 100) / 20; // Use points as a base
+    
+    const dynamicData = [
+        Math.floor(Math.random() * 20) + baseActivity,
+        Math.floor(Math.random() * 30) + baseActivity,
+        Math.floor(Math.random() * 25) + baseActivity,
+        Math.floor(Math.random() * 40) + baseActivity,
+        Math.floor(Math.random() * 15) + baseActivity,
+        Math.floor(Math.random() * 20) + baseActivity,
+        Math.floor(Math.random() * 10) + baseActivity
+    ];
+
     // SaaS Level Visualization
     new Chart(ctx, {
         type: 'bar',
         data: {
             labels: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
             datasets: [{
-                label: 'CYCLE_EFFICIENCY',
-                data: [65, 59, 80, 81, 56, 55, 40],
-                backgroundColor: 'rgba(123, 66, 250, 0.3)',
-                borderColor: '#7b42fa',
-                borderWidth: 2,
-                borderRadius: 4,
+                label: 'NODE_EFFICIENCY',
+                data: dynamicData,
+                backgroundColor: 'rgba(204, 255, 0, 0.2)',
+                borderColor: '#ccff00',
+                borderWidth: 1,
+                borderRadius: 2,
                 hoverBackgroundColor: '#ccff00',
                 hoverBorderColor: '#ccff00'
             }]
@@ -953,17 +969,24 @@ function initializeChart() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#0a0a0e',
+                    titleFont: { family: 'JetBrains Mono' },
+                    bodyFont: { family: 'JetBrains Mono' },
+                    borderColor: 'rgba(204, 255, 0, 0.3)',
+                    borderWidth: 1
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: '#4a4a5e', font: { family: 'JetBrains Mono', size: 10 } }
+                    grid: { color: 'rgba(255,255,255,0.03)' },
+                    ticks: { display: false }
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#4a4a5e', font: { family: 'JetBrains Mono', size: 10 } }
+                    ticks: { color: '#4a4a5e', font: { family: 'JetBrains Mono', size: 9 } }
                 }
             }
         }
