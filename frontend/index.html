@@ -384,6 +384,111 @@
             color: var(--accent-purple);
         }
 
+        @media (max-width: 768px) {
+            html,
+            body {
+                overflow-x: hidden;
+                max-width: 100vw;
+            }
+
+            .sidebar {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                overflow: hidden !important;
+                position: absolute !important;
+                left: -9999px !important;
+            }
+
+            #app,
+            .main-container,
+            main {
+                margin-left: 0 !important;
+                padding-left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                left: 0 !important;
+            }
+
+            .main-container {
+                grid-template-columns: 1fr;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .hero,
+            .hero-section,
+            .landing-hero,
+            .editorial-hero {
+                padding: 2rem 1rem !important;
+                text-align: left !important;
+            }
+
+            .hero-title,
+            .hero h1,
+            .landing-title,
+            h1.title,
+            .main-title {
+                font-size: 2.5rem !important;
+                line-height: 1.1 !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                white-space: normal !important;
+                max-width: 100% !important;
+            }
+
+            .hero-subtitle,
+            .hero p,
+            .landing-subtitle,
+            .hero-desc {
+                font-size: 0.95rem !important;
+                max-width: 100% !important;
+                padding-right: 0 !important;
+            }
+
+            .hero-buttons,
+            .cta-buttons,
+            .button-group,
+            .auth-actions {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 0.75rem !important;
+                width: 100% !important;
+            }
+
+            .hero-buttons a,
+            .hero-buttons button,
+            .cta-buttons a,
+            .cta-buttons button,
+            .auth-actions a,
+            .auth-actions button {
+                width: 100% !important;
+                text-align: center !important;
+            }
+
+            .live-canvas {
+                padding: 1rem;
+            }
+
+            .metric-card {
+                grid-template-columns: 1fr;
+                gap: 16px;
+                padding: 20px;
+                text-align: left;
+            }
+
+            .m-data {
+                text-align: left;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-title {
+                font-size: 2rem !important;
+            }
+        }
+
         /* Animations */
         @keyframes slideUp {
             to {
@@ -455,19 +560,18 @@
                     Nodes Active: 12,402
                 </div>
 
-                <h1 class="main-title">Solve<br><span>Any Problem</span><br>Fast</h1>
+                <h1 class="main-title">Get Unstuck.<br><span>Help Others.</span><br>Earn Points.</h1>
 
                 <p class="hero-desc">
-                    Access a localized network of academic peers. Cut through the noise and get direct answers, code
-                    reviews, and project help instantly without algorithmic friction.
+                    StudentsHelper is a peer-to-peer academic help platform. Post your question with a bounty, get answered by fellow students, and reward the best solution.
                 </p>
 
                 <div class="auth-actions">
                     <a href="pages/register.html" class="btn-editorial primary">
-                        Init Session <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                        Join the Network <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
                     </a>
-                    <a href="pages/login.html" class="btn-editorial">
-                        Terminal Auth
+                    <a href="pages/view-requests.html" class="btn-editorial">
+                        Browse Open Requests
                     </a>
                 </div>
             </section>
@@ -479,40 +583,36 @@
                     <div class="metric-card">
                         <div class="m-icon"><i data-lucide="zap" style="width: 32px; height: 32px;"></i></div>
                         <div class="m-info">
-                            <h3>Lightning Routing</h3>
-                            <p>Requests broadcast immediately to qualified peers in your local network layer.</p>
+                            <h3>Post Your Question</h3>
+                            <p>Describe your problem and set a bounty from your point balance. Your points are held securely until a solution is accepted.</p>
                         </div>
                         <div class="m-data">
-                            <div class="big-num">2<span
-                                    style="font-size: 1rem; color: var(--text-secondary);">min</span></div>
-                            <div class="sub-num">AVG Match Time</div>
+                            <div class="big-num">1</div>
+                            <div class="sub-num">Step</div>
                         </div>
                     </div>
 
                     <div class="metric-card">
                         <div class="m-icon"><i data-lucide="shield-check" style="width: 32px; height: 32px;"></i></div>
                         <div class="m-info">
-                            <h3>Verified Nodes</h3>
-                            <p>All endpoints are authenticated using rigorous university credentials and peer ledgers.
-                            </p>
+                            <h3>Get Answered</h3>
+                            <p>Fellow students claim your request and submit their best solution. Multiple answers allowed - you pick the best one.</p>
                         </div>
                         <div class="m-data">
-                            <div class="big-num">100<span
-                                    style="font-size: 1rem; color: var(--text-secondary);">%</span></div>
-                            <div class="sub-num">Auth Enforced</div>
+                            <div class="big-num">2</div>
+                            <div class="sub-num">Step</div>
                         </div>
                     </div>
 
                     <div class="metric-card">
                         <div class="m-icon"><i data-lucide="trophy" style="width: 32px; height: 32px;"></i></div>
                         <div class="m-info">
-                            <h3>Reputation Ledger</h3>
-                            <p>Contribute cycles to the network and earn immutable ranking in the global namespace.</p>
+                            <h3>Reward the Solver</h3>
+                            <p>Accept the answer that helped you most. Points transfer automatically to the solver. Everyone builds reputation.</p>
                         </div>
                         <div class="m-data">
-                            <div class="big-num">50<span style="font-size: 1rem; color: var(--text-secondary);">K</span>
-                            </div>
-                            <div class="sub-num">Active Bounties</div>
+                            <div class="big-num">3</div>
+                            <div class="sub-num">Step</div>
                         </div>
                     </div>
 

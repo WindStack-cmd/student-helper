@@ -54,6 +54,59 @@ function renderSidebar(options = {}) {
         fetchBalance();
         checkVerificationStatus();
     }
+
+    // Enforce sidebar visibility behavior on mobile after injection
+    handleSidebarVisibility();
+    if (!window.__sidebarResizeBound) {
+        window.addEventListener('resize', handleSidebarVisibility);
+        window.__sidebarResizeBound = true;
+    }
+}
+
+// Hide sidebar on mobile and remove main content left offset
+function handleSidebarVisibility() {
+    const sidebar = document.querySelector('.sidebar') ||
+        document.querySelector('#sidebar') ||
+        document.querySelector('[class*="sidebar"]');
+    if (!sidebar) return;
+
+    const main = document.querySelector('.main-content') ||
+        document.querySelector('main') ||
+        document.querySelector('.content');
+
+    if (window.innerWidth <= 768) {
+        sidebar.style.display = 'none';
+        sidebar.style.width = '0';
+        sidebar.style.minWidth = '0';
+        sidebar.style.maxWidth = '0';
+        sidebar.style.overflow = 'hidden';
+        sidebar.style.position = 'absolute';
+        sidebar.style.left = '-9999px';
+
+        if (main) {
+            main.style.marginLeft = '0';
+            main.style.paddingLeft = '1rem';
+            main.style.width = '100%';
+            main.style.maxWidth = '100%';
+            main.style.left = '0';
+        }
+    } else {
+        sidebar.style.display = '';
+        sidebar.style.width = '';
+        sidebar.style.minWidth = '';
+        sidebar.style.maxWidth = '';
+        sidebar.style.overflow = '';
+        sidebar.style.position = '';
+        sidebar.style.left = '';
+
+        if (main) {
+            main.style.marginLeft = '';
+            main.style.paddingLeft = '';
+            main.style.width = '';
+            main.style.maxWidth = '';
+            main.style.left = '';
+        }
+    }
 }
 
 async function fetchBalance() {

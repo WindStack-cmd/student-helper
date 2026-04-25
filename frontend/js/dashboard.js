@@ -62,10 +62,19 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
         totalRequests = isPaginated ? (result.total || 0) : data.length;
 
         if (!data || data.length === 0) {
+            let subtitle = emptyText || "No data available.";
+            if (currentTab === "Network Feed") {
+                subtitle = "No active requests in the network yet. Be the first to post one.";
+            } else if (currentTab === "My Data") {
+                subtitle = "You haven't posted any requests yet. Post your first question to get started.";
+            } else if (currentTab === "Archived") {
+                subtitle = "No archived requests yet. Accepted or expired requests will appear here.";
+            }
             container.innerHTML = `
-                <div style="padding:80px 30px; display:flex; flex-direction:column; align-items:center; gap:20px; opacity:0.2;">
-                    <i data-lucide="ghost" style="width:48px; height:48px;"></i>
-                    <div style="font-family:var(--font-mono); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em;">${emptyText}</div>
+                <div class="empty-state">
+                    <i data-lucide="ghost" style="width: 42px; height: 42px; color: var(--text-tertiary); opacity: 0.85;"></i>
+                    <p class="empty-state-title">NO_DATA_FOUND</p>
+                    <p class="empty-state-subtitle">${subtitle}</p>
                 </div>
             `;
             renderPaginationControls(false); // Hide pagination if no data
@@ -210,11 +219,11 @@ function renderSearchUI() {
     // Create wrapper for the right side of tabs
     const searchWrapper = document.createElement("div");
     searchWrapper.id = "searchWrapper";
-    searchWrapper.style = "margin-left: auto; display: flex; align-items: center; padding-right: 24px; pointer-events: auto;";
+    searchWrapper.className = "filters-row";
 
     searchWrapper.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <select id="categoryFilter" style="background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 6px; padding: 8px 12px; color: var(--text-primary); font-family: var(--font-mono); font-size: 0.75rem; outline: none; appearance: none; cursor:pointer;" onchange="currentPage=1; loadRequests();">
+        <div class="category-select-wrap">
+            <select id="categoryFilter" class="category-select" onchange="currentPage=1; loadRequests();">
                 <option value="">ALL CATEGORIES</option>
                 <option value="Math">Math</option>
                 <option value="Code">Code</option>
@@ -222,14 +231,12 @@ function renderSearchUI() {
                 <option value="Science">Science</option>
                 <option value="Other">Other</option>
             </select>
-            <div style="position: relative; display: flex; align-items: center;">
-                <i data-lucide="search" style="position: absolute; left: 12px; width: 14px; height: 14px; color: var(--text-tertiary);"></i>
-                <input type="text" id="requestSearch" placeholder="SEARCH_DATABASE..." 
-                    style="background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 6px; padding: 8px 12px 8px 36px; color: var(--text-primary); font-family: var(--font-mono); font-size: 0.75rem; width: 220px; transition: all 0.2s; outline: none;"
-                    onfocus="this.style.borderColor='var(--text-secondary)'"
-                    onblur="this.style.borderColor='var(--border-dim)'">
-            </div>
         </div>
+            <div class="search-wrap">
+                <i data-lucide="search"></i>
+                <input type="text" id="requestSearch" placeholder="SEARCH_DATABASE..." 
+                    class="request-search-input">
+            </div>
     `;
 
     tabsContainer.appendChild(searchWrapper);
@@ -320,8 +327,74 @@ async function loadDashboardMetrics() {
                 referralNodeLink.innerText = "NOT_AVAILABLE";
             }
         }
+
+        updateIdentityProtocolPanel(data);
     } catch (e) {
         console.error("Dashboard metrics load error:", e);
+    }
+}
+
+function updateIdentityProtocolPanel(data) {
+    const user = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
+    const rank = Number(data.rank || 0);
+    const posted = Number(data.bounties_posted || 0);
+    const completed = Number(data.bounties_completed || 0);
+
+    const rankLabel = document.getElementById("identityRankLabel");
+    const levelBar = document.getElementById("identityLevelBar");
+    const tierProgress = document.getElementById("identityTierProgress");
+    const initializedValue = document.getElementById("identityInitializedValue");
+    const modulesWrap = document.getElementById("identityCoreModules");
+    const objectives = document.getElementById("identityObjectives");
+
+    if (rankLabel) {
+        rankLabel.textContent = rank > 0 ? `#${rank}` : "UNRANKED";
+    }
+
+    if (levelBar) {
+        let progress = 15;
+        if (rank > 0) {
+            progress = Math.max(20, Math.min(100, 100 - Math.min(rank, 1000) / 10));
+        }
+        levelBar.style.width = `${progress}%`;
+    }
+
+    if (tierProgress) {
+        const toNext = Math.max(0, 25 - completed);
+        tierProgress.textContent = toNext > 0
+            ? `${toNext} COMPLETED BOUNTIES TO NEXT TIER`
+            : "TIER UPGRADE READY";
+    }
+
+    if (initializedValue) {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        initializedValue.textContent = `Cycle_${now.getFullYear()}.${month}`;
+    }
+
+    if (modulesWrap) {
+        const modules = [
+            "Python",
+            posted > 0 ? "Bounties" : "Starter",
+            completed > 0 ? "Solver" : "Explorer"
+        ];
+        modulesWrap.innerHTML = modules.map((m, idx) => {
+            if (idx === 1) {
+                return `<span class="sys-tag" style="border-color: var(--accent-blue); color: var(--accent-blue);">${m}</span>`;
+            }
+            return `<span class="sys-tag">${m}</span>`;
+        }).join("");
+    }
+
+    if (objectives) {
+        const name = user.first_name || user.name || "Node";
+        if (posted === 0) {
+            objectives.textContent = `${name}, post your first request to activate your network pipeline.`;
+        } else if (completed === 0) {
+            objectives.textContent = `${name}, your requests are live. Next objective: get your first accepted solution.`;
+        } else {
+            objectives.textContent = `${name}, keep momentum by solving more requests and improving your rank.`;
+        }
     }
 }
 
