@@ -1167,3 +1167,223 @@ body {
         padding: 24px;
     }
 }
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.empty-state-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-text-secondary, var(--text-secondary));
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+}
+
+.empty-state-subtitle {
+    font-size: 0.875rem;
+    color: var(--color-text-tertiary, var(--text-tertiary));
+    max-width: 320px;
+}
+
+/* -- Mobile Responsive Breakpoints -- */
+@media (max-width: 768px) {
+    /* Hide sidebar completely */
+    .sidebar,
+    #sidebar,
+    [class*="sidebar"],
+    nav.sidebar,
+    .nav-sidebar,
+    .side-nav,
+    .sidenav {
+        display: none !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        left: -9999px !important;
+    }
+
+    /* Remove all left offset from main content */
+    body,
+    .main-content {
+        margin-left: 0 !important;
+        padding-left: 1rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        left: 0 !important;
+    }
+
+    .content,
+    .page-content,
+    .workspace,
+    .main-wrapper,
+    .content-wrapper,
+    .dashboard-content,
+    main {
+        margin-left: 0 !important;
+        padding-left: 1rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        left: 0 !important;
+    }
+
+    .workspace-content {
+        margin-left: 0 !important;
+        padding-left: 1rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        left: 0 !important;
+    }
+
+    /* Make sure body doesn't overflow horizontally */
+    html,
+    body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+
+    /* Fix any flex/grid layouts that push content right */
+    .app-layout,
+    .layout,
+    .page-layout,
+    .dashboard-layout,
+    .main-layout {
+        display: block !important;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+    }
+
+    /* Hero section */
+    .hero,
+    .hero-section,
+    .landing-hero {
+        padding: 2rem 1rem !important;
+        text-align: left !important;
+    }
+
+    .hero-title,
+    .hero h1,
+    .landing-title,
+    h1.title {
+        font-size: 2.5rem !important;
+        line-height: 1.1 !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        max-width: 100% !important;
+    }
+
+    .hero-subtitle,
+    .hero p,
+    .landing-subtitle {
+        font-size: 0.95rem !important;
+        max-width: 100% !important;
+        padding-right: 0 !important;
+    }
+
+    /* Fix CTA buttons side by side being cut off */
+    .hero-buttons,
+    .cta-buttons,
+    .button-group {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+    }
+
+    .hero-buttons a,
+    .hero-buttons button,
+    .cta-buttons a,
+    .cta-buttons button {
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    /* Metric cards full width */
+    .metrics-grid,
+    .stats-row,
+    .cards-row,
+    .overview-cards {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+        padding: 0 !important;
+    }
+
+    .metric-card,
+    .stat-card,
+    .overview-card {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+
+    .metrics-grid,
+    .stats-grid,
+    .cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .modal-content,
+    .modal {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        margin: 1rem auto !important;
+        padding: 1rem !important;
+    }
+
+    .request-card,
+    .answer-card,
+    .post-card {
+        padding: 1rem !important;
+    }
+
+    .top-bar,
+    .topbar,
+    .navbar,
+    header {
+        padding: 0.75rem 1rem !important;
+        width: 100% !important;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .btn,
+    button {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h2 {
+        font-size: 1.25rem !important;
+    }
+
+    .hero-title,
+    .page-title {
+        font-size: 1.75rem !important;
+        line-height: 1.2 !important;
+    }
+
+    .metric-value,
+    .stat-number {
+        font-size: 1.5rem !important;
+    }
+}

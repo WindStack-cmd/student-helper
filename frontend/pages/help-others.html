@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HUNT MODE | StudentsHelper</title>
+    <link rel="stylesheet" href="../css/global.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%237b42fa' width='100' height='100'/><text x='50' y='50' font-size='80' fill='%23ccff00' text-anchor='middle' dy='.3em' font-weight='bold'>S</text></svg>">
     <!-- Fonts for Cyber Editorial theme -->
     <link
@@ -677,6 +678,94 @@
                 display: none;
             }
         }
+
+        @media (max-width: 768px) {
+            html,
+            body {
+                overflow-x: hidden;
+                width: 100%;
+                max-width: 100vw;
+            }
+
+            #app {
+                display: block;
+            }
+
+            .sidebar-nav {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                overflow: hidden !important;
+                position: absolute !important;
+                left: -9999px !important;
+            }
+
+            .workspace {
+                width: 100% !important;
+                margin-left: 0 !important;
+            }
+
+            .workspace-header {
+                height: auto;
+                min-height: 72px;
+                padding: 10px 12px;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .workspace-title {
+                font-size: 1.05rem;
+                line-height: 1.15;
+                flex: 1;
+                min-width: 0;
+                white-space: normal;
+            }
+
+            .workspace-actions {
+                flex-shrink: 0;
+                gap: 8px;
+            }
+
+            .btn-icon-sys {
+                width: 38px;
+                height: 38px;
+            }
+
+            .filter-panel {
+                padding: 12px;
+                gap: 10px;
+            }
+
+            .filter-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .filter-select,
+            .search-box {
+                width: 100%;
+            }
+
+            .workspace-content {
+                padding: 12px;
+            }
+
+            .hunt-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .bounty-card {
+                padding: 16px;
+            }
+
+            .bounty-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 
@@ -867,9 +956,8 @@
             if (!data || data.length === 0) {
                 container.innerHTML = `
                 <div class="empty-state">
-                    <i data-lucide="radar"></i>
-                    <h2>No Signals Found</h2>
-                    <p>Network scan clear. Adjust filters or check back later for active bounties.</p>
+                    <p class="empty-state-title">NO_DATA_FOUND</p>
+                    <p class="empty-state-subtitle">No open requests right now. Check back soon or invite a classmate.</p>
                 </div>
             `;
                 return;

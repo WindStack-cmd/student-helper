@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NETWORK LEDGER | StudentsHelper</title>
+    <link rel="stylesheet" href="../css/global.css">
     <!-- Fonts for Cyber Editorial theme -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
@@ -743,6 +744,137 @@
                 display: none;
             }
         }
+
+        @media (max-width: 768px) {
+            html,
+            body {
+                overflow-x: hidden;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 100vw;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            #app {
+                display: block;
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .sidebar-nav {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                overflow: hidden !important;
+                position: absolute !important;
+                left: -9999px !important;
+            }
+
+            .workspace {
+                display: block;
+                overflow: visible;
+                width: 100%;
+            }
+
+            .board-hero {
+                padding: 18px 16px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-dim);
+            }
+
+            .page-title {
+                font-size: 2.5rem;
+                line-height: 0.95;
+                margin-bottom: 16px;
+            }
+
+            .spotlight-card {
+                margin-top: 12px;
+                padding: 18px;
+            }
+
+            .spotlight-user {
+                gap: 12px;
+                margin-bottom: 14px;
+            }
+
+            .spotlight-avatar {
+                width: 48px;
+                height: 48px;
+            }
+
+            .spotlight-info h3 {
+                font-size: 1.05rem;
+            }
+
+            .spotlight-stats {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding-top: 14px;
+            }
+
+            .board-list {
+                padding: 16px;
+                overflow: visible;
+            }
+
+            .user-status-banner {
+                position: relative;
+                top: auto;
+                padding: 14px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+                margin-bottom: 18px;
+            }
+
+            .user-status-left {
+                width: 100%;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .my-rank {
+                font-size: 1rem;
+                padding: 10px 12px;
+            }
+
+            .user-status-text h4 {
+                font-size: 0.95rem;
+            }
+
+            .user-status-text p {
+                font-size: 0.76rem;
+                line-height: 1.35;
+            }
+
+            .btn-hunt {
+                width: 100%;
+                justify-content: center;
+                padding: 10px 12px;
+                font-size: 0.78rem;
+            }
+
+            .log-table th,
+            .log-table td {
+                padding: 12px 10px;
+            }
+
+            .row-user {
+                gap: 10px;
+            }
+
+            .row-name {
+                font-size: 0.8rem;
+            }
+
+            .btn-load-more {
+                margin-top: 18px;
+            }
+        }
     </style>
 </head>
 
@@ -833,18 +965,18 @@
                     <div class="spotlight-user">
                         <div class="spotlight-avatar"><i data-lucide="zap"></i></div>
                         <div class="spotlight-info">
-                            <h3>John Doe</h3>
-                            <p>Computer Science '24</p>
+                            <h3 id="spotlightName">SYSTEM USER</h3>
+                            <p id="spotlightSubtitle">Network Node</p>
                         </div>
                     </div>
                     <div class="spotlight-stats">
                         <div class="stat-block">
                             <span class="label">Reputation</span>
-                            <span class="val highlight">3,250</span>
+                            <span class="val highlight" id="spotlightReputation">0</span>
                         </div>
                         <div class="stat-block">
                             <span class="label">Bounties Claimed</span>
-                            <span class="val">128</span>
+                            <span class="val" id="spotlightBounties">0</span>
                         </div>
                         <div class="stat-block" style="grid-column: span 2; margin-top: 12px;">
                             <span class="label">Core Directives</span>
@@ -907,6 +1039,46 @@
     <script>
         lucide.createIcons();
 
+        function updateSpotlightFromUser() {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (!userStr) return;
+
+            try {
+                const user = JSON.parse(userStr);
+                const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "System User");
+
+                const nameEl = document.getElementById("spotlightName");
+                const subtitleEl = document.getElementById("spotlightSubtitle");
+                const repEl = document.getElementById("spotlightReputation");
+                const bountiesEl = document.getElementById("spotlightBounties");
+
+                if (nameEl) nameEl.textContent = name;
+                if (subtitleEl) subtitleEl.textContent = "Network Node";
+                if (repEl) repEl.textContent = String(user.reputation || 0);
+                if (bountiesEl) bountiesEl.textContent = String(user.bounties_completed || 0);
+            } catch (e) {
+                console.error("Spotlight user parse error:", e);
+            }
+        }
+
+        function updateSpotlightFromTopNode(node) {
+            if (!node) return;
+
+            const nameEl = document.getElementById("spotlightName");
+            const subtitleEl = document.getElementById("spotlightSubtitle");
+            const repEl = document.getElementById("spotlightReputation");
+            const bountiesEl = document.getElementById("spotlightBounties");
+
+            if (nameEl) {
+                nameEl.textContent = node.first_name || (node.email ? node.email.split("@")[0] : "Top Node");
+            }
+            if (subtitleEl) subtitleEl.textContent = "Top Ranked Node";
+            if (repEl) repEl.textContent = String(node.reputation || 0);
+            if (bountiesEl) bountiesEl.textContent = String(node.bounties_completed || 0);
+        }
+
+        updateSpotlightFromUser();
+
         async function loadLeaderboard() {
             const tbody = document.getElementById("leaderboardBody") || document.querySelector("tbody");
             if (!tbody) return;
@@ -921,6 +1093,23 @@
                 const data = await res.json();
 
                 tbody.innerHTML = "";
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `
+                <tr class="ranking-row">
+                    <td colspan="4" style="text-align: center; padding: 2rem;">
+                        <div class="empty-state">
+                            <p class="empty-state-title">NO_DATA_FOUND</p>
+                            <p class="empty-state-subtitle">No rankings yet. Start solving requests to appear here.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                    updateSpotlightFromUser();
+                    return;
+                }
+
+                updateSpotlightFromTopNode(data[0]);
 
                 data.forEach((user, index) => {
                     const initials = user.first_name ? user.first_name.charAt(0).toUpperCase() : "U";

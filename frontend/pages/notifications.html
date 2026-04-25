@@ -659,7 +659,12 @@
         container.innerHTML=""
 
         if (!data || data.length === 0) {
-            container.innerHTML = `<div class="notification" style="text-align: center; color: var(--text-secondary);">No notifications</div>`
+                        container.innerHTML = `
+<div class="empty-state">
+    <p class="empty-state-title">NO_DATA_FOUND</p>
+    <p class="empty-state-subtitle">No notifications yet. Activity on your requests will appear here.</p>
+</div>
+`
             return
         }
 

@@ -709,9 +709,142 @@
             background: var(--accent-lime);
         }
 
+        .filters-row {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-right: 24px;
+            pointer-events: auto;
+        }
+
+        .category-select-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            min-width: 160px;
+        }
+
+        .category-select {
+            width: 100%;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background: linear-gradient(180deg, rgba(17, 17, 24, 0.95) 0%, rgba(10, 10, 14, 0.95) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 10px 38px 10px 14px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+        }
+
+        .category-select:hover {
+            border-color: rgba(204, 255, 0, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .category-select:focus {
+            outline: none;
+            border-color: rgba(204, 255, 0, 0.8);
+            box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.35);
+        }
+
+        .category-select-wrap::after {
+            content: '';
+            position: absolute;
+            right: 14px;
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid var(--text-secondary);
+            border-bottom: 2px solid var(--text-secondary);
+            transform: rotate(45deg) translateY(-2px);
+            pointer-events: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .category-select-wrap:focus-within::after {
+            border-color: var(--accent-lime);
+        }
+
+        .category-select option {
+            background: #07070c;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+        }
+
+        .search-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-wrap i {
+            position: absolute;
+            left: 12px;
+            width: 14px;
+            height: 14px;
+            color: var(--text-tertiary);
+        }
+
+        .request-search-input {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: 10px;
+            padding: 10px 12px 10px 36px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            width: 240px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            outline: none;
+        }
+
+        .request-search-input:focus {
+            border-color: rgba(204, 255, 0, 0.7);
+            box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
+        }
+
         .data-list {
             display: flex;
             flex-direction: column;
+        }
+
+        .empty-state {
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem 1rem;
+            gap: 0.5rem;
+        }
+
+        .empty-state-title {
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .empty-state-subtitle {
+            font-family: var(--font-body);
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            line-height: 1.45;
+            max-width: 560px;
+            margin: 0;
         }
 
         .data-row {
@@ -1008,6 +1141,160 @@
                 display: none;
             }
         }
+
+        @media (max-width: 768px) {
+            html,
+            body {
+                overflow-x: hidden;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 100vw;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            #app {
+                display: block;
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .sidebar-nav {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                overflow: hidden !important;
+                position: absolute !important;
+                left: -9999px !important;
+            }
+
+            .workspace {
+                margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow: visible;
+            }
+
+            .workspace-header {
+                padding: 0 12px;
+                height: 72px;
+            }
+
+            .workspace-title {
+                font-size: 1.25rem;
+            }
+
+            .workspace-content {
+                padding: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                overflow: visible;
+            }
+
+            .workspace-panel {
+                min-height: 420px;
+                order: 1;
+            }
+
+            .metrics-grid {
+                order: 2;
+            }
+
+            .panel-tabs {
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                padding: 0 10px 10px;
+            }
+
+            .tab {
+                padding: 14px 10px;
+                font-size: 0.72rem;
+                white-space: nowrap;
+            }
+
+            .filters-row {
+                order: 2;
+                width: 100%;
+                margin-left: 0;
+                padding-right: 0;
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .category-select-wrap,
+            .search-wrap {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .category-select,
+            .request-search-input {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .metric-card {
+                padding: 20px;
+            }
+
+            .workspace-actions {
+                gap: 8px;
+            }
+
+            .btn-icon {
+                width: 36px;
+                height: 36px;
+            }
+
+            .btn-primary {
+                height: 36px;
+                padding: 0 10px;
+                font-size: 0.72rem;
+                white-space: nowrap;
+            }
+
+            .empty-state {
+                min-height: 240px;
+                padding: 1.25rem 0.75rem;
+            }
+
+            .empty-state-subtitle {
+                font-size: 0.95rem;
+                max-width: 100%;
+            }
+
+            .data-row {
+                grid-template-columns: 1fr;
+                row-gap: 8px;
+                padding: 16px 14px;
+            }
+
+            .row-status-col,
+            .row-date {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tab {
+                padding: 12px 8px;
+                font-size: 0.68rem;
+            }
+
+            .workspace-title {
+                font-size: 1.05rem;
+            }
+        }
     </style>
 </head>
 
@@ -1091,10 +1378,6 @@
 
                     <button class="btn-icon" onclick="loadNotifications()">
                         <i data-lucide="bell" style="width:18px;height:18px;"></i>
-                    </button>
-
-                    <button class="btn-icon">
-                        <i data-lucide="search" style="width: 18px; height: 18px;"></i>
                     </button>
 
                     <a href="request-help.html" style="text-decoration: none;" class="btn-primary">
@@ -1183,14 +1466,15 @@
             <div class="level-card">
                 <div class="level-header">
                     <span>Node Ranking</span>
-                    <span>Lvl. 4</span>
+                    <span id="identityRankLabel">LOADING...</span>
                 </div>
                 <div class="level-bar-bg">
-                    <div class="level-bar-fill"></div>
+                    <div class="level-bar-fill" id="identityLevelBar"></div>
                 </div>
-                <div
+                <div id="identityTierProgress"
                     style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary); text-align: center;">
-                    180 PTS TO NEXT TIER</div>
+                    LOADING_PROGRESS...
+                </div>
             </div>
 
             <div class="info-group" style="height: 180px; margin-bottom: 40px;">
@@ -1202,18 +1486,15 @@
             <div class="info-group">
                 <div class="info-label"><i data-lucide="clock" style="width: 14px; height: 14px;"></i> Initialized
                 </div>
-                <div class="info-value" style="font-family: var(--font-mono); font-size: 0.85rem;">Cycle_2024.10
+                <div class="info-value" id="identityInitializedValue" style="font-family: var(--font-mono); font-size: 0.85rem;">LOADING...
                 </div>
             </div>
 
             <div class="info-group">
                 <div class="info-label"><i data-lucide="layers" style="width: 14px; height: 14px;"></i> Core Modules
                 </div>
-                <div class="tag-list">
-                    <span class="sys-tag">Python</span>
-                    <span class="sys-tag"
-                        style="border-color: var(--accent-blue); color: var(--accent-blue);">Algorithms</span>
-                    <span class="sys-tag">DataStructs</span>
+                <div class="tag-list" id="identityCoreModules">
+                    <span class="sys-tag">LOADING</span>
                 </div>
             </div>
 
@@ -1233,9 +1514,8 @@
             <div class="info-group">
                 <div class="info-label"><i data-lucide="target" style="width: 14px; height: 14px;"></i> Active
                     Objectives</div>
-                <div class="info-value" style="font-size: 0.85rem; color: var(--text-secondary);">
-                    Currently focusing on distributed systems optimization and helping peers with baseline
-                    compilation errors.
+                <div class="info-value" id="identityObjectives" style="font-size: 0.85rem; color: var(--text-secondary);">
+                    LOADING_OBJECTIVES...
                 </div>
             </div>
         </div>

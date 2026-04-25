@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACTIVE BOUNTIES | StudentsHelper</title>
+    <link rel="stylesheet" href="../css/global.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%237b42fa' width='100' height='100'/><text x='50' y='50' font-size='80' fill='%23ccff00' text-anchor='middle' dy='.3em' font-weight='bold'>S</text></svg>">
     <!-- Fonts for Cyber Editorial theme -->
     <link
@@ -670,9 +671,8 @@ try{
         logContainer.style.display = "none";
         emptyContainer.innerHTML = `
         <div class="empty-state">
-            <i data-lucide="hard-drive"></i>
-            <h2>Ledger Empty</h2>
-            <p>No active bounties on the network.</p>
+            <p class="empty-state-title">NO_DATA_FOUND</p>
+            <p class="empty-state-subtitle">You haven't posted any requests yet. Post your first question to get started.</p>
         </div>
         `;
         lucide.createIcons();

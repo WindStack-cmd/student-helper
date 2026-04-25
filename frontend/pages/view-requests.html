@@ -626,8 +626,8 @@
         if (requests.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <i data-lucide="search-x" style="width: 48px; height: 48px; opacity: 0.5;"></i>
-                    <p>[ SYSTEM IDLE - NO TARGETS DETECTED ]</p>
+                    <p class="empty-state-title">NO_DATA_FOUND</p>
+                    <p class="empty-state-subtitle">No requests match your search. Try different filters.</p>
                 </div>
             `;
             lucide.createIcons();
