@@ -1012,7 +1012,6 @@
             <header class="workspace-header">
                 <h1 class="workspace-title">Sys.Network_Feed</h1>
                 <div class="workspace-actions">
-                    <button class="btn-icon"><i data-lucide="search" style="width: 18px; height: 18px;"></i></button>
                     <a href="request-help.html" style="text-decoration: none;" class="btn-primary">
                         <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
                         Broadcast Post
@@ -1071,19 +1070,19 @@
                     <div class="filter-label">Sort Protocols By</div>
                     <div class="radio-options">
                         <label class="radio-option">
-                            <input type="radio" name="sort" checked>
+                            <input type="radio" name="sort" value="newest" checked onchange="loadPosts()">
                             <span class="radio-label">Chronological (Latest)</span>
                         </label>
                         <label class="radio-option">
-                            <input type="radio" name="sort">
+                            <input type="radio" name="sort" value="highest_bounty" onchange="loadPosts()">
                             <span class="radio-label">High Yield (Bounties)</span>
                         </label>
                         <label class="radio-option">
-                            <input type="radio" name="sort">
+                            <input type="radio" name="sort" value="most_viewed" onchange="loadPosts()">
                             <span class="radio-label">Network Activity (Hot)</span>
                         </label>
                         <label class="radio-option">
-                            <input type="radio" name="sort">
+                            <input type="radio" name="sort" value="solved" onchange="loadPosts()">
                             <span class="radio-label">Unresolved</span>
                         </label>
                     </div>
@@ -1093,15 +1092,15 @@
                     <div class="filter-label">Data Types</div>
                     <div class="radio-options">
                         <label class="radio-option">
-                            <input type="radio" name="type" checked>
+                            <input type="radio" name="type" value="all" checked onchange="loadPosts()">
                             <span class="radio-label">All Transmissions</span>
                         </label>
                         <label class="radio-option">
-                            <input type="radio" name="type">
+                            <input type="radio" name="type" value="open" onchange="loadPosts()">
                             <span class="radio-label">Help Requests</span>
                         </label>
                         <label class="radio-option">
-                            <input type="radio" name="type">
+                            <input type="radio" name="type" value="knowledge" onchange="loadPosts()">
                             <span class="radio-label">Knowledge Sharing</span>
                         </label>
                     </div>
@@ -1133,9 +1132,29 @@
     <script>
         async function loadPosts() {
             try {
-                const response = await fetch("http://127.0.0.1:5001/get_posts");
+                // Get filters
+                const sort = document.querySelector('input[name="sort"]:checked')?.value || 'newest';
+                const type = document.querySelector('input[name="type"]:checked')?.value || 'all';
+                
+                // For community chat, we'll fetch posts from /get_posts for "Knowledge Sharing"
+                // and /get_requests for "Help Requests" if selected.
+                // If "All Transmissions", we'll combine or just show posts for now.
+                
+                let url = "http://127.0.0.1:5001/get_posts";
+                if (type === 'open') {
+                    url = `http://127.0.0.1:5001/get_requests?status=open&sort=${sort}`;
+                } else {
+                    // For now, /get_posts doesn't support complex sorting on backend, but we'll use it
+                    url = "http://127.0.0.1:5001/get_posts";
+                }
+
+                const response = await fetch(url);
                 if (!response.ok) throw new Error("HTTP " + response.status);
-                const posts = await response.json();
+                const data = await response.json();
+                
+                // Handle both /get_posts (array) and /get_requests (object with .data)
+                const posts = Array.isArray(data) ? data : (data.data || []);
+                
                 const feed = document.getElementById("postsContainer");
                 if (!feed) return;
                 if (posts.length === 0) {
@@ -1219,31 +1238,52 @@
                 const response = await fetch("http://127.0.0.1:5001/leaderboard");
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const users = await response.json();
-                const top3 = users.slice(0, 3);
-                const container = document.querySelector(".trending-nodes"); // use actual container id
+                const top5 = users.slice(0, 5);
+                const container = document.getElementById("topNodesContainer");
                 if (!container) return;
-                container.innerHTML = top3.map((u, i) => {
+                
+                if (top5.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-tertiary); font-family:var(--font-mono); font-size:0.75rem;">NO_ACTIVE_NODES</div>';
+                    return;
+                }
+
+                container.innerHTML = top5.map((u, i) => {
                     const name = u.first_name || u.name || u.email?.split('@')[0] || "User";
                     const avatar = name.substring(0, 2).toUpperCase();
+                    const reputation = u.reputation !== undefined ? u.reputation : (u.points || 0);
+                    const formattedRep = reputation >= 1000 ? (reputation / 1000).toFixed(1) + 'k' : reputation;
+                    
                     return `
-            <div class="top-node-item">
-                <span class="node-rank">#${i + 1}</span>
-                <span class="node-avatar">${avatar}</span>
-                <div class="node-info">
-                    <div class="node-id">${name}</div>
-                    <div class="node-score">+${u.reputation !== undefined ? u.reputation : (u.points || 0)} PTS / Hr</div>
-                </div>
-            </div>
-        `;
+                        <div class="trending-node" onclick="window.location.href='leaderboard.html'">
+                            <span class="node-rank">#${i + 1}</span>
+                            <div class="node-pfp" style="border-color: ${i === 0 ? 'var(--accent-lime)' : (i === 1 ? 'var(--accent-purple)' : 'var(--border-dim)')}">
+                                ${avatar}
+                            </div>
+                            <div class="node-info">
+                                <div class="node-id">${name}</div>
+                                <div class="node-score" style="color: ${i < 3 ? 'var(--accent-lime)' : 'var(--text-tertiary)'}">
+                                    +${formattedRep} <span style="font-size: 0.6rem; opacity: 0.7;">REPUTATION</span>
+                                </div>
+                            </div>
+                            <i data-lucide="chevron-right" style="width: 12px; height: 12px; margin-left: auto; color: var(--text-tertiary);"></i>
+                        </div>
+                    `;
                 }).join('');
+                
+                if (window.lucide) { window.lucide.createIcons(); }
             } catch (e) {
                 console.error("Leaderboard fetch failed:", e);
+                const container = document.getElementById("topNodesContainer");
+                if (container) container.innerHTML = '<div style="text-align:center; color:var(--danger-red); font-size:0.7rem;">ERROR_FETCHING_NODES</div>';
             }
         }
 
         document.addEventListener("DOMContentLoaded", () => {
             loadPosts();
             loadLeaderboard();
+            
+            // Auto-refresh leaderboard every 30 seconds for dynamic updates
+            setInterval(loadLeaderboard, 30000);
         });
 
 

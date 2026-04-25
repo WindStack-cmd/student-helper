@@ -470,6 +470,27 @@ def init_db():
         except Exception:
             pass
 
+        # Deep Cleanup of test/old data reported by user
+        try:
+            test_names = ('NAGI', 'RIN', 'JHON', 'JINWOO', 'TEST')
+            # Get emails first to delete associated data
+            cursor.execute("SELECT email FROM users WHERE first_name IN (%s,%s,%s,%s,%s) OR name IN (%s,%s,%s,%s,%s)", test_names + test_names)
+            test_emails = [r[0] for r in cursor.fetchall() if r[0]]
+            
+            if test_emails:
+                placeholders = ', '.join(['%s'] * len(test_emails))
+                # Delete related data first
+                cursor.execute(f"DELETE FROM claims WHERE user_email IN ({placeholders})", tuple(test_emails))
+                cursor.execute(f"DELETE FROM answers WHERE email IN ({placeholders})", tuple(test_emails))
+                cursor.execute(f"DELETE FROM requests WHERE user_email IN ({placeholders})", tuple(test_emails))
+                cursor.execute(f"DELETE FROM posts WHERE user_email IN ({placeholders})", tuple(test_emails))
+                cursor.execute(f"DELETE FROM notifications WHERE email IN ({placeholders})", tuple(test_emails))
+                cursor.execute(f"DELETE FROM users WHERE email IN ({placeholders})", tuple(test_emails))
+                conn.commit()
+                log_event("DB_INIT", f"Deep cleaned {len(test_emails)} test accounts and all associated network data", "INFO")
+        except Exception as e:
+            log_event("DB_INIT", f"Deep cleanup error: {e}", "WARNING")
+
         # Give 100 points onboarding bonus to anyone with 0 (one-time migration for existing users)
         try:
             cursor.execute("UPDATE users SET points = 100, reputation = 100 WHERE points = 0 AND reputation = 0")
@@ -913,7 +934,11 @@ def leaderboard():
                    COALESCE(reputation, points, 0) as reputation,
                    COALESCE(bounties_completed, 0) as bounties_completed
             FROM users
-            ORDER BY COALESCE(reputation, points, 0) DESC
+            WHERE email NOT LIKE 'test%' 
+              AND first_name NOT LIKE 'Test%'
+              AND (reputation > 100 OR bounties_completed > 0)
+            ORDER BY COALESCE(reputation, points, 0) DESC, bounties_completed DESC
+            LIMIT 10
         """)
         users = cursor.fetchall()
         log_event("LEADERBOARD", f"Retrieved leaderboard with {len(users)} users", "INFO")

@@ -1501,14 +1501,18 @@
             <div class="info-group">
                 <div class="info-label"><i data-lucide="link" style="width: 14px; height: 14px;"></i> Referral Link
                 </div>
-                <div class="info-value" id="referralNodeLink"
-                    style="font-family: var(--font-mono); font-size: 0.75rem; word-break: break-all; color: var(--accent-blue); padding: 8px; border: 1px solid var(--border-dim); background: var(--bg-elevated); border-radius: 4px; cursor: pointer;"
-                    onclick="copyReferral()">
-                    LOADING_LINK...
+                <div class="referral-card" style="margin-top: 10px; background: var(--bg-elevated); border: 1px solid var(--border-dim); border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+                    <div id="referralNodeLink"
+                        style="flex: 1; font-family: var(--font-mono); font-size: 0.75rem; word-break: break-all; color: var(--accent-blue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        LOADING_LINK...
+                    </div>
+                    <button onclick="copyReferral()" class="btn-icon-sm" style="background: rgba(0, 229, 255, 0.1); border: 1px solid var(--accent-blue); color: var(--accent-blue); border-radius: 4px; padding: 4px 8px; font-size: 0.7rem; font-family: var(--font-mono); cursor: pointer; transition: all 0.2s;">
+                        COPY
+                    </button>
                 </div>
                 <div
-                    style="font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-tertiary); margin-top: 4px;">
-                    CLICK TO COPY - EARN 10% COMMISSION</div>
+                    style="font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-tertiary); margin-top: 8px;">
+                    SHARE_NODE_HASH - EARN 10% COMMISSION</div>
             </div>
 
             <div class="info-group">
