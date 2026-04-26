@@ -1193,6 +1193,7 @@ body {
 
 /* -- Mobile Responsive Breakpoints -- */
 @media (max-width: 768px) {
+
     /* Hide sidebar completely */
     .sidebar,
     #sidebar,
