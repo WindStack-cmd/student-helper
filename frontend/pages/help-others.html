@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HUNT MODE | StudentsHelper</title>
     <link rel="stylesheet" href="../css/global.css">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%237b42fa' width='100' height='100'/><text x='50' y='50' font-size='80' fill='%23ccff00' text-anchor='middle' dy='.3em' font-weight='bold'>S</text></svg>">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%237b42fa' width='100' height='100'/><text x='50' y='50' font-size='80' fill='%23ccff00' text-anchor='middle' dy='.3em' font-weight='bold'>S</text></svg>">
     <!-- Fonts for Cyber Editorial theme -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
@@ -680,6 +681,7 @@
         }
 
         @media (max-width: 768px) {
+
             html,
             body {
                 overflow-x: hidden;
@@ -791,7 +793,7 @@
                     <a href="community-chat.html" class="nav-item">
                         <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
                         <span>Network</span>
-                        
+
                     </a>
                     <a href="leaderboard.html" class="nav-item">
                         <i data-lucide="bar-chart-2" style="width: 18px; height: 18px;"></i>
@@ -831,7 +833,8 @@
                     <div class="user-role">...</div>
                 </div>
                 <i data-lucide="power" onclick="event.stopPropagation(); logout()"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;"
+                    title="Logout"></i>
             </div>
         </aside>
 
@@ -843,8 +846,6 @@
                 <div class="workspace-actions">
                     <button class="btn-icon-sys" onclick="location.reload()" title="Refresh Scan"><i
                             data-lucide="rotate-cw" style="width: 18px; height: 18px;"></i></button>
-                    <button class="btn-icon-sys"><i data-lucide="filter"
-                            style="width: 18px; height: 18px;"></i></button>
                 </div>
             </header>
 
@@ -925,7 +926,7 @@
                 if (!res.ok) throw new Error("HTTP error " + res.status);
                 const result = await res.json();
                 let data = result.data || [];
-                
+
                 // Local bounty filter (fallback since backend doesn't handle bounty brackets natively yet)
                 const bountyFilter = document.getElementById("bountyFilter").value;
                 if (bountyFilter) {
@@ -938,7 +939,7 @@
                         return true;
                     });
                 }
-                
+
                 window.currentRequests = data;
                 renderRequests(data);
             } catch (e) {

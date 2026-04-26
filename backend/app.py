@@ -432,6 +432,12 @@ def init_db():
             pass
         
         try:
+            cursor.execute("ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) DEFAULT NULL")
+            conn.commit()
+        except Exception:
+            pass
+        
+        try:
             cursor.execute("SELECT id FROM users WHERE referral_code IS NULL")
             unreferred_users = cursor.fetchall()
             for row in unreferred_users:
@@ -767,7 +773,7 @@ def me():
         cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute(
-                "SELECT id, email, first_name, name, is_verified, COALESCE(reputation, points, 0) AS balance FROM users WHERE email=%s",
+                "SELECT id, email, first_name, name, is_verified, profile_image, COALESCE(reputation, points, 0) AS balance FROM users WHERE email=%s",
                 (email,)
             )
             user = cursor.fetchone()
@@ -781,6 +787,55 @@ def me():
     except Exception as e:
         log_event("ME", str(e), "ERROR")
         return jsonify({"message": "Failed to fetch user profile", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/update_profile_image", methods=["POST"])
+@require_auth
+def update_profile_image():
+    """Update user profile image (avatar)."""
+    try:
+        email = request.user_email
+        if "file" not in request.files:
+            return jsonify({"message": "No file part"}), 400
+        
+        file = request.files["file"]
+        if file.filename == "":
+            return jsonify({"message": "No selected file"}), 400
+            
+        if file:
+            import uuid
+            import werkzeug.utils
+            
+            # Ensure avatar directory exists
+            avatar_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'avatars')
+            os.makedirs(avatar_dir, exist_ok=True)
+            
+            filename = f"avatar_{uuid.uuid4().hex}_{werkzeug.utils.secure_filename(file.filename)}"
+            filepath = os.path.join(avatar_dir, filename)
+            file.save(filepath)
+            
+            profile_image_url = f"/uploads/avatars/{filename}"
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "UPDATE users SET profile_image = %s WHERE email = %s",
+                    (profile_image_url, email)
+                )
+                conn.commit()
+                log_event("PROFILE_IMAGE", f"Profile image updated for {email}: {profile_image_url}", "INFO")
+                return jsonify({"message": "Profile image updated", "profile_image": profile_image_url}), 200
+            finally:
+                cursor.close()
+                conn.close()
+    except Exception as e:
+        log_event("PROFILE_IMAGE", str(e), "ERROR")
+        return jsonify({"message": "Failed to update profile image", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/uploads/avatars/<filename>")
+def uploaded_avatar(filename):
+    """Serve uploaded avatars."""
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], 'avatars'), filename)
 
 @app.route("/resend_verification", methods=["POST"])
 @require_auth
@@ -1529,41 +1584,30 @@ def accept_answer():
         return jsonify({"message": "Failed to accept answer", "error_code": "INTERNAL_ERROR"}), 500
 
 @app.route("/purge_user", methods=["POST"])
-@limiter.limit("2 per minute")  # FEATURE #3: Rate limiting (very restrictive for destructive operation)
+@require_auth
 def purge_user():
     try:
-        data = request.json or {}
-        email = str(data.get("email") or "").strip()
-
-        # FIX #3: Input validation
-        if not email or not validate_email(email):
-            log_event("PURGE_USER", f"Invalid email format: {email}", "WARNING")
-            return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
-
-        log_event("PURGE_USER", f"Starting purge for: {email}", "WARNING")
-
+        email = request.user_email
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("DELETE FROM notifications WHERE email = %s", (email,))
+            # Delete all related records
+            cursor.execute("DELETE FROM claims WHERE user_email = %s", (email,))
             cursor.execute("DELETE FROM answers WHERE email = %s", (email,))
-            cursor.execute("DELETE FROM posts WHERE user_email = %s", (email,))
             cursor.execute("DELETE FROM requests WHERE user_email = %s", (email,))
+            cursor.execute("DELETE FROM posts WHERE user_email = %s", (email,))
+            cursor.execute("DELETE FROM notifications WHERE email = %s", (email,))
             cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-
+            
             conn.commit()
-            log_event("PURGE_USER", f"User data purged successfully for: {email}", "WARNING")
-            return jsonify({"message": "User data purged successfully"}), 200
-        except Exception as e:
-            conn.rollback()
-            log_event("PURGE_USER", f"Error purging user {email}: {str(e)}", "ERROR")
-            return jsonify({"message": "Failed to purge user data", "error_code": "DB_ERROR"}), 500
+            log_event("PURGE_USER", f"User {email} completely purged from the system.", "INFO")
+            return jsonify({"message": "User data completely purged"}), 200
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
-        log_event("PURGE_USER", f"Critical error: {str(e)}", "ERROR")
-        return jsonify({"message": "Server error", "error_code": "INTERNAL_ERROR"}), 500
+        log_event("PURGE_USER", str(e), "ERROR")
+        return jsonify({"message": "Failed to purge user data", "error_code": "INTERNAL_ERROR"}), 500
 
 # @socketio.on("message")  # Disabled on Windows due to socket binding issues
 # def handle_message(msg):
@@ -1703,7 +1747,7 @@ def user_stats():
         cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute("""
-                SELECT first_name, email, referral_code, COALESCE(referral_earnings, 0) as referral_earnings,
+                SELECT first_name, email, referral_code, profile_image, COALESCE(referral_earnings, 0) as referral_earnings,
                        COALESCE(reputation, points, 0) as reputation,
                        COALESCE(bounties_completed, 0) as bounties_completed
                 FROM users
@@ -1938,6 +1982,32 @@ def delete_request():
     except Exception as e:
         log_event("DELETE_REQUEST", str(e), "ERROR")
         return jsonify({"message": "Failed to delete"}), 500
+
+@app.route("/purge_user", methods=["POST"])
+@require_auth
+def purge_user():
+    try:
+        email = request.user_email
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # Delete all related records
+            cursor.execute("DELETE FROM claims WHERE user_email = %s", (email,))
+            cursor.execute("DELETE FROM answers WHERE email = %s", (email,))
+            cursor.execute("DELETE FROM requests WHERE user_email = %s", (email,))
+            cursor.execute("DELETE FROM posts WHERE user_email = %s", (email,))
+            cursor.execute("DELETE FROM notifications WHERE email = %s", (email,))
+            cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+            
+            conn.commit()
+            log_event("PURGE_USER", f"User {email} completely purged from the system.", "INFO")
+            return jsonify({"message": "User data completely purged"}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("PURGE_USER", str(e), "ERROR")
+        return jsonify({"message": "Failed to purge user data", "error_code": "INTERNAL_ERROR"}), 500
 
 # ============================================
 # FRONTEND ROUTES (Must be at the end to not intercept API routes)
