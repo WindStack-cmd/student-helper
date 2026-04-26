@@ -6,6 +6,8 @@ const limit = 20;
 let totalRequests = 0;
 let searchQuery = "";
 let currentTab = "Network Feed";
+let performanceChartInstance = null;
+let pendingWeeklyActivity = null;
 
 async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated = false) {
     const headers = getAuthHeaders();
@@ -314,6 +316,7 @@ async function loadDashboardMetrics() {
         if (referralEarningsEl) referralEarningsEl.innerText = data.referral_earnings || 0;
 
         const referralNodeLink = document.getElementById("referralNodeLink");
+        const referralCopyBtn = document.querySelector(".referral-card button");
         if (referralNodeLink) {
             if (data.referral_code) {
                 const origin = window.location.origin;
@@ -323,12 +326,24 @@ async function loadDashboardMetrics() {
                 const link = `${origin}${basePath}/register.html?ref=${data.referral_code}`;
                 referralNodeLink.innerText = link;
                 referralNodeLink.setAttribute('data-link', link);
+                if (referralCopyBtn) {
+                    referralCopyBtn.disabled = false;
+                    referralCopyBtn.style.opacity = '1';
+                    referralCopyBtn.style.cursor = 'pointer';
+                }
             } else {
                 referralNodeLink.innerText = "NOT_AVAILABLE";
+                referralNodeLink.removeAttribute('data-link');
+                if (referralCopyBtn) {
+                    referralCopyBtn.disabled = true;
+                    referralCopyBtn.style.opacity = '0.5';
+                    referralCopyBtn.style.cursor = 'not-allowed';
+                }
             }
         }
 
         updateIdentityProtocolPanel(data);
+        updatePerformanceChart(data.weekly_activity);
     } catch (e) {
         console.error("Dashboard metrics load error:", e);
     }
@@ -934,29 +949,18 @@ function initializeChart() {
     const ctx = document.getElementById("performanceChart");
     if (!ctx) return;
 
-    // Generate semi-random data based on user reputation for a more dynamic feel
-    const userStr = localStorage.getItem("loggedInUser");
-    const user = JSON.parse(userStr || "{}");
-    const baseActivity = (user.points || 100) / 20; // Use points as a base
-    
-    const dynamicData = [
-        Math.floor(Math.random() * 20) + baseActivity,
-        Math.floor(Math.random() * 30) + baseActivity,
-        Math.floor(Math.random() * 25) + baseActivity,
-        Math.floor(Math.random() * 40) + baseActivity,
-        Math.floor(Math.random() * 15) + baseActivity,
-        Math.floor(Math.random() * 20) + baseActivity,
-        Math.floor(Math.random() * 10) + baseActivity
-    ];
+    const initialData = Array.isArray(pendingWeeklyActivity) && pendingWeeklyActivity.length === 7
+        ? pendingWeeklyActivity
+        : [0, 0, 0, 0, 0, 0, 0];
 
     // SaaS Level Visualization
-    new Chart(ctx, {
+    performanceChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
             datasets: [{
                 label: 'NODE_EFFICIENCY',
-                data: dynamicData,
+                data: initialData,
                 backgroundColor: 'rgba(204, 255, 0, 0.2)',
                 borderColor: '#ccff00',
                 borderWidth: 1,
@@ -991,6 +995,24 @@ function initializeChart() {
             }
         }
     });
+}
+
+function updatePerformanceChart(weeklyActivity) {
+    const safeData = Array.isArray(weeklyActivity) && weeklyActivity.length === 7
+        ? weeklyActivity.map(v => {
+            const n = Number(v);
+            return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+        })
+        : [0, 0, 0, 0, 0, 0, 0];
+
+    pendingWeeklyActivity = safeData;
+
+    if (!performanceChartInstance) {
+        return;
+    }
+
+    performanceChartInstance.data.datasets[0].data = safeData;
+    performanceChartInstance.update();
 }
 
 document.addEventListener("click", function (e) {

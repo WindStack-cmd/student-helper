@@ -291,7 +291,6 @@ function buildAppSidebar({ activePage, rootPrefix, pagesPrefix, userName, userIn
                 <a href="${pagesPrefix}community-chat.html" class="nav-item ${activePage === 'community' ? 'active accent-blue' : ''}">
                     <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
                     <span>Network</span>
-                    <span class="nav-badge">3</span>
                 </a>
                 <a href="${pagesPrefix}leaderboard.html" class="nav-item ${activePage === 'leaderboard' ? 'active accent-blue' : ''}">
                     <i data-lucide="bar-chart-2" style="width: 18px; height: 18px;"></i>

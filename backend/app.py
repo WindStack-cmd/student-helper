@@ -1712,6 +1712,23 @@ def user_stats():
             user = cursor.fetchone()
 
             if user:
+                # Ensure every user has a referral code so dashboard referral link is always dynamic.
+                if not user.get("referral_code"):
+                    generated_code = ""
+                    for _ in range(10):
+                        candidate = secrets.token_hex(4)
+                        cursor.execute("SELECT id FROM users WHERE referral_code = %s", (candidate,))
+                        if not cursor.fetchone():
+                            generated_code = candidate
+                            break
+                    if generated_code:
+                        cursor.execute(
+                            "UPDATE users SET referral_code = %s WHERE email = %s",
+                            (generated_code, email)
+                        )
+                        conn.commit()
+                        user["referral_code"] = generated_code
+
                 cursor.execute("SELECT COUNT(*) as count FROM requests WHERE user_email = %s", (email,))
                 res = cursor.fetchone()
                 user["bounties_posted"] = res["count"] if res else 0
@@ -1724,17 +1741,63 @@ def user_stats():
                 res = cursor.fetchone()
                 user["rank"] = res["rank"] if res else 0
 
+                # Weekly activity (Mon-Sun) from requests posted + answers submitted in current week.
+                today = datetime.now().date()
+                week_start = today - timedelta(days=today.weekday())
+                week_end_exclusive = week_start + timedelta(days=7)
+
+                requests_by_day = {}
+                answers_by_day = {}
+
+                cursor.execute(
+                    """
+                    SELECT DATE(created_at) as day_key, COUNT(*) as day_count
+                    FROM requests
+                    WHERE user_email = %s
+                      AND created_at >= %s
+                      AND created_at < %s
+                    GROUP BY DATE(created_at)
+                    """,
+                    (email, week_start, week_end_exclusive)
+                )
+                for row in cursor.fetchall() or []:
+                    day_key = str(row.get("day_key"))
+                    requests_by_day[day_key] = int(row.get("day_count") or 0)
+
+                cursor.execute(
+                    """
+                    SELECT DATE(created_at) as day_key, COUNT(*) as day_count
+                    FROM answers
+                    WHERE email = %s
+                      AND created_at >= %s
+                      AND created_at < %s
+                    GROUP BY DATE(created_at)
+                    """,
+                    (email, week_start, week_end_exclusive)
+                )
+                for row in cursor.fetchall() or []:
+                    day_key = str(row.get("day_key"))
+                    answers_by_day[day_key] = int(row.get("day_count") or 0)
+
+                weekly_activity = [0, 0, 0, 0, 0, 0, 0]  # Mon..Sun
+                for offset in range(7):
+                    day_obj = week_start + timedelta(days=offset)
+                    day_key = str(day_obj)
+                    weekly_activity[offset] = requests_by_day.get(day_key, 0) + answers_by_day.get(day_key, 0)
+
+                user["weekly_activity"] = weekly_activity
+
                 log_event("USER_STATS", f"Retrieved stats for {email}", "INFO")
                 return jsonify(user)
             else:
                 log_event("USER_STATS", f"User not found: {email}", "WARNING")
-                return jsonify({"first_name": "", "email": email, "reputation": 0, "bounties_completed": 0, "bounties_posted": 0, "rank": 0}), 200
+                return jsonify({"first_name": "", "email": email, "reputation": 0, "bounties_completed": 0, "bounties_posted": 0, "rank": 0, "weekly_activity": [0, 0, 0, 0, 0, 0, 0]}), 200
         finally:
             cursor.close()
             conn.close()
     except Exception as e:
         log_event("USER_STATS", f"Error: {str(e)}", "ERROR")
-        return jsonify({"first_name": "", "email": resolve_request_email(), "reputation": 0, "bounties_completed": 0, "bounties_posted": 0, "rank": 0}), 200
+        return jsonify({"first_name": "", "email": resolve_request_email(), "reputation": 0, "bounties_completed": 0, "bounties_posted": 0, "rank": 0, "weekly_activity": [0, 0, 0, 0, 0, 0, 0]}), 200
 
 @app.route("/notifications", methods=["GET"])
 def get_notifications():
