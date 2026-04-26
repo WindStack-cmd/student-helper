@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -324,12 +324,9 @@
 
         /* Settings Layout Area */
         .config-container {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 240px 1fr;
             gap: 48px;
-            max-width: 900px;
-            margin: 0 auto;
-            width: 100%;
             animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             opacity: 0;
             transform: translateY(20px);
@@ -593,7 +590,6 @@
         }
 
         @media (max-width: 768px) {
-
             html,
             body {
                 overflow-x: hidden;
@@ -743,8 +739,7 @@
                     <div class="user-role">...</div>
                 </div>
                 <i data-lucide="power" onclick="event.stopPropagation(); logout()"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;"
-                    title="Logout"></i>
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
             </div>
         </aside>
 
@@ -764,7 +759,21 @@
             <div class="workspace-content">
                 <div class="config-container">
 
-                    <!-- Inner Settings Navigation Removed -->
+                    <!-- Inner Settings Navigation -->
+                    <aside class="config-nav">
+                        <div class="config-tab active">
+                            <i data-lucide="shield" style="width: 16px; height: 16px;"></i> Security
+                        </div>
+                        <div class="config-tab">
+                            <i data-lucide="bell" style="width: 16px; height: 16px;"></i> Notifications
+                        </div>
+                        <div class="config-tab">
+                            <i data-lucide="monitor" style="width: 16px; height: 16px;"></i> Interface
+                        </div>
+                        <div class="config-tab">
+                            <i data-lucide="database" style="width: 16px; height: 16px;"></i> Data / Logs
+                        </div>
+                    </aside>
 
                     <!-- Settings Output -->
                     <div class="config-panel">
@@ -782,8 +791,7 @@
                                     <div class="config-card-header">
                                         <div class="card-icon"
                                             style="color: var(--accent-purple); border-color: rgba(123, 66, 250, 0.3);">
-                                            <i data-lucide="key"></i>
-                                        </div>
+                                            <i data-lucide="key"></i></div>
                                         <h3 class="card-title">Access Key (Password)</h3>
                                     </div>
                                     <p class="card-desc">Last rotated: 45 days ago. Regular key rotation is strictly
@@ -911,7 +919,7 @@
 
         function updateLabel(inputEl) {
             const span = inputEl.parentElement.querySelector('span');
-            if (span) {
+            if(span) {
                 if (inputEl.checked) {
                     span.textContent = inputEl.id === 'toggle2fa' ? 'Status: Online' : 'Status: Active';
                 } else {
@@ -921,7 +929,9 @@
         }
 
         function rotateKey() {
-            window.location.href = "change-password.html";
+            if (confirm("Are you sure you want to rotate your access key? You will be asked to log in again.")) {
+                alert("Access key rotated successfully");
+            }
         }
 
         function compileSettings() {
@@ -930,7 +940,7 @@
                 return `${t.key}: ${el ? el.checked : false}`;
             }).join("\\n");
             console.log("Compiling settings:\\n" + compiled);
-            alert("Settings compiled and saved successfully.");
+            alert("Settings compiled and saved");
         }
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -942,9 +952,9 @@
                     const username = document.getElementById("sidebarName");
                     if (avatar) avatar.innerText = user.first_name.charAt(0).toUpperCase();
                     if (username) username.innerText = user.first_name;
-                } catch (e) { }
+                } catch(e) {}
             } else {
-                window.location.href = "login.html";
+                window.location.href = "../index.html";
             }
         });
     </script>
@@ -957,13 +967,12 @@
                     const user = JSON.parse(userStr);
                     const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "User");
                     const email = user.email || "user@system.node";
-
+                    
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
                     document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
                     document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
-                } catch (e) { }
+                } catch(e) {}
             }
-
 
             // Purge Button Logic
             const purgeBtn = document.getElementById('purgeButton');
@@ -973,22 +982,14 @@
                     if (!userStr) return;
                     const user = JSON.parse(userStr);
                     const email = user.email;
-                    const token = localStorage.getItem("jwt_token");
-
-                    if (!token) {
-                        alert("Session expired. Please log in again.");
-                        window.location.href = "login.html";
-                        return;
-                    }
 
                     if (confirm("CRITICAL WARNING: This will PERMANENTLY erase all your node data, posts, and reputation. This action CANNOT be undone. Are you absolutely sure?")) {
-                        if (confirm("FINAL CONFIRMATION: Please click OK one last time to confirm structural deletion of node " + email)) {
+                        if (confirm("FINAL CONFIRMATION: Type 'PURGE' is not required, but please click OK one last time to confirm structural deletion of node " + email)) {
                             try {
-                                const response = await fetch('http://127.0.0.1:5001/purge_user', {
+                                const response = await fetch('http://localhost:5001/purge_user', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${token}`
                                     },
                                     body: JSON.stringify({ email }),
                                 });
@@ -997,9 +998,8 @@
 
                                 if (response.ok) {
                                     alert("Node data successfully purged. Connection terminated.");
-                                    localStorage.removeItem("loggedInUser");
-                                    localStorage.removeItem("jwt_token");
-                                    window.location.href = "login.html";
+                                    localStorage.clear();
+                                    window.location.href = "../index.html";
                                 } else {
                                     alert("Error during purge: " + (result.message || "Unknown error"));
                                 }

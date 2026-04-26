@@ -1876,32 +1876,6 @@ def delete_request():
         log_event("DELETE_REQUEST", str(e), "ERROR")
         return jsonify({"message": "Failed to delete"}), 500
 
-@app.route("/purge_user", methods=["POST"])
-@require_auth
-def purge_user():
-    try:
-        email = request.user_email
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            # Delete all related records
-            cursor.execute("DELETE FROM claims WHERE user_email = %s", (email,))
-            cursor.execute("DELETE FROM answers WHERE email = %s", (email,))
-            cursor.execute("DELETE FROM requests WHERE user_email = %s", (email,))
-            cursor.execute("DELETE FROM posts WHERE user_email = %s", (email,))
-            cursor.execute("DELETE FROM notifications WHERE email = %s", (email,))
-            cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-            
-            conn.commit()
-            log_event("PURGE_USER", f"User {email} completely purged from the system.", "INFO")
-            return jsonify({"message": "User data completely purged"}), 200
-        finally:
-            cursor.close()
-            conn.close()
-    except Exception as e:
-        log_event("PURGE_USER", str(e), "ERROR")
-        return jsonify({"message": "Failed to purge user data", "error_code": "INTERNAL_ERROR"}), 500
-
 # ============================================
 # FRONTEND ROUTES (Must be at the end to not intercept API routes)
 # ============================================
