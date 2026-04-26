@@ -114,6 +114,8 @@ flowchart TD
 | **Reputation Ledger** | Global leaderboard ranked by cumulative reputation score. |
 | **Referral Program** | Unique referral codes per user; referrer earns **10 %** commission on referred user's bounties. |
 
+
+
 ### ⏱️ Request Lifecycle
 | Feature | Details |
 |---------|---------|
