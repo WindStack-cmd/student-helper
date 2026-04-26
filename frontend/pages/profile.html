@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IDENTITY | StudentsHelper</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%237b42fa' width='100' height='100'/><text x='50' y='50' font-size='80' fill='%23ccff00' text-anchor='middle' dy='.3em' font-weight='bold'>S</text></svg>">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%237b42fa' width='100' height='100'/><text x='50' y='50' font-size='80' fill='%23ccff00' text-anchor='middle' dy='.3em' font-weight='bold'>S</text></svg>">
     <!-- Fonts for Cyber Editorial theme -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
@@ -618,6 +619,7 @@
         }
 
         @media (max-width: 768px) {
+
             html,
             body {
                 overflow-x: hidden;
@@ -805,7 +807,8 @@
                     <div class="user-role" id="sidebarEmail">...</div>
                 </div>
                 <i data-lucide="power" onclick="event.stopPropagation(); logout()"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;"
+                    title="Logout"></i>
             </div>
         </aside>
 
@@ -815,7 +818,7 @@
                 <h1 class="workspace-title"><i data-lucide="fingerprint"
                         style="color: var(--accent-purple); width: 28px; height: 28px;"></i> Sys.Identity</h1>
                 <div class="workspace-actions">
-                    <button class="btn-icon-sys"><i data-lucide="share-2"
+                    <button class="btn-icon-sys" title="Share Profile" onclick="shareProfile()"><i data-lucide="share-2"
                             style="width: 18px; height: 18px;"></i></button>
                     <button class="btn-sys-main" onclick="alert('Configuration Updated')">
                         <i data-lucide="save" style="width: 16px; height: 16px;"></i>
@@ -827,14 +830,22 @@
             <div class="workspace-content">
 
                 <div class="identity-hero">
-                    <div class="cover-plate">
+                    <div class="cover-plate" id="profileBanner" style="position: relative;">
                         <div class="bg-text">0xNODE</div>
+                        <div class="banner-actions" style="position: absolute; top: 15px; right: 15px;">
+                            <input type="file" id="bannerUploadInput" accept="image/*" style="display: none;">
+                            <button class="btn-icon-sys" title="Update Banner Image"
+                                onclick="document.getElementById('bannerUploadInput').click()"
+                                style="background: rgba(20, 20, 20, 0.7); border-color: rgba(255,255,255,0.2);">
+                                <i data-lucide="image" style="width: 18px; height: 18px; color: white;"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="node-avatar-lg" id="mainAvatar">JD</div>
                     <div class="identity-header">
                         <div>
                             <h1 id="profileName">Name</h1>
-                             <p id="profileEmail">Email</p>
+                            <p id="profileEmail">Email</p>
                             <div class="id-badges">
                                 <span class="sys-badge">Target: Student</span>
                                 <span class="sys-badge prime"><i data-lucide="shield-check"
@@ -843,7 +854,9 @@
                             </div>
                         </div>
                         <div class="workspace-actions">
-                            <button class="btn-icon-sys" title="Update Node Image"><i data-lucide="camera"
+                            <input type="file" id="avatarUploadInput" accept="image/*" style="display: none;">
+                            <button class="btn-icon-sys" title="Update Node Image"
+                                onclick="document.getElementById('avatarUploadInput').click()"><i data-lucide="camera"
                                     style="width: 18px; height: 18px;"></i></button>
                         </div>
                     </div>
@@ -931,49 +944,173 @@
         </main>
     </div>
 
-   <script>
-    lucide.createIcons();
+    <script>
+        lucide.createIcons();
 
-    function logout() {
-        localStorage.removeItem("loggedInUser")
-        window.location.href = "login.html";
-    }
+        function logout() {
+            localStorage.removeItem("loggedInUser")
+            window.location.href = "login.html";
+        }
 
-    function loadProfile() {
+        function shareProfile() {
+            const userStr = localStorage.getItem("loggedInUser");
+            if (!userStr) {
+                alert("Cannot generate share link. User not logged in.");
+                return;
+            }
+            const user = JSON.parse(userStr);
+            if (!user.email) {
+                alert("Profile incomplete. Cannot generate share link.");
+                return;
+            }
 
-        const user = JSON.parse(localStorage.getItem("loggedInUser"))
+            const baseUrl = window.location.href.split('?')[0].replace('profile.html', 'user-profile.html');
+            const shareUrl = `${baseUrl}?email=${encodeURIComponent(user.email)}`;
 
-       if (!user) {
-         alert("Session expired, please login again")
-         window.location.href = "login.html"
-         return
-    }
+            const shareData = {
+                title: `${user.first_name || user.name || 'User'}'s Profile on StudentsHelper`,
+                text: `Check out my profile on StudentsHelper!`,
+                url: shareUrl
+            };
 
-    console.log("User:", user)
-    
-        const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "User");
-        const email = user.email || "";
+            if (navigator.share) {
+                navigator.share(shareData).catch(err => {
+                    console.error("Error sharing:", err);
+                });
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert("Profile link copied to clipboard:\n" + shareUrl);
+                }).catch(err => {
+                    console.error("Could not copy text: ", err);
+                    alert("Share link:\n" + shareUrl);
+                });
+            }
+        }
 
-        // Main profile
-        document.getElementById("profileName").innerText = name
-        document.getElementById("profileEmail").innerText = email
+        function loadProfile() {
 
-        // Inputs
-        document.getElementById("profileNameInput").value = name
-        document.getElementById("profileEmailInput").value = email
+            const user = JSON.parse(localStorage.getItem("loggedInUser"))
 
-        // Avatar (big)
-        document.getElementById("mainAvatar").innerText = name.charAt(0).toUpperCase()
+            if (!user) {
+                alert("Session expired, please login again")
+                window.location.href = "login.html"
+                return
+            }
 
-        // Sidebar (same page)
-        document.getElementById("sidebarName").innerText = name
-        document.getElementById("sidebarAvatar").innerText = name.charAt(0).toUpperCase()
-        const sidebarEmail = document.getElementById("sidebarEmail");
-        if (sidebarEmail) sidebarEmail.innerText = email;
-    }
+            console.log("User:", user)
 
-    document.addEventListener("DOMContentLoaded", loadProfile)
-</script>
+            const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "User");
+            const email = user.email || "";
+
+            // Main profile
+            document.getElementById("profileName").innerText = name
+            document.getElementById("profileEmail").innerText = email
+
+            // Inputs
+            document.getElementById("profileNameInput").value = name
+            document.getElementById("profileEmailInput").value = email
+
+            // Avatar Loading
+            const avatarUrl = localStorage.getItem("userAvatarUrl");
+            const mainAvatar = document.getElementById("mainAvatar");
+            const sidebarAvatar = document.getElementById("sidebarAvatar");
+
+            if (avatarUrl) {
+                if (mainAvatar) {
+                    mainAvatar.innerText = "";
+                    mainAvatar.style.backgroundImage = `url(${avatarUrl})`;
+                    mainAvatar.style.backgroundSize = "cover";
+                    mainAvatar.style.backgroundPosition = "center";
+                }
+                if (sidebarAvatar) {
+                    sidebarAvatar.innerText = "";
+                    sidebarAvatar.style.backgroundImage = `url(${avatarUrl})`;
+                    sidebarAvatar.style.backgroundSize = "cover";
+                    sidebarAvatar.style.backgroundPosition = "center";
+                }
+            } else {
+                if (mainAvatar) mainAvatar.innerText = name.charAt(0).toUpperCase();
+                if (sidebarAvatar) sidebarAvatar.innerText = name.charAt(0).toUpperCase();
+            }
+
+            // Sidebar (same page)
+            document.getElementById("sidebarName").innerText = name
+            const sidebarEmail = document.getElementById("sidebarEmail");
+            if (sidebarEmail) sidebarEmail.innerText = email;
+
+            // Banner Loading
+            const bannerUrl = localStorage.getItem("userBannerUrl");
+            const profileBanner = document.getElementById("profileBanner");
+            if (bannerUrl && profileBanner) {
+                profileBanner.style.backgroundImage = `url(${bannerUrl})`;
+                profileBanner.style.backgroundSize = "cover";
+                profileBanner.style.backgroundPosition = "center";
+            }
+
+            // Setup Camera Button
+            const avatarInput = document.getElementById("avatarUploadInput");
+            if (avatarInput && !avatarInput.hasAttribute('data-bound')) {
+                avatarInput.setAttribute('data-bound', 'true');
+                avatarInput.addEventListener("change", function (e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function (event) {
+                            const dataUrl = event.target.result;
+                            try {
+                                localStorage.setItem("userAvatarUrl", dataUrl);
+                            } catch (err) {
+                                console.warn("Image too large for localStorage.");
+                                alert("Image is too large to save locally. Please try a smaller image.");
+                                return;
+                            }
+
+                            // Apply to all avatar elements
+                            document.querySelectorAll('.user-avatar, #mainAvatar, #sidebarAvatar, .node-avatar-lg').forEach(el => {
+                                el.innerText = "";
+                                el.style.backgroundImage = `url(${dataUrl})`;
+                                el.style.backgroundSize = "cover";
+                                el.style.backgroundPosition = "center";
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            // Setup Banner Button
+            const bannerInput = document.getElementById("bannerUploadInput");
+            if (bannerInput && !bannerInput.hasAttribute('data-bound')) {
+                bannerInput.setAttribute('data-bound', 'true');
+                bannerInput.addEventListener("change", function (e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function (event) {
+                            const dataUrl = event.target.result;
+                            try {
+                                localStorage.setItem("userBannerUrl", dataUrl);
+                            } catch (err) {
+                                console.warn("Image too large for localStorage.");
+                                alert("Image is too large to save locally. Please try a smaller image.");
+                                return;
+                            }
+
+                            // Apply to banner
+                            if (profileBanner) {
+                                profileBanner.style.backgroundImage = `url(${dataUrl})`;
+                                profileBanner.style.backgroundSize = "cover";
+                                profileBanner.style.backgroundPosition = "center";
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", loadProfile);
+    </script>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
@@ -983,11 +1120,22 @@
                     const user = JSON.parse(userStr);
                     const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "User");
                     const email = user.email || "user@system.node";
-                    
+                    const avatarUrl = localStorage.getItem("userAvatarUrl");
+
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
-                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
                     document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
-                } catch(e) {}
+
+                    document.querySelectorAll('.user-avatar').forEach(el => {
+                        if (avatarUrl) {
+                            el.innerText = "";
+                            el.style.backgroundImage = `url(${avatarUrl})`;
+                            el.style.backgroundSize = "cover";
+                            el.style.backgroundPosition = "center";
+                        } else {
+                            el.innerText = name.charAt(0).toUpperCase();
+                        }
+                    });
+                } catch (e) { }
             }
         });
     </script>
