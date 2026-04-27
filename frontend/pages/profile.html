@@ -60,6 +60,64 @@
             height: 100vh;
         }
 
+        /* ----- Dropdown Menu ----- */
+        .sys-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #111118 !important;
+            min-width: 160px;
+            box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.8) !important;
+            border: 1px solid var(--border-bright);
+            border-radius: 8px;
+            z-index: 200 !important;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .dropdown-content a {
+            color: #ffffff !important;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-size: 0.85rem;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            transition: background 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dropdown-content a:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-content a:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .show {
+            display: block;
+            animation: dropdownIn 0.2s ease-out;
+        }
+
+        @keyframes dropdownIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* ----- LEFT PANEL: NAVIGATION TREE ----- */
         .sidebar-nav {
             width: 260px;
@@ -832,13 +890,21 @@
                 <div class="identity-hero">
                     <div class="cover-plate" id="profileBanner" style="position: relative;">
                         <div class="bg-text">0xNODE</div>
-                        <div class="banner-actions" style="position: absolute; top: 15px; right: 15px;">
-                            <input type="file" id="bannerUploadInput" accept="image/*" style="display: none;">
-                            <button class="btn-icon-sys" title="Update Banner Image"
-                                onclick="document.getElementById('bannerUploadInput').click()"
-                                style="background: rgba(20, 20, 20, 0.7); border-color: rgba(255,255,255,0.2);">
+                    </div>
+                    <div class="banner-actions"
+                        style="position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 150;">
+                        <input type="file" id="bannerUploadInput" accept="image/*" style="display: none;">
+                        <div class="sys-dropdown">
+                            <button class="btn-icon-sys" title="Banner Options"
+                                onclick="toggleDropdown(event, 'banner-menu')"
+                                style="background: rgba(20, 20, 20, 0.85); border-color: rgba(255,255,255,0.3); backdrop-filter: blur(4px);">
                                 <i data-lucide="image" style="width: 18px; height: 18px; color: white;"></i>
                             </button>
+                            <div id="banner-menu" class="dropdown-content">
+                                <a href="#" onclick="document.getElementById('bannerUploadInput').click()">Upload New</a>
+                                <a href="#" onclick="removeBannerImage()" style="color: var(--danger-red) !important;">Set
+                                    Default</a>
+                            </div>
                         </div>
                     </div>
                     <div class="node-avatar-lg" id="mainAvatar">JD</div>
@@ -853,11 +919,19 @@
                                     Verified Helper</span>
                             </div>
                         </div>
-                        <div class="workspace-actions">
+                        <div class="workspace-actions" style="display: flex; gap: 8px;">
                             <input type="file" id="avatarUploadInput" accept="image/*" style="display: none;">
-                            <button class="btn-icon-sys" title="Update Node Image"
-                                onclick="document.getElementById('avatarUploadInput').click()"><i data-lucide="camera"
-                                    style="width: 18px; height: 18px;"></i></button>
+                            <div class="sys-dropdown">
+                                <button class="btn-icon-sys" title="Identity Options"
+                                    onclick="toggleDropdown(event, 'avatar-menu')"><i data-lucide="camera"
+                                        style="width: 18px; height: 18px;"></i></button>
+                                <div id="avatar-menu" class="dropdown-content">
+                                    <a href="#" onclick="document.getElementById('avatarUploadInput').click()">Upload
+                                        New</a>
+                                    <a href="#" onclick="removeAvatarImage()" style="color: var(--danger-red);">Set
+                                        Default</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -987,6 +1061,53 @@
             }
         }
 
+        function toggleDropdown(event, id) {
+            event.stopPropagation();
+            // Close all other dropdowns
+            var dropdowns = document.getElementsByClassName("dropdown-content");
+            for (var i = 0; i < dropdowns.length; i++) {
+                if (dropdowns[i].id !== id) {
+                    dropdowns[i].classList.remove('show');
+                }
+            }
+            document.getElementById(id).classList.toggle("show");
+        }
+
+        window.onclick = function (event) {
+            if (!event.target.closest('.sys-dropdown')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+
+        function removeBannerImage() {
+            localStorage.removeItem("userBannerUrl");
+            loadProfile();
+        }
+
+        function removeAvatarImage() {
+            localStorage.removeItem("userAvatarUrl");
+            loadProfile();
+
+            const userStr = localStorage.getItem("loggedInUser");
+            let name = "User";
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "User");
+                } catch (e) { }
+            }
+            document.querySelectorAll('.user-avatar').forEach(el => {
+                el.style.backgroundImage = "none";
+                el.innerText = name.charAt(0).toUpperCase();
+            });
+        }
+
         function loadProfile() {
 
             const user = JSON.parse(localStorage.getItem("loggedInUser"))
@@ -1029,8 +1150,14 @@
                     sidebarAvatar.style.backgroundPosition = "center";
                 }
             } else {
-                if (mainAvatar) mainAvatar.innerText = name.charAt(0).toUpperCase();
-                if (sidebarAvatar) sidebarAvatar.innerText = name.charAt(0).toUpperCase();
+                if (mainAvatar) {
+                    mainAvatar.style.backgroundImage = "none";
+                    mainAvatar.innerText = name.charAt(0).toUpperCase();
+                }
+                if (sidebarAvatar) {
+                    sidebarAvatar.style.backgroundImage = "none";
+                    sidebarAvatar.innerText = name.charAt(0).toUpperCase();
+                }
             }
 
             // Sidebar (same page)
@@ -1040,10 +1167,14 @@
             // Banner Loading
             const bannerUrl = localStorage.getItem("userBannerUrl");
             const profileBanner = document.getElementById("profileBanner");
-            if (bannerUrl && profileBanner) {
-                profileBanner.style.backgroundImage = `url(${bannerUrl})`;
-                profileBanner.style.backgroundSize = "cover";
-                profileBanner.style.backgroundPosition = "center";
+            if (profileBanner) {
+                if (bannerUrl) {
+                    profileBanner.style.backgroundImage = `url(${bannerUrl})`;
+                    profileBanner.style.backgroundSize = "cover";
+                    profileBanner.style.backgroundPosition = "center";
+                } else {
+                    profileBanner.style.backgroundImage = "none";
+                }
             }
 
             // Setup Camera Button
