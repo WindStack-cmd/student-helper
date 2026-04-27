@@ -685,6 +685,78 @@
             color: var(--text-primary);
         }
 
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 18px 22px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .empty-scan {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 229, 255, 0.14);
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.05), transparent 68%);
+            position: relative;
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+
+        .empty-scan::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(0, 229, 255, 0) 0deg, rgba(0, 229, 255, 0.04) 260deg, rgba(0, 229, 255, 0.7) 330deg, rgba(0, 229, 255, 0) 360deg);
+            animation: scanSweep 1.8s linear infinite;
+            opacity: 0.85;
+        }
+
+        .empty-scan::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--text-primary);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
+        }
+
+        .empty-state-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .empty-state-kicker {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+        }
+
+        @keyframes scanSweep {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         /* Animations */
         @keyframes slideUp {
             to {
@@ -1099,8 +1171,12 @@
                 <tr class="ranking-row">
                     <td colspan="4" style="text-align: center; padding: 2rem;">
                         <div class="empty-state">
-                            <p class="empty-state-title">NO_DATA_FOUND</p>
-                            <p class="empty-state-subtitle">No rankings yet. Start solving requests to appear here.</p>
+                            <div class="empty-scan" aria-hidden="true"></div>
+                            <div class="empty-state-copy">
+                                <div class="empty-state-kicker">Node search active</div>
+                                <p class="empty-state-title" style="margin: 0; font-family: var(--font-display); font-size: 1.05rem; font-weight: 900; color: var(--text-primary); text-transform: uppercase; letter-spacing: -0.02em; line-height: 1;">NO_DATA_FOUND</p>
+                                <p class="empty-state-subtitle" style="margin: 0; font-family: var(--font-body); font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary); max-width: 52ch;">No rankings yet. Start solving requests to appear here.</p>
+                            </div>
                         </div>
                     </td>
                 </tr>
