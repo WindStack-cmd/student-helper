@@ -659,6 +659,162 @@
             color: var(--text-primary);
         }
 
+        /* Hunt mode onboarding empty state (scoped) */
+        .hunt-grid>.hunt-empty-state {
+            grid-column: 1 / -1;
+        }
+
+        .hunt-empty-state {
+            display: none;
+            max-width: 860px;
+            width: 100%;
+            margin: 3rem auto;
+            padding: 2.5rem 2rem;
+            border-top: 1px solid var(--border-dim);
+            background: transparent;
+            text-align: center;
+        }
+
+        .hunt-empty-state.is-visible {
+            display: block;
+        }
+
+        .hunt-empty-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            border-radius: 4px;
+            background: transparent;
+            color: rgba(255, 51, 102, 0.7);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1.25rem;
+        }
+
+        .hunt-empty-title {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .hunt-empty-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            max-width: 480px;
+            margin: 0 auto 2.5rem auto;
+            text-align: center;
+        }
+
+        .hunt-empty-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+
+        .hunt-empty-step {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-left: 3px solid rgba(255, 51, 102, 0.6);
+            border-radius: 8px;
+            padding: 1.25rem 1rem;
+            text-align: left;
+            transition: border-color 0.2s ease;
+        }
+
+        .hunt-empty-step:hover {
+            border-left-color: rgba(255, 51, 102, 1);
+        }
+
+        .hunt-empty-step-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .hunt-empty-step-num {
+            display: inline-block;
+            color: rgba(255, 51, 102, 0.5);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+        }
+
+        .hunt-empty-step-icon {
+            color: rgba(255, 51, 102, 0.6);
+            font-size: 16px;
+            line-height: 1;
+            background: transparent;
+            border: 0;
+        }
+
+        .hunt-empty-step-title {
+            color: rgba(255, 51, 102, 0.9);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 0.6rem;
+        }
+
+        .hunt-empty-step-desc {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .hunt-empty-cta {
+            display: block;
+            width: 100%;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0.875rem 2rem;
+            background: transparent;
+            border: 1px solid rgba(255, 51, 102, 0.5);
+            color: rgba(255, 51, 102, 0.9);
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            justify-content: center;
+        }
+
+        .hunt-empty-cta:hover {
+            background: rgba(255, 51, 102, 0.08);
+            border-color: rgba(255, 51, 102, 1);
+            color: var(--text-primary);
+            box-shadow: none;
+            transform: none;
+        }
+
+        .hunt-empty-footnote {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.25);
+            text-align: center;
+            margin-top: 0.75rem;
+            font-style: normal;
+        }
+
         /* Animations */
         @keyframes slideUp {
             to {
@@ -756,6 +912,25 @@
             .hunt-grid {
                 grid-template-columns: 1fr;
                 gap: 12px;
+            }
+
+            .hunt-empty-state {
+                padding: 1.5rem 1rem;
+                margin: 2rem auto;
+            }
+
+            .hunt-empty-title {
+                font-size: 1.3rem;
+                white-space: normal;
+            }
+
+            .hunt-empty-steps {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .hunt-empty-cta {
+                max-width: 100%;
             }
 
             .bounty-card {
@@ -956,9 +1131,42 @@
 
             if (!data || data.length === 0) {
                 container.innerHTML = `
-                <div class="empty-state">
-                    <p class="empty-state-title">NO_DATA_FOUND</p>
-                    <p class="empty-state-subtitle">No open requests right now. Check back soon or invite a classmate.</p>
+                <div class="hunt-empty-state is-visible">
+                    <div class="hunt-empty-badge">HUNT_MODE_INITIALIZING</div>
+                    <h2 class="hunt-empty-title">No Active Requests Detected</h2>
+                    <p class="hunt-empty-subtitle">The network is quiet. Be the first to post a request<br>or wait for a fellow student to need your help.</p>
+
+                    <div class="hunt-empty-steps">
+                        <article class="hunt-empty-step">
+                            <div class="hunt-empty-step-head">
+                                <span class="hunt-empty-step-num">01</span>
+                                <span class="hunt-empty-step-icon" aria-hidden="true">⟳</span>
+                            </div>
+                            <h3 class="hunt-empty-step-title">SCAN</h3>
+                            <p class="hunt-empty-step-desc">Browse open requests from students who need help across all subjects</p>
+                        </article>
+
+                        <article class="hunt-empty-step">
+                            <div class="hunt-empty-step-head">
+                                <span class="hunt-empty-step-num">02</span>
+                                <span class="hunt-empty-step-icon" aria-hidden="true">◎</span>
+                            </div>
+                            <h3 class="hunt-empty-step-title">CLAIM</h3>
+                            <p class="hunt-empty-step-desc">Click claim to signal you are working on a solution and prevent duplicate work</p>
+                        </article>
+
+                        <article class="hunt-empty-step">
+                            <div class="hunt-empty-step-head">
+                                <span class="hunt-empty-step-num">03</span>
+                                <span class="hunt-empty-step-icon" aria-hidden="true">◈</span>
+                            </div>
+                            <h3 class="hunt-empty-step-title">EARN</h3>
+                            <p class="hunt-empty-step-desc">Submit your answer and collect the bounty points if the requester accepts it</p>
+                        </article>
+                    </div>
+
+                    <a href="request-help.html" class="btn-primary hunt-empty-cta">+ POST THE FIRST REQUEST</a>
+                    <p class="hunt-empty-footnote">Already have requests? They will appear here automatically.</p>
                 </div>
             `;
                 return;
