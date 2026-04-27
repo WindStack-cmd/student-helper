@@ -363,6 +363,19 @@
             background: rgba(255, 255, 255, 0.05);
         }
 
+        .btn-icon-sys.danger {
+            color: var(--danger-red);
+            border-color: rgba(255, 51, 102, 0.25);
+            background: rgba(255, 51, 102, 0.05);
+        }
+
+        .btn-icon-sys.danger:hover {
+            color: #fff;
+            border-color: var(--danger-red);
+            background: rgba(255, 51, 102, 0.18);
+            box-shadow: 4px 4px 0 rgba(255, 51, 102, 0.12);
+        }
+
         .btn-sys-main {
             padding: 0 24px;
             height: 44px;
@@ -921,17 +934,14 @@
                         </div>
                         <div class="workspace-actions" style="display: flex; gap: 8px;">
                             <input type="file" id="avatarUploadInput" accept="image/*" style="display: none;">
-                            <div class="sys-dropdown">
-                                <button class="btn-icon-sys" title="Identity Options"
-                                    onclick="toggleDropdown(event, 'avatar-menu')"><i data-lucide="camera"
-                                        style="width: 18px; height: 18px;"></i></button>
-                                <div id="avatar-menu" class="dropdown-content">
-                                    <a href="#" onclick="document.getElementById('avatarUploadInput').click()">Upload
-                                        New</a>
-                                    <a href="#" onclick="removeAvatarImage()" style="color: var(--danger-red);">Set
-                                        Default</a>
-                                </div>
-                            </div>
+                            <button class="btn-icon-sys" title="Upload new avatar"
+                                onclick="document.getElementById('avatarUploadInput').click()">
+                                <i data-lucide="camera" style="width: 18px; height: 18px;"></i>
+                            </button>
+                            <button id="removeAvatarButton" class="btn-icon-sys danger" title="Remove current PFP"
+                                onclick="removeAvatarImage()" style="display: none;">
+                                <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1108,6 +1118,12 @@
             });
         }
 
+        function updateAvatarControls(avatarUrl) {
+            const removeButton = document.getElementById("removeAvatarButton");
+            if (!removeButton) return;
+            removeButton.style.display = avatarUrl ? "inline-flex" : "none";
+        }
+
         function loadProfile() {
 
             const user = JSON.parse(localStorage.getItem("loggedInUser"))
@@ -1159,6 +1175,7 @@
                     sidebarAvatar.innerText = name.charAt(0).toUpperCase();
                 }
             }
+            updateAvatarControls(avatarUrl);
 
             // Sidebar (same page)
             document.getElementById("sidebarName").innerText = name
@@ -1202,6 +1219,7 @@
                                 el.style.backgroundSize = "cover";
                                 el.style.backgroundPosition = "center";
                             });
+                            updateAvatarControls(dataUrl);
                         };
                         reader.readAsDataURL(file);
                     }
