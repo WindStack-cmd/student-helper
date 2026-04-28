@@ -5,6 +5,8 @@
 [![Auth](https://img.shields.io/badge/Auth-JWT%20%2B%20OAuth-blueviolet)](https://github.com/your-username/students-helper)
 [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/your-username/students-helper)
 
+
+
 StudentsHelper is a full-stack community platform that facilitates **peer-to-peer academic assistance**. Students who need help post bounty-backed requests; expert students claim and solve them, earning reputation and points through a secure escrow system.
  The platform features OAuth sign-in, email verification, a referral program, real-time notifications, and a glassmorphic dark-mode UI.
 
