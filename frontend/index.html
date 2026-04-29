@@ -41,6 +41,37 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* ===== SCROLLBAR STYLING ===== */
+        /* For Chrome, Safari, Edge */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(204, 255, 0, 0.3);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(204, 255, 0, 0.6);
+        }
+
+        /* For Firefox */
+        * {
+            scrollbar-color: rgba(204, 255, 0, 0.3) transparent;
+            scrollbar-width: thin;
+        }
+
+        *:hover {
+            scrollbar-color: rgba(204, 255, 0, 0.6) transparent;
+        }
+
         body {
             background-color: var(--bg-base);
             color: var(--text-primary);
@@ -157,8 +188,9 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            overflow: hidden;
+            overflow-y: auto;
             justify-content: center;
+            min-height: 100%;
         }
 
         .editorial-hero::before {
@@ -245,26 +277,31 @@
             text-decoration: none;
             border-radius: 8px;
             transition: all 0.2s;
-            border: 1px solid var(--text-primary);
-            background: transparent;
+            border: 1px solid var(--border-bright);
+            background: rgba(255, 255, 255, 0.05);
             color: var(--text-primary);
             cursor: pointer;
+            backdrop-filter: blur(10px);
         }
 
         .btn-editorial.primary {
-            background: var(--text-primary);
+            background: var(--accent-lime);
             color: var(--bg-base);
+            border-color: var(--accent-lime);
         }
 
         .btn-editorial:hover {
             transform: translateY(-2px);
-            box-shadow: 4px 4px 0 var(--border-dim);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--border-bright);
+            box-shadow: 0 8px 16px rgba(204, 255, 0, 0.1);
         }
 
         .btn-editorial.primary:hover {
             background: var(--accent-lime);
             border-color: var(--accent-lime);
-            box-shadow: 4px 4px 0 rgba(204, 255, 0, 0.2);
+            box-shadow: 0 8px 20px rgba(204, 255, 0, 0.3);
+            transform: translateY(-2px);
         }
 
         /* Right Side: Visual Data / Network Activity */
@@ -274,6 +311,7 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            min-height: 100%;
         }
 
         /* A rough grid pattern for the whole right side */
