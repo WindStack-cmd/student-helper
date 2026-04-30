@@ -1224,6 +1224,28 @@ def get_requests():
                 if len(r) > 12: req["expires_at"] = str(r[12]) if r[12] else None
                 
                 requests_list.append(req)
+
+            # Resolve display names in one query to avoid exposing raw emails in UI labels.
+            email_values = [req.get("email") for req in requests_list if req.get("email")]
+            name_map = {}
+            if email_values:
+                placeholders = ','.join(['%s'] * len(email_values))
+                cursor.execute(
+                    f"""
+                    SELECT email,
+                           COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                    FROM users
+                    WHERE email IN ({placeholders})
+                    """,
+                    tuple(email_values)
+                )
+                for user_row in cursor.fetchall():
+                    if user_row[0]:
+                        name_map[user_row[0]] = user_row[1]
+
+            for req in requests_list:
+                email = req.get("email")
+                req["poster_name"] = name_map.get(email) or (email.split('@')[0] if email else "ANONYMOUS_USER")
             
             log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Sort: {sort_by})", "INFO")
             
@@ -1283,6 +1305,22 @@ def get_request_details(request_id):
             if request_data:
                 request_data['created_at'] = str(request_data['created_at']) if request_data['created_at'] else None
                 request_data['expires_at'] = str(request_data['expires_at']) if request_data.get('expires_at') else None
+                poster_email = request_data.get('user_email')
+                request_data['poster_name'] = "ANONYMOUS_USER"
+                if poster_email:
+                    cursor.execute(
+                        """
+                        SELECT COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                        FROM users
+                        WHERE email = %s
+                        """,
+                        (poster_email,)
+                    )
+                    poster_row = cursor.fetchone()
+                    if poster_row and poster_row.get('display_name'):
+                        request_data['poster_name'] = poster_row['display_name']
+                    else:
+                        request_data['poster_name'] = poster_email.split('@')[0]
             
             for ans in answers_list:
                 ans['created_at'] = str(ans['created_at']) if ans['created_at'] else None
@@ -1400,9 +1438,21 @@ def get_my_requests():
         try:
             cursor.execute("SELECT * FROM requests WHERE user_email = %s ORDER BY created_at DESC", (email,))
             rows = cursor.fetchall()
+            cursor.execute(
+                """
+                SELECT COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                FROM users
+                WHERE email = %s
+                """,
+                (email,)
+            )
+            user_row = cursor.fetchone()
+            display_name = user_row.get('display_name') if user_row else None
+
             requests_list = []
             for r in rows:
                 r['email'] = r.get('user_email')
+                r['poster_name'] = display_name or (r['email'].split('@')[0] if r.get('email') else 'ANONYMOUS_USER')
                 r['created_at'] = str(r['created_at']) if r['created_at'] else None
                 r['expires_at'] = str(r['expires_at']) if r.get('expires_at') else None
                 requests_list.append(r)
@@ -1423,9 +1473,27 @@ def get_archived_requests():
         try:
             cursor.execute("SELECT * FROM requests WHERE solved = 1 OR status = 'closed' ORDER BY created_at DESC")
             rows = cursor.fetchall()
+            email_values = [row.get('user_email') for row in rows if row.get('user_email')]
+            name_map = {}
+            if email_values:
+                placeholders = ','.join(['%s'] * len(email_values))
+                cursor.execute(
+                    f"""
+                    SELECT email,
+                           COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                    FROM users
+                    WHERE email IN ({placeholders})
+                    """,
+                    tuple(email_values)
+                )
+                for user_row in cursor.fetchall():
+                    if user_row.get('email'):
+                        name_map[user_row['email']] = user_row.get('display_name')
+
             requests_list = []
             for r in rows:
                 r['email'] = r.get('user_email')
+                r['poster_name'] = name_map.get(r['email']) or (r['email'].split('@')[0] if r.get('email') else 'ANONYMOUS_USER')
                 r['created_at'] = str(r['created_at']) if r['created_at'] else None
                 r['expires_at'] = str(r['expires_at']) if r.get('expires_at') else None
                 requests_list.append(r)
