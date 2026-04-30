@@ -87,6 +87,7 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
         data.forEach(req => {
             const badge = renderBadge(req);
             const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3);">${req.category}</span>` : '';
+            const posterName = req.poster_name || req.first_name || req.name || (req.email ? req.email.split("@")[0] : "ANONYMOUS_USER");
 
             // Feature 1 & 2: Bounty and Expiry Badges
             let bountyBadge = '';
@@ -122,7 +123,7 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
         <div>
             <div class="row-title">${req.title}</div>
             <div class="row-meta">${categoryTag}${bountyBadge}${expiryInfo}</div>
-            <div class="row-desc">Posted by ${req.email}</div>
+            <div class="row-desc">Posted by ${posterName}</div>
         </div>
     </div>
     <div class="row-status-col">${badge}</div>
@@ -502,6 +503,7 @@ async function openRequest(id) {
         const data = await response.json();
         const req = data.request;
         const answers = data.answers;
+        const posterName = req.poster_name || req.first_name || req.name || (req.user_email ? req.user_email.split("@")[0] : "ANONYMOUS_USER");
 
         // Fill Request details
         document.getElementById("modalTitle").innerHTML = `
@@ -513,7 +515,7 @@ async function openRequest(id) {
             </span>
         `;
         document.getElementById("modalDesc").innerText = req.description;
-        document.getElementById("modalAuthor").innerText = req.user_email || "ANONYMOUS_USER";
+        document.getElementById("modalAuthor").innerText = posterName;
         document.getElementById("modalDate").innerText = new Date(req.created_at).toLocaleString();
         document.getElementById("modalBounty").innerText = `${req.bounty || 0} PTS`;
         document.getElementById("answerCount").innerText = `(${answers.length})`;
