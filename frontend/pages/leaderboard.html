@@ -188,11 +188,54 @@
             align-items: center;
             gap: 16px;
             cursor: pointer;
-            transition: background 0.2s;
         }
 
-        .sidebar-footer:hover {
-            background: var(--bg-elevated);
+        .user-profile-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .user-profile-area:hover {
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.2), inset 0 0 12px rgba(0, 229, 255, 0.08);
+            transform: translateX(4px);
+        }
+
+        .user-profile-area:hover .user-name {
+            color: var(--accent-blue);
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+        }
+
+        .logout-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .logout-button:hover {
+            background: rgba(255, 51, 102, 0.15);
+            border: 1px solid rgba(255, 51, 102, 0.5);
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.4), inset 0 0 12px rgba(255, 51, 102, 0.1);
+            transform: scale(1.1);
+        }
+
+        .logout-button:hover i[data-lucide="power"] {
+            color: #ff6b9d !important;
+            filter: drop-shadow(0 0 8px rgba(255, 107, 157, 0.8)) drop-shadow(0 0 12px rgba(255, 51, 102, 0.6));
+            animation: powerPulse 0.6s ease-in-out infinite;
         }
 
         .user-avatar {
@@ -784,6 +827,17 @@
             }
         }
 
+        @keyframes powerPulse {
+            0%, 100% {
+                opacity: 1;
+                text-shadow: 0 0 10px rgba(255, 51, 102, 0.6);
+            }
+            50% {
+                opacity: 0.7;
+                text-shadow: 0 0 20px rgba(255, 51, 102, 0.9);
+            }
+        }
+
         @media (max-width: 1100px) {
             .workspace {
                 grid-template-columns: 1fr;
@@ -1007,14 +1061,18 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer" onclick="logout()">
-                <div class="user-avatar" id="sidebarAvatar">JD</div>
-                <div class="user-info">
-                    <div class="user-name" id="sidebarName">John Doe</div>
-                    <div class="user-role">NODE_LVL_4</div>
+            <div class="sidebar-footer">
+                <div class="user-profile-area" onclick="window.location.href='profile.html'">
+                    <div class="user-avatar" id="sidebarAvatar">JD</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarName">John Doe</div>
+                        <div class="user-role">NODE_LVL_4</div>
+                    </div>
                 </div>
-                <i data-lucide="power"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+                <div class="logout-button" onclick="logout()">
+                    <i data-lucide="power"
+                        style="color: var(--danger-red); width: 16px; height: 16px;"></i>
+                </div>
             </div>
         </aside>
 
