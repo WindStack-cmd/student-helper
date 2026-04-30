@@ -1027,8 +1027,6 @@
 
                 <div class="time-filters">
                     <button class="filter-btn active">Genesis</button>
-                    <button class="filter-btn">Cycle 03</button>
-                    <button class="filter-btn">Cycle 04</button>
                 </div>
 
                 <!-- Spotlight -> The current #1 -->
@@ -1052,10 +1050,7 @@
                         </div>
                         <div class="stat-block" style="grid-column: span 2; margin-top: 12px;">
                             <span class="label">Core Directives</span>
-                            <span
-                                style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700;">REACT</span>
-                            <span
-                                style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700; margin-left: 4px;">SYS_ARCH</span>
+                            <span id="spotlightDirectives"></span>
                         </div>
                     </div>
                 </div>
@@ -1067,10 +1062,10 @@
                 <!-- Contextual Banner: Where the user stands -->
                 <div class="user-status-banner">
                     <div class="user-status-left">
-                        <div class="my-rank">#1245</div>
+                        <div class="my-rank" id="userRankBadge">UNRANKED</div>
                         <div class="user-status-text">
-                            <h4>Target Acquired</h4>
-                            <p>Top 5% bracket. Need 120 REP to compile next node tier.</p>
+                            <h4 id="userStatusTitle">Network Sync</h4>
+                            <p id="userStatusDesc">Scanning your ledger position and target reputation.</p>
                         </div>
                     </div>
                     <div>
@@ -1111,162 +1106,156 @@
     <script>
         lucide.createIcons();
 
-        function updateSpotlightFromUser() {
-            const userStr = localStorage.getItem("loggedInUser");
-            if (!userStr) return;
-
-            try {
-                const user = JSON.parse(userStr);
-                const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "System User");
-
-                const nameEl = document.getElementById("spotlightName");
-                const subtitleEl = document.getElementById("spotlightSubtitle");
-                const repEl = document.getElementById("spotlightReputation");
-                const bountiesEl = document.getElementById("spotlightBounties");
-
-                if (nameEl) nameEl.textContent = name;
-                if (subtitleEl) subtitleEl.textContent = "Network Node";
-                if (repEl) repEl.textContent = String(user.reputation || 0);
-                if (bountiesEl) bountiesEl.textContent = String(user.bounties_completed || 0);
-            } catch (e) {
-                console.error("Spotlight user parse error:", e);
-            }
+        function getDisplayName(userObj) {
+            return userObj.first_name || userObj.name || (userObj.email ? userObj.email.split("@")[0] : "System User");
         }
 
-        function updateSpotlightFromTopNode(node) {
-            if (!node) return;
+        function updateSidebarUser(userObj) {
+            const name = getDisplayName(userObj);
+            const email = userObj.email || "user@system.node";
 
+            document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
+            document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
+            document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
+        }
+
+        function renderDirectiveTags(repValue, bountyValue) {
+            const directives = [];
+            if ((repValue || 0) >= 500) directives.push("ELITE_NODE");
+            if ((repValue || 0) >= 250 && (repValue || 0) < 500) directives.push("HIGH_SIGNAL");
+            if ((bountyValue || 0) >= 10) directives.push("PATCH_MASTER");
+            if ((bountyValue || 0) > 0 && (bountyValue || 0) < 10) directives.push("ACTIVE_HUNTER");
+            if (directives.length === 0) directives.push("NETWORK_NODE");
+
+            const directivesEl = document.getElementById("spotlightDirectives");
+            if (!directivesEl) return;
+            directivesEl.innerHTML = directives.map(tag =>
+                `<span style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700; margin-right: 4px;">${tag}</span>`
+            ).join("");
+        }
+
+        function updateSpotlight(node, subtitleText) {
             const nameEl = document.getElementById("spotlightName");
             const subtitleEl = document.getElementById("spotlightSubtitle");
             const repEl = document.getElementById("spotlightReputation");
             const bountiesEl = document.getElementById("spotlightBounties");
 
-            if (nameEl) {
-                nameEl.textContent = node.first_name || (node.email ? node.email.split("@")[0] : "Top Node");
-            }
-            if (subtitleEl) subtitleEl.textContent = "Top Ranked Node";
+            if (!node) return;
+
+            if (nameEl) nameEl.textContent = getDisplayName(node);
+            if (subtitleEl) subtitleEl.textContent = subtitleText;
             if (repEl) repEl.textContent = String(node.reputation || 0);
             if (bountiesEl) bountiesEl.textContent = String(node.bounties_completed || 0);
+            renderDirectiveTags(node.reputation || 0, node.bounties_completed || 0);
         }
 
-        updateSpotlightFromUser();
+        function updateUserStatusBanner(users, currentUser) {
+            const rankBadge = document.getElementById("userRankBadge");
+            const statusTitle = document.getElementById("userStatusTitle");
+            const statusDesc = document.getElementById("userStatusDesc");
 
-        async function loadLeaderboard() {
+            if (!rankBadge || !statusTitle || !statusDesc || !currentUser) return;
+
+            const rankIndex = users.findIndex(u => u.email === currentUser.email);
+            const currentRep = Number(currentUser.reputation || 0);
+
+            if (rankIndex >= 0) {
+                const rank = rankIndex + 1;
+                rankBadge.textContent = `#${rank}`;
+                statusTitle.textContent = rank <= 3 ? "Target Acquired" : "Node Located";
+                statusDesc.textContent = `Rank ${rank} in current network scan with ${currentRep} REP.`;
+            } else {
+                rankBadge.textContent = "UNRANKED";
+                const minRepInBoard = users.length > 0 ? Number(users[users.length - 1].reputation || 0) : 0;
+                const repNeeded = Math.max(0, minRepInBoard - currentRep + 1);
+                statusTitle.textContent = "Signal Weak";
+                statusDesc.textContent = repNeeded > 0
+                    ? `Need ${repNeeded} REP to breach top node list.`
+                    : "Keep solving bounties to appear in the top node list.";
+            }
+        }
+
+        async function loadLeaderboard(currentUser) {
             const tbody = document.getElementById("leaderboardBody") || document.querySelector("tbody");
             if (!tbody) return;
 
-            const fallbackHTML = tbody.innerHTML;
-
             try {
-                const res = await fetch("http://127.0.0.1:5000/leaderboard");
-                if (!res.ok) {
-                    throw new Error("HTTP Status " + res.status);
-                }
-                const data = await res.json();
+                const res = await fetch("http://127.0.0.1:5001/leaderboard");
+                if (!res.ok) throw new Error("HTTP Status " + res.status);
 
+                const users = await res.json();
                 tbody.innerHTML = "";
 
-                if (!data || data.length === 0) {
+                if (!users || users.length === 0) {
                     tbody.innerHTML = `
-                <tr class="ranking-row">
-                    <td colspan="4" style="text-align: center; padding: 2rem;">
-                        <div class="empty-state">
-                            <div class="empty-scan" aria-hidden="true"></div>
-                            <div class="empty-state-copy">
-                                <div class="empty-state-kicker">Node search active</div>
-                                <p class="empty-state-title" style="margin: 0; font-family: var(--font-display); font-size: 1.05rem; font-weight: 900; color: var(--text-primary); text-transform: uppercase; letter-spacing: -0.02em; line-height: 1;">NO_DATA_FOUND</p>
-                                <p class="empty-state-subtitle" style="margin: 0; font-family: var(--font-body); font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary); max-width: 52ch;">No rankings yet. Start solving requests to appear here.</p>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            `;
-                    updateSpotlightFromUser();
+                        <tr class="ranking-row">
+                            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary); font-family: var(--font-mono);">NO_NODES_FOUND</td>
+                        </tr>
+                    `;
+                    updateSpotlight(currentUser, "Network Node");
+                    updateUserStatusBanner([], currentUser);
                     return;
                 }
 
-                updateSpotlightFromTopNode(data[0]);
+                updateSpotlight(users[0], "Top Ranked Node");
+                updateUserStatusBanner(users, currentUser);
 
-                data.forEach((user, index) => {
-                    const initials = user.first_name ? user.first_name.charAt(0).toUpperCase() : "U";
+                users.forEach((user, index) => {
+                    const name = getDisplayName(user);
+                    const initials = name.substring(0, 1).toUpperCase();
                     const row = document.createElement("tr");
                     row.className = "ranking-row";
 
                     row.innerHTML = `
-                <td><div class="row-rank">#${String(index + 1).padStart(2, "0")}</div></td>
-                <td>
-                    <div class="row-user">
-                        <div class="row-avatar">${initials}</div>
-                        <div class="row-name">${user.first_name || user.email.split('@')[0]}</div>
-                    </div>
-                </td>
-                <td class="row-rep">${user.reputation || 0} <span>REP</span></td>
-                <td>
-                    <div class="row-badges">
-                        <div class="b-icon"><i data-lucide="${index === 0 ? 'award' : 'check'}"></i></div>
-                    </div>
-                </td>
-            `;
+                        <td><div class="row-rank">#${String(index + 1).padStart(2, "0")}</div></td>
+                        <td>
+                            <div class="row-user">
+                                <div class="row-avatar">${initials}</div>
+                                <div class="row-name">${name}</div>
+                            </div>
+                        </td>
+                        <td class="row-rep">${user.reputation || 0} <span>REP</span></td>
+                        <td style="text-align: right; font-family: var(--font-mono);">${user.bounties_completed || 0}</td>
+                    `;
                     tbody.appendChild(row);
                 });
 
                 lucide.createIcons();
-
             } catch (err) {
                 console.error("Leaderboard error:", err);
-                if (tbody && tbody.innerHTML === "") {
-                    tbody.innerHTML = fallbackHTML || `
-                <tr class="ranking-row">
-                    <td><div class="row-rank">#01</div></td>
-                    <td><div class="row-user"><div class="row-avatar">X</div><div class="row-name">STATIC FALLBACK</div></div></td>
-                    <td class="row-rep">999 <span>REP</span></td>
-                    <td><div class="row-badges"><div class="b-icon"><i data-lucide="award"></i></div></div></td>
-                </tr>
-            `;
-                    lucide.createIcons();
-                }
+                tbody.innerHTML = `
+                    <tr class="ranking-row">
+                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--danger-red); font-family: var(--font-mono);">LEDGER_SYNC_FAILED</td>
+                    </tr>
+                `;
+                updateSpotlight(currentUser, "Network Node");
+                updateUserStatusBanner([], currentUser);
             }
         }
 
-        loadLeaderboard()
-    </script>
-
-    <script>
-
-        const user = JSON.parse(localStorage.getItem("loggedInUser"))
-
-        if (user) {
-
-            const avatar = document.getElementById("sidebarAvatar")
-            const username = document.getElementById("sidebarName")
-
-            if (avatar) {
-                avatar.innerText = user.first_name.charAt(0).toUpperCase()
-            }
-
-            if (username) {
-                username.innerText = user.first_name
-            }
-
-        } else {
-            window.location.href = "login.html"
-        }
-    </script>
-
-    <script>
         document.addEventListener("DOMContentLoaded", () => {
             const userStr = localStorage.getItem("loggedInUser");
-            if (userStr) {
-                try {
-                    const user = JSON.parse(userStr);
-                    const name = user.first_name || user.name || "User";
-                    const email = user.email || "user@system.node";
-
-                    document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
-                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
-                    document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
-                } catch (e) { }
+            if (!userStr) {
+                window.location.href = "login.html";
+                return;
             }
+
+            let currentUser = {};
+            try {
+                currentUser = JSON.parse(userStr) || {};
+            } catch (e) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            updateSidebarUser(currentUser);
+            updateSpotlight(currentUser, "Network Node");
+            loadLeaderboard(currentUser);
+
+            // Auto-refresh leaderboard every 25 seconds for live updates
+            setInterval(() => {
+                loadLeaderboard(currentUser);
+            }, 25000);
         });
     </script>
 </body>
