@@ -200,8 +200,8 @@ def set_csp_headers(response):
     """Set proper CSP headers to allow API calls and local connections"""
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "connect-src 'self' http://127.0.0.1:* http://localhost:*; "
-        "script-src 'self' https://unpkg.com https://fonts.googleapis.com https://cdn.jsdelivr.net 'unsafe-inline'; "
+        "connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://unpkg.com https://cdn.jsdelivr.net; "
+        "script-src 'self' https://unpkg.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.socket.io 'unsafe-inline'; "
         "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; "
         "img-src 'self' data: https:; "
         "font-src 'self' https://fonts.gstatic.com; "
@@ -1651,31 +1651,6 @@ def accept_answer():
         log_event("ACCEPT_ANSWER", f"Error accepting answer: {str(e)}", "ERROR")
         return jsonify({"message": "Failed to accept answer", "error_code": "INTERNAL_ERROR"}), 500
 
-@app.route("/purge_user", methods=["POST"])
-@require_auth
-def purge_user():
-    try:
-        email = request.user_email
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            # Delete all related records
-            cursor.execute("DELETE FROM claims WHERE user_email = %s", (email,))
-            cursor.execute("DELETE FROM answers WHERE email = %s", (email,))
-            cursor.execute("DELETE FROM requests WHERE user_email = %s", (email,))
-            cursor.execute("DELETE FROM posts WHERE user_email = %s", (email,))
-            cursor.execute("DELETE FROM notifications WHERE email = %s", (email,))
-            cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-            
-            conn.commit()
-            log_event("PURGE_USER", f"User {email} completely purged from the system.", "INFO")
-            return jsonify({"message": "User data completely purged"}), 200
-        finally:
-            cursor.close()
-            conn.close()
-    except Exception as e:
-        log_event("PURGE_USER", str(e), "ERROR")
-        return jsonify({"message": "Failed to purge user data", "error_code": "INTERNAL_ERROR"}), 500
 
 # @socketio.on("message")  # Disabled on Windows due to socket binding issues
 # def handle_message(msg):
@@ -2050,6 +2025,68 @@ def delete_request():
     except Exception as e:
         log_event("DELETE_REQUEST", str(e), "ERROR")
         return jsonify({"message": "Failed to delete"}), 500
+
+@app.route("/purge_user", methods=["POST"])
+@require_auth
+def purge_user():
+    data = request.json or {}
+    email_to_purge = data.get("email")
+    authenticated_email = request.user_email
+
+    if not email_to_purge or email_to_purge != authenticated_email:
+        log_event("PURGE_USER", f"Unauthorized purge attempt. Auth: {authenticated_email}, Target: {email_to_purge}", "WARNING")
+        return jsonify({"message": "Unauthorized request"}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Free up requests captured by the user
+        cursor.execute("UPDATE requests SET status = 'open', captured_by = NULL WHERE captured_by = %s", (email_to_purge,))
+        
+        # Track counts for summary
+        counts = {}
+        
+        # Delete claims on requests created by this user
+        cursor.execute("DELETE FROM claims WHERE request_id IN (SELECT id FROM requests WHERE user_email = %s)", (email_to_purge,))
+        counts['claims_on_my_requests'] = cursor.rowcount
+        
+        # Delete answers on requests created by this user
+        cursor.execute("DELETE FROM answers WHERE request_id IN (SELECT id FROM requests WHERE user_email = %s)", (email_to_purge,))
+        counts['answers_on_my_requests'] = cursor.rowcount
+        
+        # Delete user's own answers and claims
+        cursor.execute("DELETE FROM answers WHERE email = %s", (email_to_purge,))
+        counts['my_answers'] = cursor.rowcount
+        
+        cursor.execute("DELETE FROM claims WHERE user_email = %s", (email_to_purge,))
+        counts['my_claims'] = cursor.rowcount
+        
+        # Delete user's requests
+        cursor.execute("DELETE FROM requests WHERE user_email = %s", (email_to_purge,))
+        counts['requests'] = cursor.rowcount
+        
+        # Delete user's posts
+        cursor.execute("DELETE FROM posts WHERE user_email = %s", (email_to_purge,))
+        counts['posts'] = cursor.rowcount
+        
+        # Delete user's notifications
+        cursor.execute("DELETE FROM notifications WHERE email = %s", (email_to_purge,))
+        counts['notifications'] = cursor.rowcount
+        
+        # Finally delete the user
+        cursor.execute("DELETE FROM users WHERE email = %s", (email_to_purge,))
+        counts['user_account'] = cursor.rowcount
+        
+        conn.commit()
+        log_event("PURGE_USER", f"Successfully purged all data for user {email_to_purge}", "INFO")
+        return jsonify({"message": "User data successfully purged", "summary": counts}), 200
+    except Exception as e:
+        conn.rollback()
+        log_event("PURGE_USER", f"Error purging user {email_to_purge}: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to purge user data"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 # ============================================
 # FRONTEND ROUTES (Must be at the end to not intercept API routes)

@@ -69,6 +69,7 @@
             display: flex;
             flex-direction: column;
             z-index: 20;
+            overflow: hidden;
         }
 
         .brand-header {
@@ -78,6 +79,7 @@
             align-items: center;
             gap: 16px;
             text-decoration: none;
+            flex-shrink: 0;
         }
 
         .brand-icon {
@@ -108,6 +110,7 @@
 
         .nav-menu {
             flex: 1;
+            min-height: 0;
             padding: 32px 16px;
             overflow-y: auto;
             display: flex;
@@ -183,7 +186,7 @@
         }
 
         .sidebar-footer {
-            padding: 32px;
+            padding: 20px 24px;
             border-top: 1px solid var(--border-dim);
             display: flex;
             align-items: center;
@@ -275,6 +278,9 @@
             font-family: var(--font-mono);
             font-size: 0.7rem;
             color: var(--text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* ----- MIDDLE PANEL: WORKSPACE ----- */
@@ -1063,18 +1069,15 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer">
-                <div class="user-profile-area" onclick="window.location.href='profile.html'">
-                    <div class="user-avatar" id="sidebarAvatar">JD</div>
-                    <div class="user-info">
-                        <div class="user-name" id="sidebarName">John Doe</div>
-                        <div class="user-role">NODE_LVL_4</div>
-                    </div>
+            <div class="sidebar-footer" onclick="window.location.href='profile.html'" title="View Profile">
+                <div class="user-avatar" id="sidebarAvatar">JD</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebarName">John Doe</div>
+                    <div class="user-role">NODE_LVL_4</div>
                 </div>
-                <div class="logout-button" onclick="logout()">
-                    <i data-lucide="power"
-                        style="color: var(--danger-red); width: 16px; height: 16px;"></i>
-                </div>
+                <i data-lucide="power" onclick="event.stopPropagation(); logout()"
+                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;"
+                    title="Logout"></i>
             </div>
         </aside>
 
