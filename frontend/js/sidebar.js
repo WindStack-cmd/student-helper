@@ -334,7 +334,9 @@ function buildAppSidebar({ activePage, rootPrefix, pagesPrefix, userName, userIn
                 <div class="user-name" id="sidebarName">${userName}</div>
                 <div class="user-role" id="sidebar-balance">LOADING...</div>
             </div>
-            <i data-lucide="power" onclick="event.stopPropagation(); logout()" style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;" title="Logout"></i>
+            <div class="logout-button" onclick="event.stopPropagation(); logout()" title="Logout" aria-label="Logout">
+                <i data-lucide="power" style="width: 16px; height: 16px;" aria-hidden="true"></i>
+            </div>
         </div>
     </aside>`;
 }
