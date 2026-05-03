@@ -191,7 +191,29 @@
             align-items: center;
             gap: 16px;
             cursor: pointer;
-            overflow: hidden;
+            overflow: visible; /* allow icon glow to render outside */
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        /* Target lucide icons whether they are <i> or replaced <svg> (attribute selector) */
+        .sidebar-footer [data-lucide="power"] {
+            transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            filter: drop-shadow(0 0 0px rgba(255, 51, 102, 0.5)) !important;
+            will-change: transform, filter, color;
+        }
+
+        .sidebar-footer:hover [data-lucide="power"],
+        .sidebar-footer [data-lucide="power"]:hover {
+            color: #ff6699 !important;
+            transform: scale(1.35) rotate(12deg) !important;
+            filter: drop-shadow(0 0 12px rgba(255, 51, 102, 0.9)) !important;
+        }
+
+        /* Ensure footer sits above sibling elements so glow isn't visually clipped */
+        .sidebar-footer {
+            position: relative;
+            z-index: 30;
         }
 
         .user-profile-area {
@@ -233,11 +255,14 @@
             background: rgba(255, 51, 102, 0.15);
             border: 1px solid rgba(255, 51, 102, 0.5);
             box-shadow: inset 0 0 12px rgba(255, 51, 102, 0.1);
-            transform: scale(1.1);
+            transform: none !important;
         }
 
-        .logout-button:hover i[data-lucide="power"] {
+        .logout-button:hover i[data-lucide="power"],
+        .logout-button:hover svg[data-lucide="power"],
+        .logout-button:hover [data-lucide="power"] {
             color: #ff6b9d !important;
+            transform: none !important;
             filter: drop-shadow(0 0 8px rgba(255, 107, 157, 0.8)) drop-shadow(0 0 12px rgba(255, 51, 102, 0.6));
             animation: powerPulse 0.6s ease-in-out infinite;
         }
@@ -252,7 +277,7 @@
             justify-content: center;
             font-family: var(--font-mono);
             font-weight: 700;
-            color: var(--accent-blue);
+            color: var(--accent-lime);
             border: 1px solid var(--border-dim);
             font-size: 0.85rem;
         }
@@ -1074,9 +1099,9 @@
                     <div class="user-name" id="sidebarName">John Doe</div>
                     <div class="user-role">NODE_LVL_4</div>
                 </div>
-                <i data-lucide="power" onclick="event.stopPropagation(); logout()"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;"
-                    title="Logout"></i>
+                <div class="logout-button" onclick="event.stopPropagation(); logout()" title="Logout" aria-label="Logout">
+                    <i data-lucide="power" style="width: 16px; height: 16px;" aria-hidden="true"></i>
+                </div>
             </div>
         </aside>
 
