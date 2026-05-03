@@ -10,6 +10,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="../css/logout-button.css">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
     <style>
@@ -69,6 +70,7 @@
             display: flex;
             flex-direction: column;
             z-index: 20;
+            overflow: hidden;
         }
 
         .brand-header {
@@ -78,6 +80,7 @@
             align-items: center;
             gap: 16px;
             text-decoration: none;
+            flex-shrink: 0;
         }
 
         .brand-icon {
@@ -108,6 +111,7 @@
 
         .nav-menu {
             flex: 1;
+            min-height: 0;
             padding: 32px 16px;
             overflow-y: auto;
             display: flex;
@@ -188,17 +192,35 @@
         }
 
         .sidebar-footer {
-            padding: 32px;
+            padding: 20px 24px;
             border-top: 1px solid var(--border-dim);
             display: flex;
             align-items: center;
             gap: 16px;
             cursor: pointer;
+            flex-shrink: 0;
             transition: background 0.2s;
         }
 
         .sidebar-footer:hover {
             background: var(--bg-elevated);
+        }
+
+        .sidebar-footer i[data-lucide="power"] {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            filter: drop-shadow(0 0 0px rgba(255, 51, 102, 0.5)) !important;
+        }
+
+        .sidebar-footer:hover i[data-lucide="power"] {
+            color: #ff6699 !important;
+            transform: scale(1.3) rotate(12deg) !important;
+            filter: drop-shadow(0 0 10px rgba(255, 51, 102, 0.8)) !important;
+        }
+
+        .sidebar-footer i[data-lucide="power"]:hover {
+            color: #ff99bb !important;
+            transform: scale(1.5) rotate(20deg) !important;
+            filter: drop-shadow(0 0 15px rgba(255, 51, 102, 1)) !important;
         }
 
         .user-avatar {
@@ -235,6 +257,9 @@
             font-family: var(--font-mono);
             font-size: 0.7rem;
             color: var(--text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
 
@@ -651,6 +676,41 @@
             box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
         }
 
+        .empty-state {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            text-align: center;
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        .empty-state-title {
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            line-height: 1;
+        }
+
+        .empty-state-subtitle {
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            max-width: 76ch;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            text-shadow: 0 0 12px rgba(0, 229, 255, 0.14), 0 0 16px rgba(123, 66, 250, 0.12);
+        }
+
         /* ----- RIGHT PANEL: INSPECTOR (FILTERS & TRENDS) ----- */
         .inspector-panel {
             width: 340px;
@@ -829,6 +889,145 @@
             }
         }
 
+        @keyframes scanSweep {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulseRing {
+            0%,
+            100% {
+                opacity: 0.35;
+                transform: scale(0.92);
+            }
+
+            50% {
+                opacity: 0.9;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes scanDots {
+            0% {
+                opacity: 0.25;
+                transform: translateY(0);
+            }
+
+            50% {
+                opacity: 1;
+                transform: translateY(-1px);
+            }
+
+            100% {
+                opacity: 0.25;
+                transform: translateY(0);
+            }
+        }
+
+        .network-scan {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .scan-radar {
+            position: relative;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 229, 255, 0.18);
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
+            box-shadow: 0 0 18px rgba(0, 229, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .scan-ring {
+            position: absolute;
+            inset: 50% auto auto 50%;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 229, 255, 0.16);
+            transform: translate(-50%, -50%);
+            animation: pulseRing 2.2s ease-in-out infinite;
+        }
+
+        .scan-ring.ring-1 {
+            width: 18px;
+            height: 18px;
+        }
+
+        .scan-ring.ring-2 {
+            width: 34px;
+            height: 34px;
+            animation-delay: 0.35s;
+        }
+
+        .scan-ring.ring-3 {
+            width: 50px;
+            height: 50px;
+            animation-delay: 0.7s;
+        }
+
+        .scan-sweep {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(0, 229, 255, 0) 0deg, rgba(0, 229, 255, 0) 300deg, rgba(0, 229, 255, 0.9) 340deg, rgba(0, 229, 255, 0) 360deg);
+            animation: scanSweep 1.1s linear infinite;
+            opacity: 0.9;
+        }
+
+        .scan-core {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--accent-blue);
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.65);
+        }
+
+        .scan-copy {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .scan-copy strong {
+            color: var(--text-primary);
+        }
+
+        .scan-dots {
+            display: inline-flex;
+            gap: 2px;
+            margin-left: 6px;
+        }
+
+        .scan-dots span {
+            display: inline-block;
+            animation: scanDots 1s ease-in-out infinite;
+        }
+
+        .scan-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .scan-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
         @media (max-width: 1200px) {
             .inspector-panel {
                 display: none;
@@ -1000,10 +1199,11 @@
                     <div class="user-name" id="sidebarName">Loading...</div>
                     <div class="user-role" id="sidebarEmail">...</div>
                 </div>
-                <i data-lucide="power"
+                <div class="logout-button"
                     onclick="event.stopPropagation(); localStorage.removeItem('loggedInUser'); window.location.href='login.html';"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto; cursor: pointer;"
-                    title="Logout"></i>
+                    title="Logout" aria-label="Logout">
+                    <i data-lucide="power" style="width: 16px; height: 16px;" aria-hidden="true"></i>
+                </div>
             </div>
         </aside>
 
@@ -1049,11 +1249,20 @@
 
 
                 <!-- Loading Marker -->
-                <div
-                    style="text-align: center; font-family: var(--font-mono); color: var(--text-tertiary); font-size: 0.8rem; text-transform: uppercase; margin-top: 24px;">
-                    <i data-lucide="loader-2"
-                        style="width: 16px; height: 16px; animation: spin 1s linear infinite; display: block; margin: 0 auto 8px;"></i>
-                    Scanning Network For More Protocols...
+                <div class="network-scan" aria-label="Scanning network for more protocols">
+                    <div class="scan-radar">
+                        <span class="scan-ring ring-1"></span>
+                        <span class="scan-ring ring-2"></span>
+                        <span class="scan-ring ring-3"></span>
+                        <span class="scan-sweep"></span>
+                        <span class="scan-core"></span>
+                    </div>
+                    <div class="scan-copy">
+                        <strong>Scanning Network</strong>
+                        <span class="scan-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
+                        <br>
+                        <span>For More Protocols</span>
+                    </div>
                 </div>
 
             </div>
@@ -1159,10 +1368,8 @@
                 if (!feed) return;
                 if (posts.length === 0) {
                     feed.innerHTML = `
-                    <div class="empty-state">
                         <p class="empty-state-title">NO_DATA_FOUND</p>
-                        <p class="empty-state-subtitle">No community posts yet. Start the conversation.</p>
-                    </div>
+                        <p class="empty-state-subtitle">NO COMMUNITY POSTS YET. PUBLISH THE FIRST UPDATE TO POPULATE THE NETWORK FEED.</p>
                     `;
                     return;
                 }

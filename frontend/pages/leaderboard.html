@@ -11,6 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="../css/logout-button.css">
     <style>
         :root {
             --bg-base: #030305;
@@ -68,6 +69,7 @@
             display: flex;
             flex-direction: column;
             z-index: 20;
+            overflow: hidden;
         }
 
         .brand-header {
@@ -77,6 +79,7 @@
             align-items: center;
             gap: 16px;
             text-decoration: none;
+            flex-shrink: 0;
         }
 
         .brand-icon {
@@ -107,6 +110,7 @@
 
         .nav-menu {
             flex: 1;
+            min-height: 0;
             padding: 32px 16px;
             overflow-y: auto;
             display: flex;
@@ -149,9 +153,8 @@
         }
 
         .nav-item.active {
-            background: rgba(0, 229, 255, 0.05);
-            /* Blue tinted for Ledger */
-            color: var(--accent-blue);
+            background: rgba(204, 255, 0, 0.05);
+            color: var(--text-primary);
         }
 
         .nav-item.active::before {
@@ -162,7 +165,7 @@
             transform: translateY(-50%);
             height: 20px;
             width: 3px;
-            background: var(--accent-blue);
+            background: var(--accent-lime);
             border-radius: 0 4px 4px 0;
         }
 
@@ -182,17 +185,86 @@
         }
 
         .sidebar-footer {
-            padding: 32px;
+            padding: 20px 24px;
             border-top: 1px solid var(--border-dim);
             display: flex;
             align-items: center;
             gap: 16px;
             cursor: pointer;
+            overflow: visible; /* allow icon glow to render outside */
+            flex-shrink: 0;
             transition: background 0.2s;
         }
 
-        .sidebar-footer:hover {
-            background: var(--bg-elevated);
+        /* Target lucide icons whether they are <i> or replaced <svg> (attribute selector) */
+        .sidebar-footer [data-lucide="power"] {
+            transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            filter: drop-shadow(0 0 0px rgba(255, 51, 102, 0.5)) !important;
+            will-change: transform, filter, color;
+        }
+
+        .sidebar-footer:hover [data-lucide="power"],
+        .sidebar-footer [data-lucide="power"]:hover {
+            color: #ff6699 !important;
+            transform: scale(1.35) rotate(12deg) !important;
+            filter: drop-shadow(0 0 12px rgba(255, 51, 102, 0.9)) !important;
+        }
+
+        /* Ensure footer sits above sibling elements so glow isn't visually clipped */
+        .sidebar-footer {
+            position: relative;
+            z-index: 30;
+        }
+
+        .user-profile-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .user-profile-area:hover {
+            background: rgba(204, 255, 0, 0.08);
+            border: 1px solid rgba(204, 255, 0, 0.22);
+            box-shadow: inset 0 0 12px rgba(204, 255, 0, 0.04);
+            transform: translateX(4px);
+        }
+
+        .user-profile-area:hover .user-name {
+            color: var(--accent-lime);
+            text-shadow: 0 0 8px rgba(204, 255, 0, 0.28);
+        }
+
+        .logout-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .logout-button:hover {
+            background: rgba(255, 51, 102, 0.15);
+            border: 1px solid rgba(255, 51, 102, 0.5);
+            box-shadow: inset 0 0 12px rgba(255, 51, 102, 0.1);
+            transform: none !important;
+        }
+
+        .logout-button:hover i[data-lucide="power"],
+        .logout-button:hover svg[data-lucide="power"],
+        .logout-button:hover [data-lucide="power"] {
+            color: #ff6b9d !important;
+            transform: none !important;
+            filter: drop-shadow(0 0 8px rgba(255, 107, 157, 0.8)) drop-shadow(0 0 12px rgba(255, 51, 102, 0.6));
+            animation: powerPulse 0.6s ease-in-out infinite;
         }
 
         .user-avatar {
@@ -205,7 +277,7 @@
             justify-content: center;
             font-family: var(--font-mono);
             font-weight: 700;
-            color: var(--accent-blue);
+            color: var(--accent-lime);
             border: 1px solid var(--border-dim);
             font-size: 0.85rem;
         }
@@ -230,6 +302,9 @@
             font-family: var(--font-mono);
             font-size: 0.7rem;
             color: var(--text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* ----- MIDDLE PANEL: WORKSPACE ----- */
@@ -685,6 +760,78 @@
             color: var(--text-primary);
         }
 
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 18px 22px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .empty-scan {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 229, 255, 0.14);
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.05), transparent 68%);
+            position: relative;
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+
+        .empty-scan::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(0, 229, 255, 0) 0deg, rgba(0, 229, 255, 0.04) 260deg, rgba(0, 229, 255, 0.7) 330deg, rgba(0, 229, 255, 0) 360deg);
+            animation: scanSweep 1.8s linear infinite;
+            opacity: 0.85;
+        }
+
+        .empty-scan::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--text-primary);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
+        }
+
+        .empty-state-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .empty-state-kicker {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+        }
+
+        @keyframes scanSweep {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         /* Animations */
         @keyframes slideUp {
             to {
@@ -709,6 +856,17 @@
             to {
                 opacity: 1;
                 transform: translateX(0);
+            }
+        }
+
+        @keyframes powerPulse {
+            0%, 100% {
+                opacity: 1;
+                text-shadow: 0 0 10px rgba(255, 51, 102, 0.6);
+            }
+            50% {
+                opacity: 0.7;
+                text-shadow: 0 0 20px rgba(255, 51, 102, 0.9);
             }
         }
 
@@ -935,14 +1093,15 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer" onclick="logout()">
+            <div class="sidebar-footer" onclick="window.location.href='profile.html'" title="View Profile">
                 <div class="user-avatar" id="sidebarAvatar">JD</div>
                 <div class="user-info">
                     <div class="user-name" id="sidebarName">John Doe</div>
                     <div class="user-role">NODE_LVL_4</div>
                 </div>
-                <i data-lucide="power"
-                    style="color: var(--danger-red); width: 16px; height: 16px; margin-left: auto;"></i>
+                <div class="logout-button" onclick="event.stopPropagation(); logout()" title="Logout" aria-label="Logout">
+                    <i data-lucide="power" style="width: 16px; height: 16px;" aria-hidden="true"></i>
+                </div>
             </div>
         </aside>
 
@@ -955,8 +1114,6 @@
 
                 <div class="time-filters">
                     <button class="filter-btn active">Genesis</button>
-                    <button class="filter-btn">Cycle 03</button>
-                    <button class="filter-btn">Cycle 04</button>
                 </div>
 
                 <!-- Spotlight -> The current #1 -->
@@ -980,10 +1137,7 @@
                         </div>
                         <div class="stat-block" style="grid-column: span 2; margin-top: 12px;">
                             <span class="label">Core Directives</span>
-                            <span
-                                style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700;">REACT</span>
-                            <span
-                                style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700; margin-left: 4px;">SYS_ARCH</span>
+                            <span id="spotlightDirectives"></span>
                         </div>
                     </div>
                 </div>
@@ -995,10 +1149,10 @@
                 <!-- Contextual Banner: Where the user stands -->
                 <div class="user-status-banner">
                     <div class="user-status-left">
-                        <div class="my-rank">#1245</div>
+                        <div class="my-rank" id="userRankBadge">UNRANKED</div>
                         <div class="user-status-text">
-                            <h4>Target Acquired</h4>
-                            <p>Top 5% bracket. Need 120 REP to compile next node tier.</p>
+                            <h4 id="userStatusTitle">Network Sync</h4>
+                            <p id="userStatusDesc">Scanning your ledger position and target reputation.</p>
                         </div>
                     </div>
                     <div>
@@ -1036,161 +1190,160 @@
 
     </div>
 
+    <script src="../js/script.js"></script>
     <script>
         lucide.createIcons();
 
-        function updateSpotlightFromUser() {
-            const userStr = localStorage.getItem("loggedInUser");
-            if (!userStr) return;
-
-            try {
-                const user = JSON.parse(userStr);
-                const name = user.first_name || user.name || (user.email ? user.email.split("@")[0] : "System User");
-
-                const nameEl = document.getElementById("spotlightName");
-                const subtitleEl = document.getElementById("spotlightSubtitle");
-                const repEl = document.getElementById("spotlightReputation");
-                const bountiesEl = document.getElementById("spotlightBounties");
-
-                if (nameEl) nameEl.textContent = name;
-                if (subtitleEl) subtitleEl.textContent = "Network Node";
-                if (repEl) repEl.textContent = String(user.reputation || 0);
-                if (bountiesEl) bountiesEl.textContent = String(user.bounties_completed || 0);
-            } catch (e) {
-                console.error("Spotlight user parse error:", e);
-            }
+        function getDisplayName(userObj) {
+            return userObj.first_name || userObj.name || (userObj.email ? userObj.email.split("@")[0] : "System User");
         }
 
-        function updateSpotlightFromTopNode(node) {
-            if (!node) return;
+        function updateSidebarUser(userObj) {
+            const name = getDisplayName(userObj);
+            const email = userObj.email || "user@system.node";
 
+            document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
+            document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
+            document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
+        }
+
+        function renderDirectiveTags(repValue, bountyValue) {
+            const directives = [];
+            if ((repValue || 0) >= 500) directives.push("ELITE_NODE");
+            if ((repValue || 0) >= 250 && (repValue || 0) < 500) directives.push("HIGH_SIGNAL");
+            if ((bountyValue || 0) >= 10) directives.push("PATCH_MASTER");
+            if ((bountyValue || 0) > 0 && (bountyValue || 0) < 10) directives.push("ACTIVE_HUNTER");
+            if (directives.length === 0) directives.push("NETWORK_NODE");
+
+            const directivesEl = document.getElementById("spotlightDirectives");
+            if (!directivesEl) return;
+            directivesEl.innerHTML = directives.map(tag =>
+                `<span style="display:inline-block; padding: 4px 8px; border: 1px solid var(--border-dim); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.70rem; border-radius: 4px; font-weight: 700; margin-right: 4px;">${tag}</span>`
+            ).join("");
+        }
+
+        function updateSpotlight(node, subtitleText) {
             const nameEl = document.getElementById("spotlightName");
             const subtitleEl = document.getElementById("spotlightSubtitle");
             const repEl = document.getElementById("spotlightReputation");
             const bountiesEl = document.getElementById("spotlightBounties");
 
-            if (nameEl) {
-                nameEl.textContent = node.first_name || (node.email ? node.email.split("@")[0] : "Top Node");
-            }
-            if (subtitleEl) subtitleEl.textContent = "Top Ranked Node";
+            if (!node) return;
+
+            if (nameEl) nameEl.textContent = getDisplayName(node);
+            if (subtitleEl) subtitleEl.textContent = subtitleText;
             if (repEl) repEl.textContent = String(node.reputation || 0);
             if (bountiesEl) bountiesEl.textContent = String(node.bounties_completed || 0);
+            renderDirectiveTags(node.reputation || 0, node.bounties_completed || 0);
         }
 
-        updateSpotlightFromUser();
+        function updateUserStatusBanner(users, currentUser) {
+            const rankBadge = document.getElementById("userRankBadge");
+            const statusTitle = document.getElementById("userStatusTitle");
+            const statusDesc = document.getElementById("userStatusDesc");
 
-        async function loadLeaderboard() {
+            if (!rankBadge || !statusTitle || !statusDesc || !currentUser) return;
+
+            const rankIndex = users.findIndex(u => u.email === currentUser.email);
+            const currentRep = Number(currentUser.reputation || 0);
+
+            if (rankIndex >= 0) {
+                const rank = rankIndex + 1;
+                rankBadge.textContent = `#${rank}`;
+                statusTitle.textContent = rank <= 3 ? "Target Acquired" : "Node Located";
+                statusDesc.textContent = `Rank ${rank} in current network scan with ${currentRep} REP.`;
+            } else {
+                rankBadge.textContent = "UNRANKED";
+                const minRepInBoard = users.length > 0 ? Number(users[users.length - 1].reputation || 0) : 0;
+                const repNeeded = Math.max(0, minRepInBoard - currentRep + 1);
+                statusTitle.textContent = "Signal Weak";
+                statusDesc.textContent = repNeeded > 0
+                    ? `Need ${repNeeded} REP to breach top node list.`
+                    : "Keep solving bounties to appear in the top node list.";
+            }
+        }
+
+        async function loadLeaderboard(currentUser) {
             const tbody = document.getElementById("leaderboardBody") || document.querySelector("tbody");
             if (!tbody) return;
 
-            const fallbackHTML = tbody.innerHTML;
-
             try {
-                const res = await fetch("http://127.0.0.1:5000/leaderboard");
-                if (!res.ok) {
-                    throw new Error("HTTP Status " + res.status);
-                }
-                const data = await res.json();
+                const res = await fetch("http://127.0.0.1:5001/leaderboard");
+                if (!res.ok) throw new Error("HTTP Status " + res.status);
 
+                const users = await res.json();
                 tbody.innerHTML = "";
 
-                if (!data || data.length === 0) {
+                if (!users || users.length === 0) {
                     tbody.innerHTML = `
-                <tr class="ranking-row">
-                    <td colspan="4" style="text-align: center; padding: 2rem;">
-                        <div class="empty-state">
-                            <p class="empty-state-title">NO_DATA_FOUND</p>
-                            <p class="empty-state-subtitle">No rankings yet. Start solving requests to appear here.</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-                    updateSpotlightFromUser();
+                        <tr class="ranking-row">
+                            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary); font-family: var(--font-mono);">NO_NODES_FOUND</td>
+                        </tr>
+                    `;
+                    updateSpotlight(currentUser, "Network Node");
+                    updateUserStatusBanner([], currentUser);
                     return;
                 }
 
-                updateSpotlightFromTopNode(data[0]);
+                updateSpotlight(users[0], "Top Ranked Node");
+                updateUserStatusBanner(users, currentUser);
 
-                data.forEach((user, index) => {
-                    const initials = user.first_name ? user.first_name.charAt(0).toUpperCase() : "U";
+                users.forEach((user, index) => {
+                    const name = getDisplayName(user);
+                    const initials = name.substring(0, 1).toUpperCase();
                     const row = document.createElement("tr");
                     row.className = "ranking-row";
 
                     row.innerHTML = `
-                <td><div class="row-rank">#${String(index + 1).padStart(2, "0")}</div></td>
-                <td>
-                    <div class="row-user">
-                        <div class="row-avatar">${initials}</div>
-                        <div class="row-name">${user.first_name || user.email.split('@')[0]}</div>
-                    </div>
-                </td>
-                <td class="row-rep">${user.reputation || 0} <span>REP</span></td>
-                <td>
-                    <div class="row-badges">
-                        <div class="b-icon"><i data-lucide="${index === 0 ? 'award' : 'check'}"></i></div>
-                    </div>
-                </td>
-            `;
+                        <td><div class="row-rank">#${String(index + 1).padStart(2, "0")}</div></td>
+                        <td>
+                            <div class="row-user">
+                                <div class="row-avatar">${initials}</div>
+                                <div class="row-name">${name}</div>
+                            </div>
+                        </td>
+                        <td class="row-rep">${user.reputation || 0} <span>REP</span></td>
+                        <td style="text-align: right; font-family: var(--font-mono);">${user.bounties_completed || 0}</td>
+                    `;
                     tbody.appendChild(row);
                 });
 
                 lucide.createIcons();
-
             } catch (err) {
                 console.error("Leaderboard error:", err);
-                if (tbody && tbody.innerHTML === "") {
-                    tbody.innerHTML = fallbackHTML || `
-                <tr class="ranking-row">
-                    <td><div class="row-rank">#01</div></td>
-                    <td><div class="row-user"><div class="row-avatar">X</div><div class="row-name">STATIC FALLBACK</div></div></td>
-                    <td class="row-rep">999 <span>REP</span></td>
-                    <td><div class="row-badges"><div class="b-icon"><i data-lucide="award"></i></div></div></td>
-                </tr>
-            `;
-                    lucide.createIcons();
-                }
+                tbody.innerHTML = `
+                    <tr class="ranking-row">
+                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--danger-red); font-family: var(--font-mono);">LEDGER_SYNC_FAILED</td>
+                    </tr>
+                `;
+                updateSpotlight(currentUser, "Network Node");
+                updateUserStatusBanner([], currentUser);
             }
         }
 
-        loadLeaderboard()
-    </script>
-
-    <script>
-
-        const user = JSON.parse(localStorage.getItem("loggedInUser"))
-
-        if (user) {
-
-            const avatar = document.getElementById("sidebarAvatar")
-            const username = document.getElementById("sidebarName")
-
-            if (avatar) {
-                avatar.innerText = user.first_name.charAt(0).toUpperCase()
-            }
-
-            if (username) {
-                username.innerText = user.first_name
-            }
-
-        } else {
-            window.location.href = "login.html"
-        }
-    </script>
-
-    <script>
         document.addEventListener("DOMContentLoaded", () => {
             const userStr = localStorage.getItem("loggedInUser");
-            if (userStr) {
-                try {
-                    const user = JSON.parse(userStr);
-                    const name = user.first_name || user.name || "User";
-                    const email = user.email || "user@system.node";
-
-                    document.querySelectorAll('.user-name').forEach(el => el.innerText = name);
-                    document.querySelectorAll('.user-avatar').forEach(el => el.innerText = name.charAt(0).toUpperCase());
-                    document.querySelectorAll('.user-role').forEach(el => el.innerText = email);
-                } catch (e) { }
+            if (!userStr) {
+                window.location.href = "login.html";
+                return;
             }
+
+            let currentUser = {};
+            try {
+                currentUser = JSON.parse(userStr) || {};
+            } catch (e) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            updateSidebarUser(currentUser);
+            updateSpotlight(currentUser, "Network Node");
+            loadLeaderboard(currentUser);
+
+            // Auto-refresh leaderboard every 25 seconds for live updates
+            setInterval(() => {
+                loadLeaderboard(currentUser);
+            }, 25000);
         });
     </script>
 </body>

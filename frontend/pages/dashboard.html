@@ -11,6 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="../css/logout-button.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -295,6 +296,7 @@
             display: flex;
             flex-direction: column;
             z-index: 20;
+            overflow: hidden;
         }
 
         .brand-header {
@@ -304,6 +306,7 @@
             align-items: center;
             gap: 16px;
             text-decoration: none;
+            flex-shrink: 0;
         }
 
         .brand-icon {
@@ -334,6 +337,7 @@
 
         .nav-menu {
             flex: 1;
+            min-height: 0;
             padding: 32px 16px;
             overflow-y: auto;
             display: flex;
@@ -412,12 +416,13 @@
         }
 
         .sidebar-footer {
-            padding: 32px;
+            padding: 20px 24px;
             border-top: 1px solid var(--border-dim);
             display: flex;
             align-items: center;
             gap: 16px;
             cursor: pointer;
+            flex-shrink: 0;
             transition: background 0.2s;
         }
 
@@ -459,6 +464,26 @@
             font-family: var(--font-mono);
             font-size: 0.7rem;
             color: var(--text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-footer i[data-lucide="power"] {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            filter: drop-shadow(0 0 0px rgba(255, 51, 102, 0.5)) !important;
+        }
+
+        .sidebar-footer:hover i[data-lucide="power"] {
+            color: #ff6699 !important;
+            transform: scale(1.3) rotate(12deg) !important;
+            filter: drop-shadow(0 0 10px rgba(255, 51, 102, 0.8)) !important;
+        }
+
+        .sidebar-footer i[data-lucide="power"]:hover {
+            color: #ff99bb !important;
+            transform: scale(1.5) rotate(20deg) !important;
+            filter: drop-shadow(0 0 15px rgba(255, 51, 102, 1)) !important;
         }
 
         /* ----- MIDDLE PANEL: WORKSPACE ----- */
@@ -838,13 +863,16 @@
         }
 
         .empty-state-subtitle {
-            font-family: var(--font-body);
-            font-size: 1.05rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            line-height: 1.45;
-            max-width: 560px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.82);
+            line-height: 1.7;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            max-width: 640px;
             margin: 0;
+            text-shadow: 0 0 12px rgba(0, 229, 255, 0.14), 0 0 16px rgba(123, 66, 250, 0.12);
         }
 
         .data-row {
@@ -1269,7 +1297,8 @@
             }
 
             .empty-state-subtitle {
-                font-size: 0.95rem;
+                font-size: 0.82rem;
+                line-height: 1.6;
                 max-width: 100%;
             }
 
@@ -1362,9 +1391,10 @@
                     <div id="userEmail" class="user-role">...</div>
                 </div>
 
-                <i data-lucide="power" onclick="event.stopPropagation(); logoutUser()"
-                    style="color: var(--danger-red); width:16px; height:16px; margin-left:auto; cursor:pointer;"
-                    title="Logout"></i>
+                <div class="logout-button" onclick="event.stopPropagation(); logoutUser()" title="Logout"
+                    aria-label="Logout">
+                    <i data-lucide="power" style="width: 16px; height: 16px;" aria-hidden="true"></i>
+                </div>
 
             </div>
         </aside>

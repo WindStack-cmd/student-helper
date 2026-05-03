@@ -200,8 +200,8 @@ def set_csp_headers(response):
     """Set proper CSP headers to allow API calls and local connections"""
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "connect-src 'self' http://127.0.0.1:* http://localhost:*; "
-        "script-src 'self' https://unpkg.com https://fonts.googleapis.com https://cdn.jsdelivr.net 'unsafe-inline'; "
+        "connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://unpkg.com https://cdn.jsdelivr.net; "
+        "script-src 'self' https://unpkg.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.socket.io 'unsafe-inline'; "
         "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; "
         "img-src 'self' data: https:; "
         "font-src 'self' https://fonts.gstatic.com; "
@@ -427,6 +427,12 @@ def init_db():
             pass
         try:
             cursor.execute("ALTER TABLE users ADD COLUMN referral_earnings INT DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+        
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) DEFAULT NULL")
             conn.commit()
         except Exception:
             pass
@@ -767,7 +773,7 @@ def me():
         cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute(
-                "SELECT id, email, first_name, name, is_verified, COALESCE(reputation, points, 0) AS balance FROM users WHERE email=%s",
+                "SELECT id, email, first_name, name, is_verified, profile_image, COALESCE(reputation, points, 0) AS balance FROM users WHERE email=%s",
                 (email,)
             )
             user = cursor.fetchone()
@@ -781,6 +787,55 @@ def me():
     except Exception as e:
         log_event("ME", str(e), "ERROR")
         return jsonify({"message": "Failed to fetch user profile", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/update_profile_image", methods=["POST"])
+@require_auth
+def update_profile_image():
+    """Update user profile image (avatar)."""
+    try:
+        email = request.user_email
+        if "file" not in request.files:
+            return jsonify({"message": "No file part"}), 400
+        
+        file = request.files["file"]
+        if file.filename == "":
+            return jsonify({"message": "No selected file"}), 400
+            
+        if file:
+            import uuid
+            import werkzeug.utils
+            
+            # Ensure avatar directory exists
+            avatar_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'avatars')
+            os.makedirs(avatar_dir, exist_ok=True)
+            
+            filename = f"avatar_{uuid.uuid4().hex}_{werkzeug.utils.secure_filename(file.filename)}"
+            filepath = os.path.join(avatar_dir, filename)
+            file.save(filepath)
+            
+            profile_image_url = f"/uploads/avatars/{filename}"
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "UPDATE users SET profile_image = %s WHERE email = %s",
+                    (profile_image_url, email)
+                )
+                conn.commit()
+                log_event("PROFILE_IMAGE", f"Profile image updated for {email}: {profile_image_url}", "INFO")
+                return jsonify({"message": "Profile image updated", "profile_image": profile_image_url}), 200
+            finally:
+                cursor.close()
+                conn.close()
+    except Exception as e:
+        log_event("PROFILE_IMAGE", str(e), "ERROR")
+        return jsonify({"message": "Failed to update profile image", "error_code": "INTERNAL_ERROR"}), 500
+
+@app.route("/uploads/avatars/<filename>")
+def uploaded_avatar(filename):
+    """Serve uploaded avatars."""
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], 'avatars'), filename)
 
 @app.route("/resend_verification", methods=["POST"])
 @require_auth
@@ -1169,6 +1224,28 @@ def get_requests():
                 if len(r) > 12: req["expires_at"] = str(r[12]) if r[12] else None
                 
                 requests_list.append(req)
+
+            # Resolve display names in one query to avoid exposing raw emails in UI labels.
+            email_values = [req.get("email") for req in requests_list if req.get("email")]
+            name_map = {}
+            if email_values:
+                placeholders = ','.join(['%s'] * len(email_values))
+                cursor.execute(
+                    f"""
+                    SELECT email,
+                           COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                    FROM users
+                    WHERE email IN ({placeholders})
+                    """,
+                    tuple(email_values)
+                )
+                for user_row in cursor.fetchall():
+                    if user_row[0]:
+                        name_map[user_row[0]] = user_row[1]
+
+            for req in requests_list:
+                email = req.get("email")
+                req["poster_name"] = name_map.get(email) or (email.split('@')[0] if email else "ANONYMOUS_USER")
             
             log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Sort: {sort_by})", "INFO")
             
@@ -1228,6 +1305,22 @@ def get_request_details(request_id):
             if request_data:
                 request_data['created_at'] = str(request_data['created_at']) if request_data['created_at'] else None
                 request_data['expires_at'] = str(request_data['expires_at']) if request_data.get('expires_at') else None
+                poster_email = request_data.get('user_email')
+                request_data['poster_name'] = "ANONYMOUS_USER"
+                if poster_email:
+                    cursor.execute(
+                        """
+                        SELECT COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                        FROM users
+                        WHERE email = %s
+                        """,
+                        (poster_email,)
+                    )
+                    poster_row = cursor.fetchone()
+                    if poster_row and poster_row.get('display_name'):
+                        request_data['poster_name'] = poster_row['display_name']
+                    else:
+                        request_data['poster_name'] = poster_email.split('@')[0]
             
             for ans in answers_list:
                 ans['created_at'] = str(ans['created_at']) if ans['created_at'] else None
@@ -1345,9 +1438,21 @@ def get_my_requests():
         try:
             cursor.execute("SELECT * FROM requests WHERE user_email = %s ORDER BY created_at DESC", (email,))
             rows = cursor.fetchall()
+            cursor.execute(
+                """
+                SELECT COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                FROM users
+                WHERE email = %s
+                """,
+                (email,)
+            )
+            user_row = cursor.fetchone()
+            display_name = user_row.get('display_name') if user_row else None
+
             requests_list = []
             for r in rows:
                 r['email'] = r.get('user_email')
+                r['poster_name'] = display_name or (r['email'].split('@')[0] if r.get('email') else 'ANONYMOUS_USER')
                 r['created_at'] = str(r['created_at']) if r['created_at'] else None
                 r['expires_at'] = str(r['expires_at']) if r.get('expires_at') else None
                 requests_list.append(r)
@@ -1368,9 +1473,27 @@ def get_archived_requests():
         try:
             cursor.execute("SELECT * FROM requests WHERE solved = 1 OR status = 'closed' ORDER BY created_at DESC")
             rows = cursor.fetchall()
+            email_values = [row.get('user_email') for row in rows if row.get('user_email')]
+            name_map = {}
+            if email_values:
+                placeholders = ','.join(['%s'] * len(email_values))
+                cursor.execute(
+                    f"""
+                    SELECT email,
+                           COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                    FROM users
+                    WHERE email IN ({placeholders})
+                    """,
+                    tuple(email_values)
+                )
+                for user_row in cursor.fetchall():
+                    if user_row.get('email'):
+                        name_map[user_row['email']] = user_row.get('display_name')
+
             requests_list = []
             for r in rows:
                 r['email'] = r.get('user_email')
+                r['poster_name'] = name_map.get(r['email']) or (r['email'].split('@')[0] if r.get('email') else 'ANONYMOUS_USER')
                 r['created_at'] = str(r['created_at']) if r['created_at'] else None
                 r['expires_at'] = str(r['expires_at']) if r.get('expires_at') else None
                 requests_list.append(r)
@@ -1528,42 +1651,6 @@ def accept_answer():
         log_event("ACCEPT_ANSWER", f"Error accepting answer: {str(e)}", "ERROR")
         return jsonify({"message": "Failed to accept answer", "error_code": "INTERNAL_ERROR"}), 500
 
-@app.route("/purge_user", methods=["POST"])
-@limiter.limit("2 per minute")  # FEATURE #3: Rate limiting (very restrictive for destructive operation)
-def purge_user():
-    try:
-        data = request.json or {}
-        email = str(data.get("email") or "").strip()
-
-        # FIX #3: Input validation
-        if not email or not validate_email(email):
-            log_event("PURGE_USER", f"Invalid email format: {email}", "WARNING")
-            return jsonify({"message": "Invalid email", "error_code": "INVALID_EMAIL"}), 400
-
-        log_event("PURGE_USER", f"Starting purge for: {email}", "WARNING")
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("DELETE FROM notifications WHERE email = %s", (email,))
-            cursor.execute("DELETE FROM answers WHERE email = %s", (email,))
-            cursor.execute("DELETE FROM posts WHERE user_email = %s", (email,))
-            cursor.execute("DELETE FROM requests WHERE user_email = %s", (email,))
-            cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-
-            conn.commit()
-            log_event("PURGE_USER", f"User data purged successfully for: {email}", "WARNING")
-            return jsonify({"message": "User data purged successfully"}), 200
-        except Exception as e:
-            conn.rollback()
-            log_event("PURGE_USER", f"Error purging user {email}: {str(e)}", "ERROR")
-            return jsonify({"message": "Failed to purge user data", "error_code": "DB_ERROR"}), 500
-        finally:
-            cursor.close()
-            conn.close()
-    except Exception as e:
-        log_event("PURGE_USER", f"Critical error: {str(e)}", "ERROR")
-        return jsonify({"message": "Server error", "error_code": "INTERNAL_ERROR"}), 500
 
 # @socketio.on("message")  # Disabled on Windows due to socket binding issues
 # def handle_message(msg):
@@ -1703,7 +1790,7 @@ def user_stats():
         cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute("""
-                SELECT first_name, email, referral_code, COALESCE(referral_earnings, 0) as referral_earnings,
+                SELECT first_name, email, referral_code, profile_image, COALESCE(referral_earnings, 0) as referral_earnings,
                        COALESCE(reputation, points, 0) as reputation,
                        COALESCE(bounties_completed, 0) as bounties_completed
                 FROM users
@@ -1938,6 +2025,68 @@ def delete_request():
     except Exception as e:
         log_event("DELETE_REQUEST", str(e), "ERROR")
         return jsonify({"message": "Failed to delete"}), 500
+
+@app.route("/purge_user", methods=["POST"])
+@require_auth
+def purge_user():
+    data = request.json or {}
+    email_to_purge = data.get("email")
+    authenticated_email = request.user_email
+
+    if not email_to_purge or email_to_purge != authenticated_email:
+        log_event("PURGE_USER", f"Unauthorized purge attempt. Auth: {authenticated_email}, Target: {email_to_purge}", "WARNING")
+        return jsonify({"message": "Unauthorized request"}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Free up requests captured by the user
+        cursor.execute("UPDATE requests SET status = 'open', captured_by = NULL WHERE captured_by = %s", (email_to_purge,))
+        
+        # Track counts for summary
+        counts = {}
+        
+        # Delete claims on requests created by this user
+        cursor.execute("DELETE FROM claims WHERE request_id IN (SELECT id FROM requests WHERE user_email = %s)", (email_to_purge,))
+        counts['claims_on_my_requests'] = cursor.rowcount
+        
+        # Delete answers on requests created by this user
+        cursor.execute("DELETE FROM answers WHERE request_id IN (SELECT id FROM requests WHERE user_email = %s)", (email_to_purge,))
+        counts['answers_on_my_requests'] = cursor.rowcount
+        
+        # Delete user's own answers and claims
+        cursor.execute("DELETE FROM answers WHERE email = %s", (email_to_purge,))
+        counts['my_answers'] = cursor.rowcount
+        
+        cursor.execute("DELETE FROM claims WHERE user_email = %s", (email_to_purge,))
+        counts['my_claims'] = cursor.rowcount
+        
+        # Delete user's requests
+        cursor.execute("DELETE FROM requests WHERE user_email = %s", (email_to_purge,))
+        counts['requests'] = cursor.rowcount
+        
+        # Delete user's posts
+        cursor.execute("DELETE FROM posts WHERE user_email = %s", (email_to_purge,))
+        counts['posts'] = cursor.rowcount
+        
+        # Delete user's notifications
+        cursor.execute("DELETE FROM notifications WHERE email = %s", (email_to_purge,))
+        counts['notifications'] = cursor.rowcount
+        
+        # Finally delete the user
+        cursor.execute("DELETE FROM users WHERE email = %s", (email_to_purge,))
+        counts['user_account'] = cursor.rowcount
+        
+        conn.commit()
+        log_event("PURGE_USER", f"Successfully purged all data for user {email_to_purge}", "INFO")
+        return jsonify({"message": "User data successfully purged", "summary": counts}), 200
+    except Exception as e:
+        conn.rollback()
+        log_event("PURGE_USER", f"Error purging user {email_to_purge}: {str(e)}", "ERROR")
+        return jsonify({"message": "Failed to purge user data"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 # ============================================
 # FRONTEND ROUTES (Must be at the end to not intercept API routes)
