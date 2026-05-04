@@ -11,8 +11,6 @@ StudentsHelper is a full-stack community platform that facilitates **peer-to-pee
 
 ---
 
-
-
 ## 📸 Screenshots
 
 <details>
