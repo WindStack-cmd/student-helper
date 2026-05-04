@@ -295,7 +295,9 @@ async function loadDashboardMetrics() {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/user_stats", { headers });
+        // Force fresh data (no cache) and add a timestamp to bypass intermediaries
+        const statsUrl = `http://127.0.0.1:5001/user_stats?_=${Date.now()}`;
+        const response = await fetch(statsUrl, { headers, cache: 'no-store' });
 
         if (response.status === 401) {
             localStorage.removeItem("access_token");
@@ -311,9 +313,14 @@ async function loadDashboardMetrics() {
         const rankEl = document.getElementById("rankCount");
         const referralEarningsEl = document.getElementById("referralEarningsCount");
 
-        if (postedEl) postedEl.innerText = data.bounties_posted || 0;
-        if (solvedEl) solvedEl.innerText = data.bounties_completed || 0;
-        if (rankEl) rankEl.innerText = data.rank ? `#${data.rank}` : "N/A";
+        const postedCount = Number(data.bounties_posted || 0);
+        const solvedCount = Number(data.bounties_completed || 0);
+        const reputationCount = Number(data.reputation || 0);
+        const hasRankActivity = postedCount > 0 || solvedCount > 0 || reputationCount > 0;
+
+        if (postedEl) postedEl.innerText = postedCount;
+        if (solvedEl) solvedEl.innerText = solvedCount;
+        if (rankEl) rankEl.innerText = hasRankActivity && data.rank ? `#${data.rank}` : "N/A";
         if (referralEarningsEl) referralEarningsEl.innerText = data.referral_earnings || 0;
 
         const referralNodeLink = document.getElementById("referralNodeLink");
@@ -356,6 +363,7 @@ function updateIdentityProtocolPanel(data) {
     const posted = Number(data.bounties_posted || 0);
     const completed = Number(data.bounties_completed || 0);
     const reputation = Number(data.reputation || 0);
+    const hasRankActivity = posted > 0 || completed > 0 || reputation > 0;
 
     const rankLabel = document.getElementById("identityRankLabel");
     const levelBar = document.getElementById("identityLevelBar");
@@ -365,7 +373,7 @@ function updateIdentityProtocolPanel(data) {
     const objectives = document.getElementById("identityObjectives");
 
     if (rankLabel) {
-        rankLabel.textContent = rank > 0 ? `#${rank}` : "UNRANKED";
+        rankLabel.textContent = hasRankActivity && rank > 0 ? `#${rank}` : "UNRANKED";
     }
 
     if (levelBar) {
@@ -646,6 +654,18 @@ async function deleteRequest(id) {
             else if (currentTab === "My Data") await loadMyRequests();
             else if (currentTab === "Archived") await loadArchivedRequests();
             if (typeof fetchBalance === 'function') fetchBalance();
+            // Optimistically update posted count in UI immediately
+            try {
+                const postedEl = document.getElementById("postedCount");
+                if (postedEl) {
+                    const current = Number(postedEl.innerText) || 0;
+                    const updated = Math.max(0, current - 1);
+                    postedEl.innerText = updated;
+                }
+            } catch (err) { console.warn('Failed to update postedCount optimistically', err); }
+
+            // Then refresh authoritative metrics from server
+            try { await loadDashboardMetrics(); } catch (e) { console.error('Failed to refresh dashboard metrics', e); }
         } else {
             const data = await res.json();
             alert(data.message || "Deletion failed.");
@@ -726,6 +746,8 @@ async function acceptAnswer(answerId, requestId) {
             if (currentTab === "Network Feed") await loadRequests();
             else if (currentTab === "My Data") await loadMyRequests();
             else if (currentTab === "Archived") await loadArchivedRequests();
+            // Accepting a solution affects solved counts and rank — refresh dashboard metrics
+            try { await loadDashboardMetrics(); } catch (e) { console.error('Failed to refresh dashboard metrics', e); }
         } else {
             const data = await response.json();
             showNotification(data.message || "Failed to accept answer", "error");
@@ -753,6 +775,8 @@ async function toggleClaim(requestId, isCurrentlyClaimed) {
         if (response.ok) {
             showNotification(isCurrentlyClaimed ? "Claim dropped" : "Objective claimed!", "success");
             openRequest(requestId); // Refresh modal
+            // Claiming/unclaiming may affect node activity—refresh metrics
+            try { await loadDashboardMetrics(); } catch (e) { console.error('Failed to refresh dashboard metrics', e); }
         } else {
             const err = await response.json();
             showNotification(err.message || "Action failed", "error");
