@@ -28,6 +28,7 @@ StudentsHelper is a full-stack community platform that facilitates **peer-to-pee
 
 ---
 
+
 ## 🏗️ Architecture & Core Flow
 
 - **Frontend:** Multi-page Glassmorphic UI (Vanilla JS). Root directory is `/frontend`.
