@@ -99,6 +99,29 @@ document.addEventListener("DOMContentLoaded", function(){
     if (form) {
         form.addEventListener("submit", submitHelpRequest);
     }
+
+    const bountyInput = document.getElementById("requestBounty");
+    const stepUpBtn = document.getElementById("bountyStepUp");
+    const stepDownBtn = document.getElementById("bountyStepDown");
+
+    if (bountyInput && stepUpBtn && stepDownBtn) {
+        const triggerInputEvent = () => {
+            bountyInput.dispatchEvent(new Event("input", { bubbles: true }));
+            bountyInput.dispatchEvent(new Event("change", { bubbles: true }));
+        };
+
+        stepUpBtn.addEventListener("click", () => {
+            bountyInput.stepUp();
+            triggerInputEvent();
+            bountyInput.focus();
+        });
+
+        stepDownBtn.addEventListener("click", () => {
+            bountyInput.stepDown();
+            triggerInputEvent();
+            bountyInput.focus();
+        });
+    }
     
     // Fetch and display balance for the current user
     async function updateStatusBalance() {
