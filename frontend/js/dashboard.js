@@ -315,8 +315,7 @@ async function loadDashboardMetrics() {
 
         const postedCount = Number(data.bounties_posted || 0);
         const solvedCount = Number(data.bounties_completed || 0);
-        const reputationCount = Number(data.reputation || 0);
-        const hasRankActivity = postedCount > 0 || solvedCount > 0 || reputationCount > 0;
+        const hasRankActivity = postedCount > 0 || solvedCount > 0;
 
         if (postedEl) postedEl.innerText = postedCount;
         if (solvedEl) solvedEl.innerText = solvedCount;
@@ -363,7 +362,7 @@ function updateIdentityProtocolPanel(data) {
     const posted = Number(data.bounties_posted || 0);
     const completed = Number(data.bounties_completed || 0);
     const reputation = Number(data.reputation || 0);
-    const hasRankActivity = posted > 0 || completed > 0 || reputation > 0;
+    const hasRankActivity = posted > 0 || completed > 0;
 
     const rankLabel = document.getElementById("identityRankLabel");
     const levelBar = document.getElementById("identityLevelBar");
@@ -378,23 +377,27 @@ function updateIdentityProtocolPanel(data) {
 
     if (levelBar) {
         // Calculate progress based on reputation or completed bounties
-        // Level up every 10 bounties?
-        const level = Math.floor(completed / 10) + 1;
-        const progressInLevel = (completed % 10) * 10; 
-        levelBar.style.width = `${Math.max(5, progressInLevel)}%`;
+        // Level up every 10 completed bounties after ranking is initialized.
+        const level = hasRankActivity ? Math.floor(completed / 10) + 1 : 0;
+        const progressInLevel = hasRankActivity ? (completed % 10) * 10 : 0;
+        levelBar.style.width = `${progressInLevel}%`;
         
         // Update initialized value to show level too
         if (initializedValue) {
-            initializedValue.textContent = `LVL_${level}_NODE`;
+            initializedValue.textContent = hasRankActivity ? `LVL_${level}_NODE` : "UNRANKED_NODE";
         }
     }
 
     if (tierProgress) {
+        if (!hasRankActivity) {
+            tierProgress.textContent = "COMPLETE OR POST A BOUNTY TO START RANKING";
+        } else {
         const nextTierAt = (Math.floor(completed / 10) + 1) * 10;
         const toNext = nextTierAt - completed;
         tierProgress.textContent = toNext > 0
             ? `${toNext} COMPLETED BOUNTIES TO NEXT LEVEL`
             : "TIER UPGRADE READY";
+        }
     }
 
     if (modulesWrap) {
