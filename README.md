@@ -47,7 +47,6 @@ StudentsHelper is a full-stack community platform that facilitates **peer-to-pee
 
 ---
 
-## 🏗️ Architecture & Core Flow
 
 ## 🏗️ Architecture & Core Flow
 
