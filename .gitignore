@@ -158,3 +158,6 @@ backend/dump_schema.py
 backend/flask_routes.txt
 backend/commits.txt
 backend/schema.txt
+
+# Open .gitignore in your project root and add this line:
+PROJECT_BRIEFING.md
