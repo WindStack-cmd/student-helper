@@ -195,46 +195,70 @@ function injectVerificationBanner() {
     const banner = document.createElement('div');
     banner.id = 'verification-banner';
     banner.style.cssText = `
-        background: var(--warning-amber);
-        color: #000;
-        padding: 12px 24px;
-        font-family: var(--font-mono);
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-transform: uppercase;
+        position: relative;
+        width: 100%;
+        padding: 10px 20px;
+        background: rgba(255, 200, 0, 0.06);
+        border: none;
+        border-bottom: 1px solid rgba(255, 200, 0, 0.25);
+        border-left: 3px solid rgba(255, 200, 0, 0.6);
+        color: rgba(255, 200, 0, 0.8);
+        font-family: monospace;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 12px;
-        z-index: 1000;
-        position: relative;
+        justify-content: space-between;
+        gap: 1rem;
+        box-sizing: border-box;
     `;
     
     banner.innerHTML = `
-        <i data-lucide="alert-triangle" style="width: 18px; height: 18px;"></i>
-        <span>⚠ VERIFY_EMAIL — CHECK_INBOX OR</span>
+        <span style="display: flex; align-items: center; gap: 8px;">⚠ VERIFY_EMAIL — Check your inbox to activate full access</span>
         <a href="#" id="resend-verification-link" style="
-            background: #000;
-            color: #fff;
-            padding: 6px 16px;
-            border-radius: 4px;
+            background: transparent;
+            border: 1px solid rgba(255, 200, 0, 0.4);
+            color: rgba(255, 200, 0, 0.9);
+            font-family: monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            padding: 4px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
             text-decoration: none;
-            margin-left: 12px;
-            font-size: 0.7rem;
-            font-weight: 900;
-            display: inline-flex;
-            align-items: center;
-            border: 1px solid rgba(255,255,255,0.2);
-            transition: all 0.2s;
+            display: inline-block;
         ">RESEND_LINK</a>
     `;
     
-    // Inject at the top of the workspace if it exists, else at the top of body
-    const workspace = document.querySelector('.workspace');
-    if (workspace) {
-        workspace.prepend(banner);
-    } else {
-        document.body.prepend(banner);
+    // Add hover styles for the button
+    const hoverStyle = document.createElement('style');
+    hoverStyle.textContent = `
+        #resend-verification-link:hover {
+            background: rgba(255, 200, 0, 0.1);
+            border-color: rgba(255, 200, 0, 0.8);
+            color: white;
+        }
+    `;
+    if (!document.getElementById('verify-banner-hover-styles')) {
+        hoverStyle.id = 'verify-banner-hover-styles';
+        document.head.appendChild(hoverStyle);
+    }
+    
+    // Try each selector in order until one is found
+    const contentContainer =
+        document.querySelector('.workspace-content') ||
+        document.querySelector('.main-content') ||
+        document.querySelector('.workspace') ||
+        document.querySelector('.page-content') ||
+        document.querySelector('.content-area') ||
+        document.querySelector('main') ||
+        document.querySelector('.dashboard-content') ||
+        document.querySelector('.request-content') ||
+        document.querySelector('.container');
+
+    if (contentContainer) {
+        contentContainer.insertBefore(banner, contentContainer.firstChild);
     }
     
     if (window.lucide) lucide.createIcons();
