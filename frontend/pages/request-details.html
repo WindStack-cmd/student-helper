@@ -806,6 +806,7 @@
 
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <script src="../js/config.js"></script>
     <script>
 
         lucide.createIcons();
@@ -819,7 +820,7 @@
 
         async function loadRequest() {
 
-            const response = await fetch("http://127.0.0.1:5001/get_requests")
+            const response = await fetch(API_BASE + "/get_requests")
             const result = await response.json()
             const data = result.data || []
 
@@ -853,7 +854,7 @@
 
         async function loadAnswers() {
 
-            const response = await fetch("http://127.0.0.1:5001/get_answers/" + requestId)
+            const response = await fetch(API_BASE + "/get_answers/" + requestId)
 
             const data = await response.json()
 
@@ -864,7 +865,7 @@
             data.forEach(ans => {
                 let fileLink = "";
                 if (ans.file_path) {
-                    fileLink = `<div style="margin-top:10px;"><a href="http://127.0.0.1:5001${ans.file_path}" target="_blank" style="color:var(--accent-blue); text-decoration:none;"><i data-lucide="paperclip" style="width:14px;height:14px;vertical-align:middle;"></i> <span style="vertical-align:middle;font-size:13px;">View Attachment</span></a></div>`;
+                    fileLink = `<div style="margin-top:10px;"><a href="${API_BASE}${ans.file_path}" target="_blank" style="color:var(--accent-blue); text-decoration:none;"><i data-lucide="paperclip" style="width:14px;height:14px;vertical-align:middle;"></i> <span style="vertical-align:middle;font-size:13px;">View Attachment</span></a></div>`;
                 }
 
                 let ratingHtml = "";
@@ -917,7 +918,7 @@ ${fileLink}
             btnElement.disabled = true;
 
             try {
-                const response = await fetch("http://127.0.0.1:5001/upvote_answer", {
+                const response = await fetch(API_BASE + "/upvote_answer", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -1060,7 +1061,7 @@ ${fileLink}
             }
 
             try {
-                const response = await fetch("http://127.0.0.1:5001/post_answer", {
+                const response = await fetch(API_BASE + "/post_answer", {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${token}`
@@ -1116,7 +1117,7 @@ ${fileLink}
             }
 
             try {
-                const response = await fetch("http://127.0.0.1:5001/accept_answer", {
+                const response = await fetch(API_BASE + "/accept_answer", {
 
                     method: "POST",
 
@@ -1188,7 +1189,7 @@ ${fileLink}
 
         async function loadSidebar() {
             try {
-                const res = await fetch("http://127.0.0.1:5001/get_requests")
+                const res = await fetch(API_BASE + "/get_requests")
                 const result = await res.json()
                 allRequests = result.data || []
                 renderSidebar(allRequests)

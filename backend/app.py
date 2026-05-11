@@ -40,8 +40,10 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
 mail = Mail(app)
 
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "super_secret_for_oauth")
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+_flask_secret = os.getenv("FLASK_SECRET_KEY")
+if not _flask_secret:
+    raise RuntimeError("FLASK_SECRET_KEY environment variable is not set. Cannot start the application.")
+app.secret_key = _flask_secret
 from authlib.integrations.flask_client import OAuth
 from flask import session, url_for, redirect, make_response
 
@@ -94,7 +96,7 @@ ALLOWED_ORIGINS = os.getenv(
     "http://localhost:8000,http://localhost:3000,http://127.0.0.1:5500,http://127.0.0.1:5501,http://127.0.0.1:5502,http://127.0.0.1:3000,http://localhost:5502"
 ).split(",")
 CORS(app, resources={r"/*": {
-    "origins": "*",
+    "origins": ALLOWED_ORIGINS,
     "allow_headers": ["Content-Type", "Authorization"],
     "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"]
 }}, supports_credentials=True)
@@ -106,7 +108,9 @@ CORS(app, resources={r"/*": {
 # app.config['CORS_HEADERS'] = 'Content-Type'  # Removed to avoid restriction
 
 # FEATURE #2: JWT Configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is not set. Cannot start the application.")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 
@@ -623,8 +627,8 @@ def handle_oauth_login(email, name, provider):
         cursor.close()
         conn.close()
 
+@limiter.limit("20 per minute")
 @app.route("/register", methods=["POST"])
-# @limiter.limit("20 per minute")  # Disabled for debugging
 def register():
     data = request.json or {}
     print(f"DEBUG REGISTER: Incoming request data: {data}")
@@ -694,8 +698,8 @@ def register():
         cursor.close()
         conn.close()
 
+@limiter.limit("5 per minute")
 @app.route("/login", methods=["POST"])
-# @limiter.limit("5 per minute")  # Temporarily disabled for CORS debugging
 def login():
     data = request.json or {}
     email = str(data.get("email") or "").strip().lower()  # Lowercase for consistency

@@ -267,7 +267,7 @@ function renderSearchUI() {
 
 async function loadRequests() {
     currentTab = "Network Feed";
-    await fetchAndRenderRequests("http://127.0.0.1:5001/get_requests", "NO_ACTIVE_REQUESTS",
+    await fetchAndRenderRequests(API_BASE + "/get_requests", "NO_ACTIVE_REQUESTS",
         (req) => req.status === 'solved' || req.solved
             ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
             : `<span class="status-badge status-active">LIVE</span>`, true);
@@ -276,7 +276,7 @@ async function loadRequests() {
 async function loadMyRequests() {
     currentTab = "My Data";
     // For now, only Network Feed is paginated on backend, but we prepare the logic
-    await fetchAndRenderRequests("http://127.0.0.1:5001/get_my_requests", "NO DATA FOUND",
+    await fetchAndRenderRequests(API_BASE + "/get_my_requests", "NO DATA FOUND",
         (req) => req.status === 'solved' || req.solved
             ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
             : `<span class="status-badge status-active">LIVE</span>`, false);
@@ -284,7 +284,7 @@ async function loadMyRequests() {
 
 async function loadArchivedRequests() {
     currentTab = "Archived";
-    await fetchAndRenderRequests("http://127.0.0.1:5001/get_archived_requests", "NO ARCHIVED DATA",
+    await fetchAndRenderRequests(API_BASE + "/get_archived_requests", "NO ARCHIVED DATA",
         (req) => req.solved
             ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
             : `<span class="status-badge" style="background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); border: 1px solid var(--border-dim);">CLOSED</span>`, false);
@@ -296,7 +296,7 @@ async function loadDashboardMetrics() {
 
     try {
         // Force fresh data (no cache) and add a timestamp to bypass intermediaries
-        const statsUrl = `http://127.0.0.1:5001/user_stats?_=${Date.now()}`;
+        const statsUrl = `${API_BASE}/user_stats?_=${Date.now()}`;
         const response = await fetch(statsUrl, { headers, cache: 'no-store' });
 
         if (response.status === 401) {
@@ -459,7 +459,7 @@ async function loadNotifications() {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/notifications", { headers });
+        const response = await fetch(API_BASE + "/notifications", { headers });
 
         if (response.status === 401) {
             localStorage.removeItem("access_token");
@@ -508,7 +508,7 @@ async function openRequest(id) {
 
     const headers = getAuthHeaders();
     try {
-        const response = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, { headers });
+        const response = await fetch(`${API_BASE}/get_request_details/${id}`, { headers });
         if (!response.ok) throw new Error("Load failed");
 
         const data = await response.json();
@@ -643,7 +643,7 @@ async function deleteRequest(id) {
     if (!headers) return;
 
     try {
-        const res = await fetch("http://127.0.0.1:5001/delete_request", {
+        const res = await fetch(API_BASE + "/delete_request", {
             method: "POST",
             headers: headers,
             body: JSON.stringify({ request_id: id })
@@ -736,7 +736,7 @@ async function acceptAnswer(answerId, requestId) {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/accept_answer", {
+        const response = await fetch(API_BASE + "/accept_answer", {
             method: "POST",
             headers: headers,
             body: JSON.stringify({ answer_id: answerId, request_id: requestId })
@@ -765,7 +765,7 @@ async function toggleClaim(requestId, isCurrentlyClaimed) {
     const headers = getAuthHeaders();
     if (!headers) return;
 
-    const url = isCurrentlyClaimed ? "http://127.0.0.1:5001/unclaim_request" : "http://127.0.0.1:5001/claim_request";
+    const url = isCurrentlyClaimed ? API_BASE + "/unclaim_request" : API_BASE + "/claim_request";
     const method = isCurrentlyClaimed ? "DELETE" : "POST";
 
     try {
@@ -795,7 +795,7 @@ async function upvoteAnswer(answerId, btnElement) {
     btnElement.disabled = true;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/upvote_answer", {
+        const response = await fetch(API_BASE + "/upvote_answer", {
             method: "POST",
             headers: getAuthHeaders(),
             body: JSON.stringify({ answer_id: answerId })
@@ -842,7 +842,7 @@ async function submitModalAnswer() {
     console.log("Submitting answer:", { request_id: id, answer: input.value.trim(), email: email });
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/post_answer", {
+        const response = await fetch(API_BASE + "/post_answer", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -866,7 +866,7 @@ async function submitModalAnswer() {
         }
 
         // Refresh answers
-        const dataResponse = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, {
+        const dataResponse = await fetch(`${API_BASE}/get_request_details/${id}`, {
             headers: {
                 "Authorization": `Bearer ${localStorage.getItem("access_token")}`
             }
