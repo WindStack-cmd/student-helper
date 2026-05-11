@@ -1089,7 +1089,7 @@
         </div>
     </div>
 
-
+    <script src="../js/config.js"></script>
     <script>
         lucide.createIcons();
 
@@ -1121,7 +1121,7 @@
             const sortFilter = document.getElementById("sortFilter").value;
 
             try {
-                const res = await fetch(`http://127.0.0.1:5001/get_requests?status=${statusFilter}&sort=${sortFilter}&search=${encodeURIComponent(searchTerm)}`);
+                const res = await fetch(`${API_BASE}/get_requests?status=${statusFilter}&sort=${sortFilter}&search=${encodeURIComponent(searchTerm)}`);
                 if (!res.ok) throw new Error("HTTP error " + res.status);
                 const result = await res.json();
                 let data = result.data || [];
@@ -1245,7 +1245,7 @@
 
         async function loadHuntMode() {
             try {
-                const res = await fetch("http://127.0.0.1:5001/get_requests");
+                const res = await fetch(API_BASE + "/get_requests");
 
                 if (res.status === 429) {
                     throw new Error("Rate limit exceeded. Please try again later.");
@@ -1293,7 +1293,7 @@
             if (btn) btn.innerText = "Capturing...";
 
             try {
-                const res = await fetch("http://127.0.0.1:5001/accept_post", {
+                const res = await fetch(API_BASE + "/accept_post", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ post_id: id, email: email })

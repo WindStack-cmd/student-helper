@@ -29,8 +29,8 @@ async function submitHelpRequest(event){
     try {
         // First validate balance
         const balanceUrl = currentEmail
-            ? `http://127.0.0.1:5001/get_balance?email=${encodeURIComponent(currentEmail)}`
-            : "http://127.0.0.1:5001/get_balance";
+            ? `${API_BASE}/get_balance?email=${encodeURIComponent(currentEmail)}`
+            : API_BASE + "/get_balance";
         const balanceRes = await fetch(balanceUrl);
         if (balanceRes.status === 401) {
             alert("Your session has expired. Please sign in again.");
@@ -48,7 +48,7 @@ async function submitHelpRequest(event){
             return;
         }
 
-        const response = await fetch("http://127.0.0.1:5001/post_request", {
+        const response = await fetch(API_BASE + "/post_request", {
             method: "POST",
             headers: headers,
             body: JSON.stringify({
@@ -130,8 +130,8 @@ document.addEventListener("DOMContentLoaded", function(){
         try {
             const currentEmail = typeof getCurrentUserEmail === "function" ? getCurrentUserEmail() : "";
             const balanceUrl = currentEmail
-                ? `http://127.0.0.1:5001/get_balance?email=${encodeURIComponent(currentEmail)}`
-                : "http://127.0.0.1:5001/get_balance";
+                ? `${API_BASE}/get_balance?email=${encodeURIComponent(currentEmail)}`
+                : API_BASE + "/get_balance";
             const res = await fetch(balanceUrl);
             if (res.ok) {
                 const data = await res.json();

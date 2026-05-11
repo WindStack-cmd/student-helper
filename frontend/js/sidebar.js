@@ -114,7 +114,7 @@ async function fetchBalance() {
         const currentEmail = typeof getCurrentUserEmail === 'function' ? getCurrentUserEmail() : '';
         if (!currentEmail) return;
 
-        const balanceUrl = `http://127.0.0.1:5001/get_balance?email=${encodeURIComponent(currentEmail)}`;
+        const balanceUrl = `${API_BASE}/get_balance?email=${encodeURIComponent(currentEmail)}`;
 
         const res = await fetch(balanceUrl);
         
@@ -135,7 +135,7 @@ async function fetchNotificationsCount() {
         const token = localStorage.getItem('access_token');
         if (!token) return;
         
-        const res = await fetch('http://127.0.0.1:5001/notifications', {
+        const res = await fetch(API_BASE + '/notifications', {
             headers: { 'Authorization': 'Bearer ' + token }
         });
         
@@ -164,7 +164,7 @@ async function checkVerificationStatus() {
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
-        const res = await fetch('http://127.0.0.1:5001/me', {
+        const res = await fetch(API_BASE + '/me', {
             headers: { 'Authorization': 'Bearer ' + token }
         });
         
@@ -247,7 +247,7 @@ function injectVerificationBanner() {
         
         try {
             const token = localStorage.getItem('access_token');
-            const res = await fetch('http://127.0.0.1:5001/resend_verification', {
+            const res = await fetch(API_BASE + '/resend_verification', {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + token }
             });
