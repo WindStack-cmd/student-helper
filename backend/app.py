@@ -2122,4 +2122,4 @@ def serve_frontend(filename):
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
     # FIX: Run on port 5001 to avoid socket binding conflicts on Windows
-    app.run(host="127.0.0.1", port=5001, debug=debug_mode, use_reloader=debug_mode)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)), debug=debug_mode, use_reloader=debug_mode)
