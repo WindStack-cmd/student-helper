@@ -165,11 +165,18 @@ Open the `frontend` folder with Live Server or serve it locally from your prefer
 | Users | GET | /leaderboard | No |
 | Users | GET | /dashboard_metrics | No |
 
-## 11. 👤 Author
+## 11. 🚢 Deployment
 
-- Name: GitHub Copilot
-- GitHub: https://github.com/github-copilot
+- Frontend is deployed on [Cloudflare Pages](https://student-helper.pages.dev)
+- Backend is deployed on Railway at https://student-helper-production-f3b2.up.railway.app
+- Database is MySQL hosted on Railway with persistent volume storage
+
+## 12. 👤 Author
+
+- Name: Pratik Yadav
+- GitHub: https://github.com/pratikyadav124
+- Email: pratikyadav0104@gmail.com
 
 ---
 
-If you want, I can also add a short deployment section for Cloudflare Pages and Railway, or tailor the author block to your actual name and GitHub profile.
+If you want, I can also add a short project summary at the top of the README or convert the deployment section into a table.
