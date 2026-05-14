@@ -602,9 +602,15 @@ async function openRequest(id) {
             delBtn.className = "btn-outline";
             delBtn.style.color = "var(--danger-red)";
             delBtn.style.borderColor = "rgba(255, 51, 102, 0.2)";
-            delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;margin-right:8px;vertical-align:middle;"></i> DELETE_REQUEST';
+            delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;margin-right:8px;vertical-align:middle;"></i> TERMINATE_REQUEST';
             delBtn.onclick = () => deleteRequest(req.id);
-            footer.prepend(delBtn);
+            // Insert after the Close button if present, otherwise append
+            const closeBtn = footer.querySelector('button[onclick="closeRequestModal()"]');
+            if (closeBtn && closeBtn.parentNode === footer) {
+                footer.insertBefore(delBtn, closeBtn.nextSibling);
+            } else {
+                footer.appendChild(delBtn);
+            }
         }
 
         // Render Answers
@@ -643,10 +649,9 @@ async function deleteRequest(id) {
     if (!headers) return;
 
     try {
-        const res = await fetch(API_BASE + "/delete_request", {
-            method: "POST",
-            headers: headers,
-            body: JSON.stringify({ request_id: id })
+        const res = await fetch(`${API_BASE}/requests/${id}`, {
+            method: "DELETE",
+            headers: headers
         });
 
         if (res.ok) {

@@ -818,7 +818,7 @@
         // Load Request
         // ---------------------
 
-        async function getAuthHeaders() {
+        function getAuthHeaders() {
             const token = localStorage.getItem("access_token");
             if (!token) return null;
             return { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
@@ -883,10 +883,9 @@ ${deleteBtn}
             }
 
             try {
-                const res = await fetch(API_BASE + "/delete_request", {
-                    method: "POST",
-                    headers: headers,
-                    body: JSON.stringify({ request_id: id })
+                const res = await fetch(`${API_BASE}/requests/${id}`, {
+                    method: "DELETE",
+                    headers: headers
                 });
 
                 if (res.ok) {

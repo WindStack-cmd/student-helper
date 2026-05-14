@@ -1059,8 +1059,8 @@ def post_request():
             if not user or user["balance"] < bounty:
                 return jsonify({"message": "Insufficient balance", "error_code": "INSUFFICIENT_BALANCE"}), 400
             
-            # Deduct bounty and set expires_at
-            expiry_date = datetime.now() + timedelta(days=7)
+            # Deduct bounty and set expires_at (use UTC)
+            expiry_date = datetime.utcnow() + timedelta(days=7)
             
             cursor.execute(
                 "UPDATE users SET reputation = reputation - %s, points = points - %s WHERE email = %s",
@@ -1106,6 +1106,15 @@ def get_requests():
         conn_expiry = get_db_connection()
         cursor_expiry = conn_expiry.cursor(dictionary=True)
         try:
+            # Ensure existing rows have a reasonable expires_at derived from created_at
+            try:
+                cursor_expiry.execute(
+                    "UPDATE requests SET expires_at = DATE_ADD(created_at, INTERVAL 7 DAY) WHERE expires_at IS NULL OR expires_at < created_at"
+                )
+            except Exception:
+                # Don't fail the whole request if migration/update fails
+                pass
+
             # Find requests that should expire
             cursor_expiry.execute(
                 "SELECT id, user_email, escrowed_bounty FROM requests WHERE status = 'open' AND expires_at < NOW() AND escrowed_bounty > 0"
@@ -2022,6 +2031,45 @@ def delete_request():
             cursor.execute("DELETE FROM answers WHERE request_id = %s", (request_id,))
             cursor.execute("DELETE FROM requests WHERE id = %s", (request_id,))
             
+            conn.commit()
+            log_event("DELETE_REQUEST", f"Request {request_id} deleted by {email}, bounty returned", "INFO")
+            return jsonify({"message": "Request deleted"}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("DELETE_REQUEST", str(e), "ERROR")
+        return jsonify({"message": "Failed to delete"}), 500
+
+
+@app.route('/requests/<int:request_id>', methods=['DELETE'])
+@require_auth
+def delete_request_by_id(request_id):
+    try:
+        email = request.user_email
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT user_email, escrowed_bounty FROM requests WHERE id = %s", (request_id,))
+            req = cursor.fetchone()
+
+            if not req:
+                return jsonify({"message": "Request not found"}), 404
+
+            if req['user_email'] != email:
+                return jsonify({"message": "Unauthorized"}), 403
+
+            # Return escrowed bounty if any
+            if req.get('escrowed_bounty', 0) > 0:
+                cursor.execute(
+                    "UPDATE users SET reputation = reputation + %s, points = points + %s WHERE email = %s",
+                    (req['escrowed_bounty'], req['escrowed_bounty'], email)
+                )
+
+            cursor.execute("DELETE FROM claims WHERE request_id = %s", (request_id,))
+            cursor.execute("DELETE FROM answers WHERE request_id = %s", (request_id,))
+            cursor.execute("DELETE FROM requests WHERE id = %s", (request_id,))
+
             conn.commit()
             log_event("DELETE_REQUEST", f"Request {request_id} deleted by {email}, bounty returned", "INFO")
             return jsonify({"message": "Request deleted"}), 200
