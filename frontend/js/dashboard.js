@@ -545,9 +545,27 @@ async function openRequest(id) {
             document.getElementById("modalSubmitBtn").disabled = false;
         }
 
-        // Claims Logic
-        const currentUser = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
-        const isOwner = req.user_email === currentUser.email;
+        // Ownership check: decode JWT from localStorage 'token' (fallback to 'access_token')
+        let tokenPayload = null;
+        try {
+            const rawToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+            if (rawToken) {
+                const payloadPart = (rawToken.split('.')[1] || '');
+                const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+                const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+                tokenPayload = JSON.parse(atob(padded));
+            }
+        } catch (e) {
+            console.warn('Failed to decode token payload', e);
+        }
+
+        console.log('Token payload (from localStorage.token):', tokenPayload);
+        console.log('Request posted_by fields:', req.user_email, req.poster_name, req.first_name || req.name);
+
+        const currentUserEmailFromToken = tokenPayload && (tokenPayload.email || tokenPayload.sub || null);
+        const currentUserFirstFromToken = tokenPayload && (tokenPayload.first_name || tokenPayload.name || null);
+        const isOwner = (currentUserEmailFromToken && req.user_email && currentUserEmailFromToken.toLowerCase() === String(req.user_email).toLowerCase()) ||
+                        (currentUserFirstFromToken && (currentUserFirstFromToken === req.first_name || currentUserFirstFromToken === req.poster_name || currentUserFirstFromToken === req.name));
 
         const claimsCount = document.getElementById("claimsCount");
         const claimantsList = document.getElementById("claimantsList");
@@ -591,26 +609,38 @@ async function openRequest(id) {
             window.location.href = "request-details.html?id=" + id;
         };
 
-        const footer = document.querySelector(".modal-footer");
-        // Remove existing delete btn if any
-        const oldDel = document.getElementById("modalDeleteBtn");
-        if (oldDel) oldDel.remove();
+        // Add delete icon button into modal header (top-right) so it's always visible regardless of scroll
+        try {
+            const header = document.querySelector('#requestModal .modal-header');
+            if (header) {
+                // Remove existing header delete if present
+                const existingHeaderDel = document.getElementById('modalHeaderDeleteBtn');
+                if (existingHeaderDel) existingHeaderDel.remove();
 
-        if (isOwner && req.status === 'open') {
-            const delBtn = document.createElement("button");
-            delBtn.id = "modalDeleteBtn";
-            delBtn.className = "btn-outline";
-            delBtn.style.color = "var(--danger-red)";
-            delBtn.style.borderColor = "rgba(255, 51, 102, 0.2)";
-            delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;margin-right:8px;vertical-align:middle;"></i> TERMINATE_REQUEST';
-            delBtn.onclick = () => deleteRequest(req.id);
-            // Insert after the Close button if present, otherwise append
-            const closeBtn = footer.querySelector('button[onclick="closeRequestModal()"]');
-            if (closeBtn && closeBtn.parentNode === footer) {
-                footer.insertBefore(delBtn, closeBtn.nextSibling);
-            } else {
-                footer.appendChild(delBtn);
+                if (isOwner && req.status === 'open') {
+                    const headerDel = document.createElement('button');
+                    headerDel.id = 'modalHeaderDeleteBtn';
+                    headerDel.title = 'DELETE_REQUEST';
+                    headerDel.className = 'btn-icon';
+                    headerDel.style.color = 'var(--danger-red)';
+                    headerDel.style.border = 'none';
+                    headerDel.style.background = 'transparent';
+                    headerDel.style.marginRight = '8px';
+                    headerDel.innerHTML = '<i data-lucide="trash-2" style="width:18px;height:18px;"></i>';
+                    headerDel.onclick = (e) => { e.stopPropagation(); if (confirm('Are you sure you want to delete this bounty?')) deleteRequest(req.id); };
+
+                    // Place before the existing close button if present
+                    const closeBtn = header.querySelector('button[onclick="closeRequestModal()"]');
+                    if (closeBtn && closeBtn.parentNode === header) {
+                        header.insertBefore(headerDel, closeBtn);
+                    } else {
+                        header.appendChild(headerDel);
+                    }
+                    if (window.lucide) lucide.createIcons();
+                }
             }
+        } catch (e) {
+            console.warn('Failed to insert header delete button', e);
         }
 
         // Render Answers
