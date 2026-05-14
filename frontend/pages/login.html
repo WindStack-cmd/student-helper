@@ -676,6 +676,21 @@
     <script src="../js/config.js"></script>
     <script>
 
+        // Handle OAuth callback redirect
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        if (params.has('oauth_token')) {
+            const token = params.get('oauth_token');
+            localStorage.setItem('token', token);
+            if (params.has('oauth_email')) {
+                localStorage.setItem('loggedInUser', JSON.stringify({
+                    email: params.get('oauth_email'),
+                    first_name: params.get('oauth_name') || params.get('oauth_email').split("@")[0]
+                }));
+            }
+            window.location.href = '/pages/dashboard.html';
+        }
+
         lucide.createIcons();
 
         // Password toggle
