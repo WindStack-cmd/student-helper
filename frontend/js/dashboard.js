@@ -8,6 +8,8 @@ let searchQuery = "";
 let currentTab = "Network Feed";
 let performanceChartInstance = null;
 let pendingWeeklyActivity = null;
+// Global currentUser populated from JWT in localStorage.token (email, first_name etc.)
+let currentUser = null;
 
 async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated = false) {
     const headers = getAuthHeaders();
@@ -603,27 +605,27 @@ async function openRequest(id) {
             document.getElementById("modalSubmitBtn").disabled = false;
         }
 
-        // Ownership check: decode JWT from localStorage 'token' (fallback to 'access_token')
-        let tokenPayload = null;
+        // Ensure global currentUser is populated from JWT in localStorage (token) so ownership checks work
         try {
-            const rawToken = localStorage.getItem('token') || localStorage.getItem('access_token');
-            if (rawToken) {
-                const payloadPart = (rawToken.split('.')[1] || '');
-                const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
-                const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
-                tokenPayload = JSON.parse(atob(padded));
+            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            if (token && !currentUser) {
+                const payload = JSON.parse(atob((token.split('.')[1] || '').replace(/-/g, '+').replace(/_/g, '/')));
+                currentUser = payload;
             }
         } catch (e) {
-            console.warn('Failed to decode token payload', e);
+            console.error('Token parse error', e);
         }
 
-        console.log('Token payload (from localStorage.token):', tokenPayload);
+        console.log('Current user from token:', currentUser);
         console.log('Request posted_by fields:', req.user_email, req.poster_name, req.first_name || req.name);
 
-        const currentUserEmailFromToken = tokenPayload && (tokenPayload.email || tokenPayload.sub || null);
-        const currentUserFirstFromToken = tokenPayload && (tokenPayload.first_name || tokenPayload.name || null);
-        const isOwner = (currentUserEmailFromToken && req.user_email && currentUserEmailFromToken.toLowerCase() === String(req.user_email).toLowerCase()) ||
-                        (currentUserFirstFromToken && (currentUserFirstFromToken === req.first_name || currentUserFirstFromToken === req.poster_name || currentUserFirstFromToken === req.name));
+        const currentUserEmail = currentUser && (currentUser.email || currentUser.sub || null);
+        const currentUserFirst = currentUser && (currentUser.first_name || currentUser.name || null);
+        const postedByEmail = req.user_email || null;
+        const postedByName = req.poster_name || req.first_name || req.name || null;
+
+        const isOwner = (currentUserEmail && postedByEmail && currentUserEmail.toLowerCase() === String(postedByEmail).toLowerCase()) ||
+                        (currentUserFirst && postedByName && (currentUserFirst === postedByName));
 
         const claimsCount = document.getElementById("claimsCount");
         const claimantsList = document.getElementById("claimantsList");
