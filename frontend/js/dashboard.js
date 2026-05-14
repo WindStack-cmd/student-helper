@@ -91,23 +91,24 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
             const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3);">${req.category}</span>` : '';
             const posterName = req.poster_name || req.first_name || req.name || (req.email ? req.email.split("@")[0] : "ANONYMOUS_USER");
 
-            // Determine if logged-in user is the owner by comparing token.first_name to posted_by fields
-            let firstNameFromToken = null;
-            try {
-                const rawToken = localStorage.getItem('token') || localStorage.getItem('access_token');
-                if (rawToken) {
-                    const payloadPart = (rawToken.split('.')[1] || '');
-                    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
-                    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
-                    const payload = JSON.parse(atob(padded));
-                    firstNameFromToken = payload && (payload.first_name || payload.name || null);
+            // Ensure currentUser is initialized from JWT so we can compare by user_id
+            if (!currentUser) {
+                try {
+                    const rawToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+                    if (rawToken) {
+                        const payloadPart = (rawToken.split('.')[1] || '');
+                        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+                        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+                        currentUser = JSON.parse(atob(padded));
+                    }
+                } catch (e) {
+                    console.warn('Failed to decode token for card owner check', e);
                 }
-            } catch (e) {
-                console.warn('Failed to decode token for card owner check', e);
             }
 
-            const postedByName = req.poster_name || req.first_name || req.name || null;
-            const isOwnerCard = firstNameFromToken && postedByName && (firstNameFromToken === postedByName);
+            // Ownership check: compare numeric user_id from token with request.user_id
+            const isOwnerCard = currentUser && req.user_id && (Number(currentUser.user_id) === Number(req.user_id));
+            console.log('Card ownership check:', currentUser && currentUser.user_id, req.user_id, isOwnerCard);
 
             // Feature 1 & 2: Bounty and Expiry Badges
             let bountyBadge = '';
@@ -619,13 +620,9 @@ async function openRequest(id) {
         console.log('Current user from token:', currentUser);
         console.log('Request posted_by fields:', req.user_email, req.poster_name, req.first_name || req.name);
 
-        const currentUserEmail = currentUser && (currentUser.email || currentUser.sub || null);
-        const currentUserFirst = currentUser && (currentUser.first_name || currentUser.name || null);
-        const postedByEmail = req.user_email || null;
-        const postedByName = req.poster_name || req.first_name || req.name || null;
-
-        const isOwner = (currentUserEmail && postedByEmail && currentUserEmail.toLowerCase() === String(postedByEmail).toLowerCase()) ||
-                        (currentUserFirst && postedByName && (currentUserFirst === postedByName));
+        // Ownership check: prefer comparing numeric user_id from token against req.user_id
+        const isOwner = currentUser && req.user_id && (Number(currentUser.user_id) === Number(req.user_id));
+        console.log('Ownership check:', currentUser && currentUser.user_id, req.user_id, isOwner);
 
         const claimsCount = document.getElementById("claimsCount");
         const claimantsList = document.getElementById("claimantsList");

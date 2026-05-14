@@ -1247,20 +1247,25 @@ def get_requests():
                 placeholders = ','.join(['%s'] * len(email_values))
                 cursor.execute(
                     f"""
-                    SELECT email,
+                    SELECT email, id,
                            COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
                     FROM users
                     WHERE email IN ({placeholders})
                     """,
                     tuple(email_values)
                 )
+                # Build maps for display name and user_id so frontend can do ownership checks by id
+                user_id_map = {}
                 for user_row in cursor.fetchall():
                     if user_row[0]:
-                        name_map[user_row[0]] = user_row[1]
+                        name_map[user_row[0]] = user_row[2]
+                        user_id_map[user_row[0]] = user_row[1]
 
             for req in requests_list:
                 email = req.get("email")
                 req["poster_name"] = name_map.get(email) or (email.split('@')[0] if email else "ANONYMOUS_USER")
+                # Attach user_id for ownership checks on frontend (may be None for legacy rows)
+                req["user_id"] = user_id_map.get(email) if email else None
             
             log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Sort: {sort_by})", "INFO")
             
@@ -1325,7 +1330,7 @@ def get_request_details(request_id):
                 if poster_email:
                     cursor.execute(
                         """
-                        SELECT COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                        SELECT id, COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
                         FROM users
                         WHERE email = %s
                         """,
@@ -1334,8 +1339,10 @@ def get_request_details(request_id):
                     poster_row = cursor.fetchone()
                     if poster_row and poster_row.get('display_name'):
                         request_data['poster_name'] = poster_row['display_name']
+                        request_data['user_id'] = poster_row.get('id')
                     else:
                         request_data['poster_name'] = poster_email.split('@')[0]
+                        request_data['user_id'] = None
             
             for ans in answers_list:
                 ans['created_at'] = str(ans['created_at']) if ans['created_at'] else None
