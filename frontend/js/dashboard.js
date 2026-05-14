@@ -89,6 +89,24 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
             const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3);">${req.category}</span>` : '';
             const posterName = req.poster_name || req.first_name || req.name || (req.email ? req.email.split("@")[0] : "ANONYMOUS_USER");
 
+            // Determine if logged-in user is the owner by comparing token.first_name to posted_by fields
+            let firstNameFromToken = null;
+            try {
+                const rawToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+                if (rawToken) {
+                    const payloadPart = (rawToken.split('.')[1] || '');
+                    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+                    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+                    const payload = JSON.parse(atob(padded));
+                    firstNameFromToken = payload && (payload.first_name || payload.name || null);
+                }
+            } catch (e) {
+                console.warn('Failed to decode token for card owner check', e);
+            }
+
+            const postedByName = req.poster_name || req.first_name || req.name || null;
+            const isOwnerCard = firstNameFromToken && postedByName && (firstNameFromToken === postedByName);
+
             // Feature 1 & 2: Bounty and Expiry Badges
             let bountyBadge = '';
             if (req.escrowed_bounty > 0) {
@@ -116,8 +134,13 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
                 }
             }
 
+            // Build delete button HTML to sit inline next to the badge on the right
+            const deleteBtnHtml = (isOwnerCard && req.status === 'open')
+                ? `<button id="cardDeleteBtn-${req.id}" class="btn-outline btn-small" style="color: var(--danger-red); border-color: rgba(255,51,102,0.15); background: transparent; margin-left:8px;">✕ DELETE</button>`
+                : '';
+
             container.innerHTML += `
-<div class="data-row" onclick="openRequest(${req.id})">
+<div class="data-row" onclick="openRequest(${req.id})" id="requestCard-${req.id}">
     <div class="row-main">
         <div class="row-icon"><i data-lucide="help-circle"></i></div>
         <div>
@@ -126,9 +149,44 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
             <div class="row-desc">Posted by ${posterName}</div>
         </div>
     </div>
-    <div class="row-status-col">${badge}</div>
+    <div class="row-status-col">${badge}${deleteBtnHtml}</div>
     <div class="row-date">${new Date(req.created_at).toLocaleDateString() || 'NEW_REQUEST'}</div>
 </div>`;
+
+            // Attach click handler to the delete button to stop propagation and perform DELETE
+            if (isOwnerCard && req.status === 'open') {
+                // Use a small timeout to ensure element is in DOM
+                setTimeout(() => {
+                    const delBtn = document.getElementById(`cardDeleteBtn-${req.id}`);
+                    if (!delBtn) return;
+                    delBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (!confirm('Delete this request?')) return;
+                        const headers = getAuthHeaders();
+                        if (!headers) return showNotification('Not authenticated', 'error');
+                        try {
+                            const resp = await fetch(`${API_BASE}/requests/${req.id}`, { method: 'DELETE', headers });
+                            if (resp.status === 401) {
+                                showNotification('Unauthorized', 'error');
+                                return;
+                            }
+                            if (!resp.ok) {
+                                const text = await resp.text();
+                                showNotification('Failed to delete request', 'error');
+                                console.error('Delete failed', resp.status, text);
+                                return;
+                            }
+                            // Remove card from DOM
+                            const card = document.getElementById(`requestCard-${req.id}`);
+                            if (card) card.remove();
+                            showNotification('Request deleted', 'success');
+                        } catch (err) {
+                            console.error('Delete error', err);
+                            showNotification('Error deleting request', 'error');
+                        }
+                    });
+                }, 50);
+            }
         });
 
         if (isPaginated) {
