@@ -818,32 +818,88 @@
         // Load Request
         // ---------------------
 
+        async function getAuthHeaders() {
+            const token = localStorage.getItem("access_token");
+            if (!token) return null;
+            return { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
+        }
+
         async function loadRequest() {
+            const headers = getAuthHeaders();
+            const container = document.getElementById("requestContainer");
+            const currentUser = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
 
-            const response = await fetch(API_BASE + "/get_requests")
-            const result = await response.json()
-            const data = result.data || []
+            try {
+                const response = await fetch(API_BASE + "/get_request_details/" + requestId, { headers });
+                if (!response.ok) throw new Error("Failed to load request");
+                
+                const data = await response.json();
+                const req = data.request;
+                const isOwner = req.user_email === currentUser.email;
 
-            const container = document.getElementById("requestContainer")
-
-            data.forEach(req => {
-
-                if (req.id == requestId) {
-
-                    container.innerHTML = `
-
-<h2>${req.title}</h2>
-
-<p>${req.description}</p>
-
-<p>Posted by: ${req.email}</p>
-
-`
-
+                let deleteBtn = '';
+                if (isOwner && req.status === 'open') {
+                    deleteBtn = `
+                        <div style="margin-top:20px;">
+                            <button onclick="deleteRequestFromDetailsPage(${req.id})" style="
+                                background: rgba(255, 51, 102, 0.1);
+                                color: var(--danger-red, #ff3366);
+                                border: 1px solid rgba(255, 51, 102, 0.3);
+                                padding: 10px 16px;
+                                border-radius: 4px;
+                                font-size: 13px;
+                                cursor: pointer;
+                                font-weight: 500;
+                                transition: all 0.2s;
+                            " onmouseover="this.style.background='rgba(255, 51, 102, 0.2)'" onmouseout="this.style.background='rgba(255, 51, 102, 0.1)'">
+                                <i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>
+                                Delete Request
+                            </button>
+                        </div>
+                    `;
                 }
 
-            })
+                container.innerHTML = `
+<h2>${req.title}</h2>
+<p>${req.description}</p>
+<p style="color:var(--text-muted, #6b7a8d); font-size:13px;">Posted by: <strong>${req.poster_name || req.first_name || req.email}</strong> on ${new Date(req.created_at).toLocaleDateString()}</p>
+${deleteBtn}
+`;
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } catch (e) {
+                console.error("Error loading request:", e);
+                container.innerHTML = `<p style="color:var(--danger-red, #ff3366);">Failed to load request details</p>`;
+            }
+        }
 
+        async function deleteRequestFromDetailsPage(id) {
+            if (!confirm("Are you sure? This will delete the request and return your escrowed bounty.")) return;
+
+            const headers = getAuthHeaders();
+            if (!headers) {
+                alert("Please log in first");
+                return;
+            }
+
+            try {
+                const res = await fetch(API_BASE + "/delete_request", {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify({ request_id: id })
+                });
+
+                if (res.ok) {
+                    alert("Request deleted and bounty returned.");
+                    window.location.href = "dashboard.html";
+                } else {
+                    const data = await res.json();
+                    alert(data.message || "Deletion failed.");
+                }
+            } catch (e) {
+                console.error("Delete error:", e);
+                alert("Failed to delete request");
+            }
         }
 
         loadRequest()
