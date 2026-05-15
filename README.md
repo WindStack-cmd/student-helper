@@ -17,6 +17,7 @@ Live demo: https://student-helper.pages.dev
 
 StudentsHelper — Connect. Solve. Earn. A bounty-driven network for student collaboration.
 
+
 ## 2. 🏷️ Badges
 
 This project uses the following stack and deployment channels:
