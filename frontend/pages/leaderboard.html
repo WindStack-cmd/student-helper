@@ -1106,7 +1106,7 @@
         </aside>
 
         <!-- MIDDLE PANEL: Split Architecture -->
-        <main class="workspace">
+        <main class="workspace main-content">
 
             <!-- LEFT: Hero & Spotlight -->
             <div class="board-hero">
@@ -1190,6 +1190,7 @@
 
     </div>
 
+    <script src="../js/config.js"></script>
     <script src="../js/script.js"></script>
     <script>
         lucide.createIcons();
@@ -1268,7 +1269,7 @@
             if (!tbody) return;
 
             try {
-                const res = await fetch("http://127.0.0.1:5001/leaderboard");
+                const res = await fetch(API_BASE + "/leaderboard");
                 if (!res.ok) throw new Error("HTTP Status " + res.status);
 
                 const users = await res.json();

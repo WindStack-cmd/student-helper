@@ -8,6 +8,8 @@ let searchQuery = "";
 let currentTab = "Network Feed";
 let performanceChartInstance = null;
 let pendingWeeklyActivity = null;
+// Global currentUser populated from JWT in localStorage.token (email, first_name etc.)
+let currentUser = null;
 
 async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated = false) {
     const headers = getAuthHeaders();
@@ -89,6 +91,25 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
             const categoryTag = req.category ? `<span class="status-badge" style="background: rgba(123, 66, 250, 0.1); color: var(--accent-purple); border: 1px solid rgba(123, 66, 250, 0.3);">${req.category}</span>` : '';
             const posterName = req.poster_name || req.first_name || req.name || (req.email ? req.email.split("@")[0] : "ANONYMOUS_USER");
 
+            // Ensure currentUser is initialized from JWT so we can compare by user_id
+            if (!currentUser) {
+                try {
+                    const rawToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+                    if (rawToken) {
+                        const payloadPart = (rawToken.split('.')[1] || '');
+                        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+                        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+                        currentUser = JSON.parse(atob(padded));
+                    }
+                } catch (e) {
+                    console.warn('Failed to decode token for card owner check', e);
+                }
+            }
+
+            // Ownership check: compare numeric user_id from token with request.user_id
+            const isOwnerCard = currentUser && req.user_id && (Number(currentUser.user_id) === Number(req.user_id));
+            console.log('Card ownership check:', currentUser && currentUser.user_id, req.user_id, isOwnerCard);
+
             // Feature 1 & 2: Bounty and Expiry Badges
             let bountyBadge = '';
             if (req.escrowed_bounty > 0) {
@@ -116,8 +137,13 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
                 }
             }
 
+            // Build delete button HTML to sit inline next to the badge on the right
+            const deleteBtnHtml = (isOwnerCard && req.status === 'open')
+                ? `<button id="cardDeleteBtn-${req.id}" class="btn-outline btn-small" style="color: var(--danger-red); border-color: rgba(255,51,102,0.15); background: transparent; margin-left:8px;">✕ DELETE</button>`
+                : '';
+
             container.innerHTML += `
-<div class="data-row" onclick="openRequest(${req.id})">
+<div class="data-row" onclick="openRequest(${req.id})" id="requestCard-${req.id}">
     <div class="row-main">
         <div class="row-icon"><i data-lucide="help-circle"></i></div>
         <div>
@@ -126,9 +152,44 @@ async function fetchAndRenderRequests(url, emptyText, renderBadge, isPaginated =
             <div class="row-desc">Posted by ${posterName}</div>
         </div>
     </div>
-    <div class="row-status-col">${badge}</div>
+    <div class="row-status-col">${badge}${deleteBtnHtml}</div>
     <div class="row-date">${new Date(req.created_at).toLocaleDateString() || 'NEW_REQUEST'}</div>
 </div>`;
+
+            // Attach click handler to the delete button to stop propagation and perform DELETE
+            if (isOwnerCard && req.status === 'open') {
+                // Use a small timeout to ensure element is in DOM
+                setTimeout(() => {
+                    const delBtn = document.getElementById(`cardDeleteBtn-${req.id}`);
+                    if (!delBtn) return;
+                    delBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (!confirm('Delete this request?')) return;
+                        const headers = getAuthHeaders();
+                        if (!headers) return showNotification('Not authenticated', 'error');
+                        try {
+                            const resp = await fetch(`${API_BASE}/requests/${req.id}`, { method: 'DELETE', headers });
+                            if (resp.status === 401) {
+                                showNotification('Unauthorized', 'error');
+                                return;
+                            }
+                            if (!resp.ok) {
+                                const text = await resp.text();
+                                showNotification('Failed to delete request', 'error');
+                                console.error('Delete failed', resp.status, text);
+                                return;
+                            }
+                            // Remove card from DOM
+                            const card = document.getElementById(`requestCard-${req.id}`);
+                            if (card) card.remove();
+                            showNotification('Request deleted', 'success');
+                        } catch (err) {
+                            console.error('Delete error', err);
+                            showNotification('Error deleting request', 'error');
+                        }
+                    });
+                }, 50);
+            }
         });
 
         if (isPaginated) {
@@ -267,7 +328,7 @@ function renderSearchUI() {
 
 async function loadRequests() {
     currentTab = "Network Feed";
-    await fetchAndRenderRequests("http://127.0.0.1:5001/get_requests", "NO_ACTIVE_REQUESTS",
+    await fetchAndRenderRequests(API_BASE + "/get_requests", "NO_ACTIVE_REQUESTS",
         (req) => req.status === 'solved' || req.solved
             ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
             : `<span class="status-badge status-active">LIVE</span>`, true);
@@ -276,7 +337,7 @@ async function loadRequests() {
 async function loadMyRequests() {
     currentTab = "My Data";
     // For now, only Network Feed is paginated on backend, but we prepare the logic
-    await fetchAndRenderRequests("http://127.0.0.1:5001/get_my_requests", "NO DATA FOUND",
+    await fetchAndRenderRequests(API_BASE + "/get_my_requests", "NO DATA FOUND",
         (req) => req.status === 'solved' || req.solved
             ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
             : `<span class="status-badge status-active">LIVE</span>`, false);
@@ -284,7 +345,7 @@ async function loadMyRequests() {
 
 async function loadArchivedRequests() {
     currentTab = "Archived";
-    await fetchAndRenderRequests("http://127.0.0.1:5001/get_archived_requests", "NO ARCHIVED DATA",
+    await fetchAndRenderRequests(API_BASE + "/get_archived_requests", "NO ARCHIVED DATA",
         (req) => req.solved
             ? `<span class="status-badge" style="background: rgba(46, 204, 113, 0.1); color: var(--success-green); border: 1px solid var(--success-green);">SOLVED</span>`
             : `<span class="status-badge" style="background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); border: 1px solid var(--border-dim);">CLOSED</span>`, false);
@@ -295,7 +356,9 @@ async function loadDashboardMetrics() {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/user_stats", { headers });
+        // Force fresh data (no cache) and add a timestamp to bypass intermediaries
+        const statsUrl = `${API_BASE}/user_stats?_=${Date.now()}`;
+        const response = await fetch(statsUrl, { headers, cache: 'no-store' });
 
         if (response.status === 401) {
             localStorage.removeItem("access_token");
@@ -311,9 +374,13 @@ async function loadDashboardMetrics() {
         const rankEl = document.getElementById("rankCount");
         const referralEarningsEl = document.getElementById("referralEarningsCount");
 
-        if (postedEl) postedEl.innerText = data.bounties_posted || 0;
-        if (solvedEl) solvedEl.innerText = data.bounties_completed || 0;
-        if (rankEl) rankEl.innerText = data.rank ? `#${data.rank}` : "N/A";
+        const postedCount = Number(data.bounties_posted || 0);
+        const solvedCount = Number(data.bounties_completed || 0);
+        const hasRankActivity = postedCount > 0 || solvedCount > 0;
+
+        if (postedEl) postedEl.innerText = postedCount;
+        if (solvedEl) solvedEl.innerText = solvedCount;
+        if (rankEl) rankEl.innerText = hasRankActivity && data.rank ? `#${data.rank}` : "N/A";
         if (referralEarningsEl) referralEarningsEl.innerText = data.referral_earnings || 0;
 
         const referralNodeLink = document.getElementById("referralNodeLink");
@@ -356,6 +423,7 @@ function updateIdentityProtocolPanel(data) {
     const posted = Number(data.bounties_posted || 0);
     const completed = Number(data.bounties_completed || 0);
     const reputation = Number(data.reputation || 0);
+    const hasRankActivity = posted > 0 || completed > 0;
 
     const rankLabel = document.getElementById("identityRankLabel");
     const levelBar = document.getElementById("identityLevelBar");
@@ -365,28 +433,32 @@ function updateIdentityProtocolPanel(data) {
     const objectives = document.getElementById("identityObjectives");
 
     if (rankLabel) {
-        rankLabel.textContent = rank > 0 ? `#${rank}` : "UNRANKED";
+        rankLabel.textContent = hasRankActivity && rank > 0 ? `#${rank}` : "UNRANKED";
     }
 
     if (levelBar) {
         // Calculate progress based on reputation or completed bounties
-        // Level up every 10 bounties?
-        const level = Math.floor(completed / 10) + 1;
-        const progressInLevel = (completed % 10) * 10; 
-        levelBar.style.width = `${Math.max(5, progressInLevel)}%`;
+        // Level up every 10 completed bounties after ranking is initialized.
+        const level = hasRankActivity ? Math.floor(completed / 10) + 1 : 0;
+        const progressInLevel = hasRankActivity ? (completed % 10) * 10 : 0;
+        levelBar.style.width = `${progressInLevel}%`;
         
         // Update initialized value to show level too
         if (initializedValue) {
-            initializedValue.textContent = `LVL_${level}_NODE`;
+            initializedValue.textContent = hasRankActivity ? `LVL_${level}_NODE` : "UNRANKED_NODE";
         }
     }
 
     if (tierProgress) {
+        if (!hasRankActivity) {
+            tierProgress.textContent = "COMPLETE OR POST A BOUNTY TO START RANKING";
+        } else {
         const nextTierAt = (Math.floor(completed / 10) + 1) * 10;
         const toNext = nextTierAt - completed;
         tierProgress.textContent = toNext > 0
             ? `${toNext} COMPLETED BOUNTIES TO NEXT LEVEL`
             : "TIER UPGRADE READY";
+        }
     }
 
     if (modulesWrap) {
@@ -448,7 +520,7 @@ async function loadNotifications() {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/notifications", { headers });
+        const response = await fetch(API_BASE + "/notifications", { headers });
 
         if (response.status === 401) {
             localStorage.removeItem("access_token");
@@ -497,7 +569,7 @@ async function openRequest(id) {
 
     const headers = getAuthHeaders();
     try {
-        const response = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, { headers });
+        const response = await fetch(`${API_BASE}/get_request_details/${id}`, { headers });
         if (!response.ok) throw new Error("Load failed");
 
         const data = await response.json();
@@ -534,9 +606,23 @@ async function openRequest(id) {
             document.getElementById("modalSubmitBtn").disabled = false;
         }
 
-        // Claims Logic
-        const currentUser = JSON.parse(localStorage.getItem("loggedInUser") || "{}");
-        const isOwner = req.user_email === currentUser.email;
+        // Ensure global currentUser is populated from JWT in localStorage (token) so ownership checks work
+        try {
+            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            if (token && !currentUser) {
+                const payload = JSON.parse(atob((token.split('.')[1] || '').replace(/-/g, '+').replace(/_/g, '/')));
+                currentUser = payload;
+            }
+        } catch (e) {
+            console.error('Token parse error', e);
+        }
+
+        console.log('Current user from token:', currentUser);
+        console.log('Request posted_by fields:', req.user_email, req.poster_name, req.first_name || req.name);
+
+        // Ownership check: prefer comparing numeric user_id from token against req.user_id
+        const isOwner = currentUser && req.user_id && (Number(currentUser.user_id) === Number(req.user_id));
+        console.log('Ownership check:', currentUser && currentUser.user_id, req.user_id, isOwner);
 
         const claimsCount = document.getElementById("claimsCount");
         const claimantsList = document.getElementById("claimantsList");
@@ -580,20 +666,38 @@ async function openRequest(id) {
             window.location.href = "request-details.html?id=" + id;
         };
 
-        const footer = document.querySelector(".modal-footer");
-        // Remove existing delete btn if any
-        const oldDel = document.getElementById("modalDeleteBtn");
-        if (oldDel) oldDel.remove();
+        // Add delete icon button into modal header (top-right) so it's always visible regardless of scroll
+        try {
+            const header = document.querySelector('#requestModal .modal-header');
+            if (header) {
+                // Remove existing header delete if present
+                const existingHeaderDel = document.getElementById('modalHeaderDeleteBtn');
+                if (existingHeaderDel) existingHeaderDel.remove();
 
-        if (isOwner && req.status === 'open') {
-            const delBtn = document.createElement("button");
-            delBtn.id = "modalDeleteBtn";
-            delBtn.className = "btn-outline";
-            delBtn.style.color = "var(--danger-red)";
-            delBtn.style.borderColor = "rgba(255, 51, 102, 0.2)";
-            delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;margin-right:8px;vertical-align:middle;"></i> DELETE_REQUEST';
-            delBtn.onclick = () => deleteRequest(req.id);
-            footer.prepend(delBtn);
+                if (isOwner && req.status === 'open') {
+                    const headerDel = document.createElement('button');
+                    headerDel.id = 'modalHeaderDeleteBtn';
+                    headerDel.title = 'DELETE_REQUEST';
+                    headerDel.className = 'btn-icon';
+                    headerDel.style.color = 'var(--danger-red)';
+                    headerDel.style.border = 'none';
+                    headerDel.style.background = 'transparent';
+                    headerDel.style.marginRight = '8px';
+                    headerDel.innerHTML = '<i data-lucide="trash-2" style="width:18px;height:18px;"></i>';
+                    headerDel.onclick = (e) => { e.stopPropagation(); if (confirm('Are you sure you want to delete this bounty?')) deleteRequest(req.id); };
+
+                    // Place before the existing close button if present
+                    const closeBtn = header.querySelector('button[onclick="closeRequestModal()"]');
+                    if (closeBtn && closeBtn.parentNode === header) {
+                        header.insertBefore(headerDel, closeBtn);
+                    } else {
+                        header.appendChild(headerDel);
+                    }
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to insert header delete button', e);
         }
 
         // Render Answers
@@ -632,10 +736,9 @@ async function deleteRequest(id) {
     if (!headers) return;
 
     try {
-        const res = await fetch("http://127.0.0.1:5001/delete_request", {
-            method: "POST",
-            headers: headers,
-            body: JSON.stringify({ request_id: id })
+        const res = await fetch(`${API_BASE}/requests/${id}`, {
+            method: "DELETE",
+            headers: headers
         });
 
         if (res.ok) {
@@ -646,6 +749,18 @@ async function deleteRequest(id) {
             else if (currentTab === "My Data") await loadMyRequests();
             else if (currentTab === "Archived") await loadArchivedRequests();
             if (typeof fetchBalance === 'function') fetchBalance();
+            // Optimistically update posted count in UI immediately
+            try {
+                const postedEl = document.getElementById("postedCount");
+                if (postedEl) {
+                    const current = Number(postedEl.innerText) || 0;
+                    const updated = Math.max(0, current - 1);
+                    postedEl.innerText = updated;
+                }
+            } catch (err) { console.warn('Failed to update postedCount optimistically', err); }
+
+            // Then refresh authoritative metrics from server
+            try { await loadDashboardMetrics(); } catch (e) { console.error('Failed to refresh dashboard metrics', e); }
         } else {
             const data = await res.json();
             alert(data.message || "Deletion failed.");
@@ -713,7 +828,7 @@ async function acceptAnswer(answerId, requestId) {
     if (!headers) return;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/accept_answer", {
+        const response = await fetch(API_BASE + "/accept_answer", {
             method: "POST",
             headers: headers,
             body: JSON.stringify({ answer_id: answerId, request_id: requestId })
@@ -726,6 +841,8 @@ async function acceptAnswer(answerId, requestId) {
             if (currentTab === "Network Feed") await loadRequests();
             else if (currentTab === "My Data") await loadMyRequests();
             else if (currentTab === "Archived") await loadArchivedRequests();
+            // Accepting a solution affects solved counts and rank — refresh dashboard metrics
+            try { await loadDashboardMetrics(); } catch (e) { console.error('Failed to refresh dashboard metrics', e); }
         } else {
             const data = await response.json();
             showNotification(data.message || "Failed to accept answer", "error");
@@ -740,7 +857,7 @@ async function toggleClaim(requestId, isCurrentlyClaimed) {
     const headers = getAuthHeaders();
     if (!headers) return;
 
-    const url = isCurrentlyClaimed ? "http://127.0.0.1:5001/unclaim_request" : "http://127.0.0.1:5001/claim_request";
+    const url = isCurrentlyClaimed ? API_BASE + "/unclaim_request" : API_BASE + "/claim_request";
     const method = isCurrentlyClaimed ? "DELETE" : "POST";
 
     try {
@@ -753,6 +870,8 @@ async function toggleClaim(requestId, isCurrentlyClaimed) {
         if (response.ok) {
             showNotification(isCurrentlyClaimed ? "Claim dropped" : "Objective claimed!", "success");
             openRequest(requestId); // Refresh modal
+            // Claiming/unclaiming may affect node activity—refresh metrics
+            try { await loadDashboardMetrics(); } catch (e) { console.error('Failed to refresh dashboard metrics', e); }
         } else {
             const err = await response.json();
             showNotification(err.message || "Action failed", "error");
@@ -768,7 +887,7 @@ async function upvoteAnswer(answerId, btnElement) {
     btnElement.disabled = true;
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/upvote_answer", {
+        const response = await fetch(API_BASE + "/upvote_answer", {
             method: "POST",
             headers: getAuthHeaders(),
             body: JSON.stringify({ answer_id: answerId })
@@ -815,7 +934,7 @@ async function submitModalAnswer() {
     console.log("Submitting answer:", { request_id: id, answer: input.value.trim(), email: email });
 
     try {
-        const response = await fetch("http://127.0.0.1:5001/post_answer", {
+        const response = await fetch(API_BASE + "/post_answer", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -839,7 +958,7 @@ async function submitModalAnswer() {
         }
 
         // Refresh answers
-        const dataResponse = await fetch(`http://127.0.0.1:5001/get_request_details/${id}`, {
+        const dataResponse = await fetch(`${API_BASE}/get_request_details/${id}`, {
             headers: {
                 "Authorization": `Bearer ${localStorage.getItem("access_token")}`
             }

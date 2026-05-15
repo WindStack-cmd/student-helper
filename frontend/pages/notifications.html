@@ -575,7 +575,7 @@
 
         <!-- MIDDLE PANEL: Workspace -->
         <main class="workspace">
-            <div class="notif-container">
+            <div class="notif-container main-content">
 
                 <div class="header-area">
                     <div class="header-content">
@@ -643,6 +643,7 @@
         </main>
     </div>
 
+    <script src="../js/config.js"></script>
     <script>
   async function loadNotifications(){
 
@@ -665,7 +666,7 @@
 
     try {
         const response = await fetch(
-            "http://127.0.0.1:5001/notifications",
+            API_BASE + "/notifications",
             {
                 headers: {
                     "Authorization": `Bearer ${token}`

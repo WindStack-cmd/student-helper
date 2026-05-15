@@ -29,6 +29,8 @@ def parse_bool_env(name, default=False):
 # Serve frontend from parent directory
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
 app = Flask(__name__, static_folder=frontend_path, static_url_path='/static')
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Flask-Mail Configuration
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -40,8 +42,10 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
 mail = Mail(app)
 
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "super_secret_for_oauth")
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+_flask_secret = os.getenv("FLASK_SECRET_KEY")
+if not _flask_secret:
+    raise RuntimeError("FLASK_SECRET_KEY environment variable is not set. Cannot start the application.")
+app.secret_key = _flask_secret
 from authlib.integrations.flask_client import OAuth
 from flask import session, url_for, redirect, make_response
 
@@ -94,7 +98,7 @@ ALLOWED_ORIGINS = os.getenv(
     "http://localhost:8000,http://localhost:3000,http://127.0.0.1:5500,http://127.0.0.1:5501,http://127.0.0.1:5502,http://127.0.0.1:3000,http://localhost:5502"
 ).split(",")
 CORS(app, resources={r"/*": {
-    "origins": "*",
+    "origins": ALLOWED_ORIGINS,
     "allow_headers": ["Content-Type", "Authorization"],
     "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"]
 }}, supports_credentials=True)
@@ -106,7 +110,9 @@ CORS(app, resources={r"/*": {
 # app.config['CORS_HEADERS'] = 'Content-Type'  # Removed to avoid restriction
 
 # FEATURE #2: JWT Configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is not set. Cannot start the application.")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 
@@ -623,8 +629,8 @@ def handle_oauth_login(email, name, provider):
         cursor.close()
         conn.close()
 
+@limiter.limit("20 per minute")
 @app.route("/register", methods=["POST"])
-# @limiter.limit("20 per minute")  # Disabled for debugging
 def register():
     data = request.json or {}
     print(f"DEBUG REGISTER: Incoming request data: {data}")
@@ -694,8 +700,8 @@ def register():
         cursor.close()
         conn.close()
 
+@limiter.limit("5 per minute")
 @app.route("/login", methods=["POST"])
-# @limiter.limit("5 per minute")  # Temporarily disabled for CORS debugging
 def login():
     data = request.json or {}
     email = str(data.get("email") or "").strip().lower()  # Lowercase for consistency
@@ -1053,8 +1059,8 @@ def post_request():
             if not user or user["balance"] < bounty:
                 return jsonify({"message": "Insufficient balance", "error_code": "INSUFFICIENT_BALANCE"}), 400
             
-            # Deduct bounty and set expires_at
-            expiry_date = datetime.now() + timedelta(days=7)
+            # Deduct bounty and set expires_at (use UTC)
+            expiry_date = datetime.utcnow() + timedelta(days=7)
             
             cursor.execute(
                 "UPDATE users SET reputation = reputation - %s, points = points - %s WHERE email = %s",
@@ -1100,6 +1106,15 @@ def get_requests():
         conn_expiry = get_db_connection()
         cursor_expiry = conn_expiry.cursor(dictionary=True)
         try:
+            # Ensure existing rows have a reasonable expires_at derived from created_at
+            try:
+                cursor_expiry.execute(
+                    "UPDATE requests SET expires_at = DATE_ADD(created_at, INTERVAL 7 DAY) WHERE expires_at IS NULL OR expires_at < created_at"
+                )
+            except Exception:
+                # Don't fail the whole request if migration/update fails
+                pass
+
             # Find requests that should expire
             cursor_expiry.execute(
                 "SELECT id, user_email, escrowed_bounty FROM requests WHERE status = 'open' AND expires_at < NOW() AND escrowed_bounty > 0"
@@ -1232,20 +1247,25 @@ def get_requests():
                 placeholders = ','.join(['%s'] * len(email_values))
                 cursor.execute(
                     f"""
-                    SELECT email,
+                    SELECT email, id,
                            COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
                     FROM users
                     WHERE email IN ({placeholders})
                     """,
                     tuple(email_values)
                 )
+                # Build maps for display name and user_id so frontend can do ownership checks by id
+                user_id_map = {}
                 for user_row in cursor.fetchall():
                     if user_row[0]:
-                        name_map[user_row[0]] = user_row[1]
+                        name_map[user_row[0]] = user_row[2]
+                        user_id_map[user_row[0]] = user_row[1]
 
             for req in requests_list:
                 email = req.get("email")
                 req["poster_name"] = name_map.get(email) or (email.split('@')[0] if email else "ANONYMOUS_USER")
+                # Attach user_id for ownership checks on frontend (may be None for legacy rows)
+                req["user_id"] = user_id_map.get(email) if email else None
             
             log_event("GET_REQUESTS", f"Retrieved {len(requests_list)} open requests (Sort: {sort_by})", "INFO")
             
@@ -1310,7 +1330,7 @@ def get_request_details(request_id):
                 if poster_email:
                     cursor.execute(
                         """
-                        SELECT COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
+                        SELECT id, COALESCE(NULLIF(TRIM(first_name), ''), NULLIF(TRIM(name), '')) AS display_name
                         FROM users
                         WHERE email = %s
                         """,
@@ -1319,8 +1339,10 @@ def get_request_details(request_id):
                     poster_row = cursor.fetchone()
                     if poster_row and poster_row.get('display_name'):
                         request_data['poster_name'] = poster_row['display_name']
+                        request_data['user_id'] = poster_row.get('id')
                     else:
                         request_data['poster_name'] = poster_email.split('@')[0]
+                        request_data['user_id'] = None
             
             for ans in answers_list:
                 ans['created_at'] = str(ans['created_at']) if ans['created_at'] else None
@@ -2026,6 +2048,45 @@ def delete_request():
         log_event("DELETE_REQUEST", str(e), "ERROR")
         return jsonify({"message": "Failed to delete"}), 500
 
+
+@app.route('/requests/<int:request_id>', methods=['DELETE'])
+@require_auth
+def delete_request_by_id(request_id):
+    try:
+        email = request.user_email
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT user_email, escrowed_bounty FROM requests WHERE id = %s", (request_id,))
+            req = cursor.fetchone()
+
+            if not req:
+                return jsonify({"message": "Request not found"}), 404
+
+            if req['user_email'] != email:
+                return jsonify({"message": "Unauthorized"}), 403
+
+            # Return escrowed bounty if any
+            if req.get('escrowed_bounty', 0) > 0:
+                cursor.execute(
+                    "UPDATE users SET reputation = reputation + %s, points = points + %s WHERE email = %s",
+                    (req['escrowed_bounty'], req['escrowed_bounty'], email)
+                )
+
+            cursor.execute("DELETE FROM claims WHERE request_id = %s", (request_id,))
+            cursor.execute("DELETE FROM answers WHERE request_id = %s", (request_id,))
+            cursor.execute("DELETE FROM requests WHERE id = %s", (request_id,))
+
+            conn.commit()
+            log_event("DELETE_REQUEST", f"Request {request_id} deleted by {email}, bounty returned", "INFO")
+            return jsonify({"message": "Request deleted"}), 200
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        log_event("DELETE_REQUEST", str(e), "ERROR")
+        return jsonify({"message": "Failed to delete"}), 500
+
 @app.route("/purge_user", methods=["POST"])
 @require_auth
 def purge_user():
@@ -2118,4 +2179,4 @@ def serve_frontend(filename):
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
     # FIX: Run on port 5001 to avoid socket binding conflicts on Windows
-    app.run(host="127.0.0.1", port=5001, debug=debug_mode, use_reloader=debug_mode)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)), debug=debug_mode, use_reloader=debug_mode)

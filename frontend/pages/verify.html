@@ -105,20 +105,10 @@
         </div>
     </div>
 
+    <script src="../js/config.js"></script>
     <script type="module">
-        function resolveApiBaseUrl() {
-            const params = new URLSearchParams(window.location.search);
-            const apiFromUrl = (params.get('api') || '').trim();
-            if (apiFromUrl) return apiFromUrl.replace(/\/$/, '');
-
-            const apiFromStorage = (localStorage.getItem('api_base_url') || '').trim();
-            if (apiFromStorage) return apiFromStorage.replace(/\/$/, '');
-
-            if (window.location.port === '5001') return window.location.origin;
-            return `${window.location.protocol}//127.0.0.1:5001`;
-        }
-
-        const API_BASE_URL = resolveApiBaseUrl();
+        // Use the API_BASE from config.js
+        const API_BASE_URL = API_BASE;
 
         async function verify() {
             const urlParams = new URLSearchParams(window.location.search);
