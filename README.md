@@ -169,6 +169,7 @@ Open the `frontend` folder with Live Server or serve it locally from your prefer
 
 ## 11. 🚢 Deployment
 
+
 - Frontend is deployed on [Cloudflare Pages](https://student-helper.pages.dev)
 - Backend is deployed on Railway at https://student-helper-production-f3b2.up.railway.app
 - Database is MySQL hosted on Railway with persistent volume storage
